@@ -60,21 +60,17 @@ class HSIC(object):
 
         return torch.median(dists)
 
-    def run_test(self, x, y, device: str = 'cpu', ls_x: float = None, ls_y: float = None) -> bool:
+    def run_test(self, x: torch.Tensor, y: torch.Tensor, ls_x: float = None, ls_y: float = None) -> bool:
         """
         Runs the HSIC test with randomly permuting the indices of y.
 
         :param x: tensor of the first sample in the form of (num_samples, num_dim)
-        :param y: tensor of the second sample in the form of (num_samples, num_dim)
+        :param y: tensor of the first sample in the form of (num_samples, num_dim)
         :param ls_x: lenght scale of the x RBF kernel
         :param ls_y: lenght scale of the y RBF kernel
 
         :return bool whether H0 (x and y are independent) holds
         """
-        if not torch.is_tensor(x):
-            x = torch.from_numpy(x).unsqueeze(1).to(device).float()
-        if not torch.is_tensor(y):
-            y = torch.from_numpy(y).unsqueeze(1).to(device).float()
 
         if ls_x is None:
             ls_x = self.calc_ls(x)
