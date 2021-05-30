@@ -82,10 +82,26 @@ if __name__ == '__main__':
             else:
                 y = dat_all['labels']
             s = dat_all['source']
+            print('Run test with ground truth sources')
+            with torch.no_grad():
+                null_1 = ind_test.run_test(x[:,0],s[:,1], device='cuda')
+                null_2 = ind_test.run_test(x[:,0],s[:,0], device='cuda')
+                null_3 = ind_test.run_test(x[:,1],s[:,0], device='cuda')
+                null_4 = ind_test.run_test(x[:,1],s[:,1], device='cuda')
+            null_list = [null_1, null_2, null_3, null_4]
+            var_map = [1,1,2,2]
+            if Counter([null_1, null_2, null_3, null_4]) == Counter([False, False, False, True]):
+                print('concluded a causal effect')
+                for i,null in enumerate(null_list):
+                    if null:
+                        print('cause variable is X{}'.format(str(var_map[i])))
+            else:
+                print('no causal effect...?')
+                break
             for seed in range(100):
                 print('Running exp with L={} and n={}; seed={}'.format(n_layer, n_segment, seed))
                 if args.method == 'tcl':
-                    ckpt_folder = os.path.join(args.ckpt_dir, 'ivae_l{}_n{}_s{}.pt'.format(n_layer, n_segment, seed))
+                    ckpt_folder = os.path.join(args.ckpt_dir, str(n_layer), str(n_segment), str(seed))
                     res_TCL = TCL_wrapper(sensor=x.T, label=y, random_seed=seed,
                                           list_hidden_nodes=[args.data_dim * 2] * (n_layer - 1) + [args.data_dim],
                                           max_steps=stepDict[n_layer][0] * 2, max_steps_init=stepDict[n_layer][1],
