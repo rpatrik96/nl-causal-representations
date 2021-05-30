@@ -26,6 +26,7 @@ import argparse
 def parse():
     parser = argparse.ArgumentParser(description='')
     # Monti
+    parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--method', type=str, default='tcl',
                         help='Method to employ. Should be TCL, iVAE or ICE-BeeM')
     parser.add_argument('--test', action='store_true')
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     n_layers = [1,2,3,4,5]
     results = {l: {n: [] for n in n_segments} for l in n_layers}
     results_causal = {l: {n: [] for n in n_segments} for l in n_layers}
-    ind_test = HSIC(50)
+    ind_test = HSIC(args.num_permutations)
     for n_layer in n_layers:
         for n_segment in n_segments:
             dat_all = gen_TCL_data_ortho(Ncomp=args.data_dim, Nsegment=n_segment, Nlayer=1, NsegmentObs=args.n_obs_per_seg, 
