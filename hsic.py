@@ -94,7 +94,7 @@ class HSIC(object):
             stats.append(self.test_statistics(x, y[idx], ls_x, ls_y))
 
         stats = torch.tensor(stats)
-        crit_val = torch.quantile(stats, 1 - self.alpha)
+        crit_val = torch.quantile(stats, 1 - alpha_corr)
 
         p = (stats > crit_val).sum() / self.num_permutations
 
