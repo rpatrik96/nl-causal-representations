@@ -84,6 +84,8 @@ class HSIC(object):
 
         alpha_corr = self.alpha / bonferroni
 
+        stat_no_perm = self.test_statistics(x, y, ls_x, ls_y)
+
         num_samples = x.shape[0]
 
         # calculate test statistics for the permutations
@@ -96,9 +98,9 @@ class HSIC(object):
         stats = torch.tensor(stats)
         crit_val = torch.quantile(stats, 1 - alpha_corr)
 
-        p = (stats > crit_val).sum() / self.num_permutations
+        p = (stats > stat_no_perm).sum() / self.num_permutations
 
         print(f"p={p:.3f}, critical value={crit_val:.3f}")
-        print(f"The null hypothesis (x and y is independent) is {p < alpha_corr}")
+        print(f"The null hypothesis (x and y is independent) is {p > crit_val}")
 
-        return p < alpha_corr
+        return p > crit_val
