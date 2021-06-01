@@ -60,7 +60,7 @@ class HSIC(object):
 
         return torch.median(dists)
 
-    def run_test(self, x, y, device: str = 'cpu', ls_x: float = None, ls_y: float = None) -> bool:
+    def run_test(self, x, y, device: str = 'cpu', ls_x: float = None, ls_y: float = None, bonferroni: int=1) -> bool:
         """
         Runs the HSIC test with randomly permuting the indices of y.
 
@@ -68,6 +68,7 @@ class HSIC(object):
         :param y: tensor of the second sample in the form of (num_samples, num_dim)
         :param ls_x: lenght scale of the x RBF kernel
         :param ls_y: lenght scale of the y RBF kernel
+        :param bonferroni: Bonferroni correction coefficient (= #hypotheses)
 
         :return bool whether H0 (x and y are independent) holds
         """
@@ -80,6 +81,8 @@ class HSIC(object):
             ls_x = self.calc_ls(x)
         if ls_y is None:
             ls_y = self.calc_ls(y)
+
+        alpha_corr = self.alpha / bonferroni
 
         num_samples = x.shape[0]
 
@@ -96,6 +99,6 @@ class HSIC(object):
         p = (stats > crit_val).sum() / self.num_permutations
 
         print(f"p={p:.3f}, critical value={crit_val:.3f}")
-        print(f"The null hypothesis (x and y is independent) is {p < self.alpha}")
+        print(f"The null hypothesis (x and y is independent) is {p < alpha_corr}")
 
-        return p < self.alpha
+        return p < alpha_corr

@@ -85,10 +85,10 @@ if __name__ == '__main__':
             s = dat_all['source']
             print('Run test with ground truth sources')
             with torch.no_grad():
-                null_1 = ind_test.run_test(x[:,0],s[:,1], device='cuda')
-                null_2 = ind_test.run_test(x[:,0],s[:,0], device='cuda')
-                null_3 = ind_test.run_test(x[:,1],s[:,0], device='cuda')
-                null_4 = ind_test.run_test(x[:,1],s[:,1], device='cuda')
+                null_1 = ind_test.run_test(x[:, 0], s[:, 1], device='cuda', bonferroni=4)
+                null_2 = ind_test.run_test(x[:, 0], s[:, 0], device='cuda', bonferroni=4)
+                null_3 = ind_test.run_test(x[:, 1], s[:, 0], device='cuda', bonferroni=4)
+                null_4 = ind_test.run_test(x[:, 1], s[:, 1], device='cuda', bonferroni=4)
             null_list = [null_1, null_2, null_3, null_4]
             var_map = [1,1,2,2]
             if Counter([null_1, null_2, null_3, null_4]) == Counter([False, False, False, True]):
@@ -136,10 +136,10 @@ if __name__ == '__main__':
                     print(results[n_layer][n_segment][-1])
                     latents = elem_list[np.argmax(score_list)]
                 with torch.no_grad():
-                    null_1 = ind_test.run_test(x[:,0],latents[:,1], device='cuda')
-                    null_2 = ind_test.run_test(x[:,0],latents[:,0], device='cuda')
-                    null_3 = ind_test.run_test(x[:,1],latents[:,0], device='cuda')
-                    null_4 = ind_test.run_test(x[:,1],latents[:,1], device='cuda')
+                    null_1 = ind_test.run_test(x[:, 0], latents[:, 1], device='cuda', bonferroni=4)
+                    null_2 = ind_test.run_test(x[:, 0], latents[:, 0], device='cuda', bonferroni=4)
+                    null_3 = ind_test.run_test(x[:, 1], latents[:, 0], device='cuda', bonferroni=4)
+                    null_4 = ind_test.run_test(x[:, 1], latents[:, 1], device='cuda', bonferroni=4)
                 null_list = [null_1, null_2, null_3, null_4]
                 var_map = [1,1,2,2]
                 if Counter([null_1, null_2, null_3, null_4]) == Counter([False, False, False, True]):
