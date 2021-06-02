@@ -19,6 +19,20 @@ from models.icebeem_wrapper import ICEBEEM_wrapper
 from models.ivae.ivae_wrapper import IVAE_wrapper
 from models.tcl.tcl_wrapper_gpu import TCL_wrapper
 
+
+def check_bivariate_dependence(x1, x2):
+    decisions = []
+    var_map = [1, 1, 2, 2]
+
+    with torch.no_grad():
+        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 1], device=args.device, bonferroni=4))
+        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 0], device=args.device, bonferroni=4))
+        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 0], device=args.device, bonferroni=4))
+        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 1], device=args.device, bonferroni=4))
+
+    return decisions, var_map
+
+
 if __name__ == '__main__':
 
     # arguments
@@ -71,16 +85,9 @@ if __name__ == '__main__':
 
             print('Run test with ground truth sources')
 
-            with torch.no_grad():
-                null_1 = ind_test.run_test(x[:, 0], s[:, 1], device=args.device, bonferroni=4)
-                null_2 = ind_test.run_test(x[:, 0], s[:, 0], device=args.device, bonferroni=4)
-                null_3 = ind_test.run_test(x[:, 1], s[:, 0], device=args.device, bonferroni=4)
-                null_4 = ind_test.run_test(x[:, 1], s[:, 1], device=args.device, bonferroni=4)
+            null_list, var_map = check_bivariate_dependence(x, s)
 
-            null_list = [null_1, null_2, null_3, null_4]
-            var_map = [1, 1, 2, 2]
-
-            if Counter([null_1, null_2, null_3, null_4]) == Counter([False, False, False, True]):
+            if Counter(null_list) == Counter([False, False, False, True]):
 
                 print('concluded a causal effect')
 
@@ -139,24 +146,23 @@ if __name__ == '__main__':
                     print(results[n_layer][n_segment][-1])
                     latents = elem_list[np.argmax(score_list)]
 
-                with torch.no_grad():
-                    null_1 = ind_test.run_test(x[:, 0], latents[:, 1], device=args.device, bonferroni=4)
-                    null_2 = ind_test.run_test(x[:, 0], latents[:, 0], device=args.device, bonferroni=4)
-                    null_3 = ind_test.run_test(x[:, 1], latents[:, 0], device=args.device, bonferroni=4)
-                    null_4 = ind_test.run_test(x[:, 1], latents[:, 1], device=args.device, bonferroni=4)
 
-                null_list = [null_1, null_2, null_3, null_4]
-                var_map = [1, 1, 2, 2]
-                if Counter([null_1, null_2, null_3, null_4]) == Counter([False, False, False, True]):
+
+                null_list, var_map = check_bivariate_dependence(x, latents)
+
+                if Counter(null_list) == Counter([False, False, False, True]):
                     results_causal[n_layer][n_segment].append(True)
                     print('concluded a causal effect')
+
                     for i, null in enumerate(null_list):
                         if null:
                             print('cause variable is X{}'.format(str(var_map[i])))
                 else:
                     results_causal[n_layer][n_segment].append(False)
+
             print('Proportion correct causal direction detected: {}'.format(
                 sum(results_causal[n_layer][n_segment]) / 100))
+
     fname = os.path.join(args.run, 'fig2_top.p')
     pickle.dump(r, open(fname, "wb"))
     sys.exit()
