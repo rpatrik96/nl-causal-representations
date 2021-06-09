@@ -68,6 +68,7 @@ if __name__ == '__main__':
                                          NsegmentObs=args.n_obs_per_seg,
                                          source='Laplace', seed=args.data_seed)
 
+            # mix the sources
             for l in range(n_layer):
                 if l > 0:
                     dat_all['obs'] = leaky_ReLU(dat_all['obs'], negSlope=.2)
@@ -77,6 +78,7 @@ if __name__ == '__main__':
                 dat_all['obs'] = np.dot(dat_all['obs'], A)
             x = dat_all['obs']
 
+            # prepare the labels
             if args.method == 'ivae' or args.method == 'icebeem':
                 y = to_one_hot(dat_all['labels'])[0]
             else:
