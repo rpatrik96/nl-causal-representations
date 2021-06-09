@@ -73,9 +73,17 @@ class HSIC(object):
         :return bool whether H0 (x and y are independent) holds
         """
         if not torch.is_tensor(x):
-            x = torch.from_numpy(x).unsqueeze(1).to(device).float()
+            x = torch.from_numpy(x)
         if not torch.is_tensor(y):
-            y = torch.from_numpy(y).unsqueeze(1).to(device).float()
+            y = torch.from_numpy(y)
+            
+        if len(x.shape) == 1:
+            x = x.unsqueeze(1)
+        if len(y.shape) == 1:
+            y = y.unsqueeze(1)
+
+        x = x.to(device).float()
+        y = y.to(device).float()
 
         if ls_x is None:
             ls_x = self.calc_ls(x)

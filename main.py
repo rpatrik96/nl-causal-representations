@@ -25,10 +25,10 @@ def check_bivariate_dependence(x1, x2):
     var_map = [1, 1, 2, 2]
 
     with torch.no_grad():
-        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 1], device=args.device, bonferroni=4))
-        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 0], device=args.device, bonferroni=4))
-        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 0], device=args.device, bonferroni=4))
-        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 1], device=args.device, bonferroni=4))
+        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 1], device=args.device, bonferroni=4).item())
+        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 0], device=args.device, bonferroni=4).item())
+        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 0], device=args.device, bonferroni=4).item())
+        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 1], device=args.device, bonferroni=4).item())
 
     return decisions, var_map
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                 if l > 0:
                     dat_all['obs'] = leaky_ReLU(dat_all['obs'], negSlope=.2)
                 A = ortho_group.rvs(args.data_dim)
-                A = np.tril(A)
+                A = np.tril(A).T
                 dat_all['mixing'].append(A)
                 dat_all['obs'] = np.dot(dat_all['obs'], A)
             x = dat_all['obs']
