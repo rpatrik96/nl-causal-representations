@@ -138,6 +138,8 @@ def parse_args():
 
 
 def main():
+
+    # setup
     args = parse_args()
 
     global device
@@ -145,138 +147,33 @@ def main():
         device = "cpu"
         print("Using cpu")
 
-    if args.seed is not None:
-        np.random.seed(args.seed)
-        random.seed(args.seed)
-        torch.manual_seed(args.seed)
-    if args.space_type == "box":
-        space = spaces.NBoxSpace(args.n, args.box_min, args.box_max)
-    elif args.space_type == "sphere":
-        space = spaces.NSphereSpace(args.n, args.sphere_r)
-    else:
-        space = spaces.NRealSpace(args.n)
-    if args.p:
-        """
-        loss = losses.LpSimCLRLoss(
-            p=args.p, tau=args.tau, simclr_compatibility_mode=False, alpha=args.alpha, simclr_denominator=True
-        )
-        """
-        """
-        loss = losses.LpSimCLRLoss(
-            p=args.p, tau=args.tau, simclr_compatibility_mode=True, alpha=args.alpha, simclr_denominator=False
-        )
-        """
-        loss = losses.LpSimCLRLoss(
-            p=args.p, tau=args.tau, simclr_compatibility_mode=True
-        )
-    else:
-        loss = losses.SimCLRLoss(normalize=False, tau=args.tau, alpha=args.alpha)
-    eta = torch.zeros(args.n)
-    if args.space_type == "sphere":
-        eta[0] = args.sphere_r
+    setup_seed(args.seed)
 
-    if args.m_p == 1:
-        sample_marginal = lambda space, size, device=device: space.laplace(
-            eta, args.m_param, size, device
-        )
-    elif args.m_p == 2:
-        sample_marginal = lambda space, size, device=device: space.normal(
-            eta, args.m_param, size, device
-        )
-    elif args.m_p == 0:
-        sample_marginal = lambda space, size, device=device: space.uniform(
-            size, device=device
-        )
-    else:
-        sample_marginal = (
-            lambda space, size, device=device: space.generalized_normal(
-                eta, args.m_param, p=args.m_p, size=size, device=device
-            )
-        )
+    space = setup_space(args)
+    loss = setup_loss(args)
 
-    if args.c_p == 1:
-        sample_conditional = lambda space, z, size, device=device: space.laplace(
-            z, args.c_param, size, device
-        )
-    elif args.c_p == 2:
-        sample_conditional = lambda space, z, size, device=device: space.normal(
-            z, args.c_param, size, device
-        )
-    elif args.c_p == 0:
-        sample_conditional = (
-            lambda space, z, size, device=device: space.von_mises_fisher(
-                z, args.c_param, size, device,
-            )
-        )
-    else:
-        sample_conditional = (
-            lambda space, z, size, device=device: space.generalized_normal(
-                z, args.c_param, p=args.c_p, size=size, device=device
-            )
-        )
+    ind_test = HSIC(args.num_permutations)
+
+    # distributions
+    sample_marginal = sample_from_marginal(args, device)
+    sample_conditional = sample_from_conditional(args, device)
 
     latent_space = latent_spaces.LatentSpace(
         space=space,
         sample_marginal=sample_marginal,
         sample_conditional=sample_conditional,
     )
-
-    def sample_marginal_and_conditional(size, device=device):
-        z = latent_space.sample_marginal(size=size, device=device)
-        z3 = latent_space.sample_marginal(size=size, device=device)
-        z_tilde = latent_space.sample_conditional(z, size=size, device=device)
-
-        return z, z_tilde, z3
-
-    g = invertible_network_utils.construct_invertible_mlp(
-        n=args.n,
-        n_layers=args.n_mixing_layer,
-        act_fct=args.act_fct,
-        cond_thresh_ratio=0.001,
-        n_iter_cond_thresh=25000,
-        lower_triangular=True,
-        weight_matrix_init='rvs'
-    )
-    g = g.to(device)
-
-    if args.load_g is not None:
-        g.load_state_dict(torch.load(args.load_g, map_location=device))
-
-    for p in g.parameters():
-        p.requires_grad = False
+    g = setup_g(args, device)
 
     h_ind = lambda z: g(z)
-
     z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
+    linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(z_disentanglement,
+                                                                                                  h_ind(z_disentanglement))
 
-    (linear_disentanglement_score, _), _ = disentanglement_utils.linear_disentanglement(
-        z_disentanglement, h_ind(z_disentanglement), mode="r2"
-    )
+    null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), z_disentanglement)
     print(f"Id. Lin. Disentanglement: {linear_disentanglement_score:.4f}")
-    (
-        permutation_disentanglement_score,
-        _,
-    ), _ = disentanglement_utils.permutation_disentanglement(
-        z_disentanglement,
-        h_ind(z_disentanglement),
-        mode="pearson",
-        solver="munkres",
-        rescaling=True,
-    )
     print(f"Id. Perm. Disentanglement: {permutation_disentanglement_score:.4f}")
     print('Run test with ground truth sources')
-    def check_bivariate_dependence(x1, x2):
-        decisions = []
-        var_map = [1, 1, 2, 2]
-        with torch.no_grad():
-            decisions.append(ind_test.run_test(x1[:, 0], x2[:, 1], device="cpu", bonferroni=4).item())
-            decisions.append(ind_test.run_test(x1[:, 0], x2[:, 0], device="cpu", bonferroni=4).item())
-            decisions.append(ind_test.run_test(x1[:, 1], x2[:, 0], device="cpu", bonferroni=4).item())
-            decisions.append(ind_test.run_test(x1[:, 1], x2[:, 1], device="cpu", bonferroni=4).item())
-
-        return decisions, var_map
-    ind_test = HSIC(args.num_permutations)
-    null_list, var_map = check_bivariate_dependence(h_ind(z_disentanglement), z_disentanglement)
 
     if Counter(null_list) == Counter([False, False, False, True]):
 
@@ -290,27 +187,20 @@ def main():
         print('no causal effect...?')
         sys.exit()
 
-    def unpack_item_list(lst):
-        if isinstance(lst, tuple):
-            lst = list(lst)
-        result_list = []
-        for it in lst:
-            if isinstance(it, (tuple, list)):
-                result_list.append(unpack_item_list(it))
-            else:
-                result_list.append(it.item())
-        return result_list
+
 
     if args.save_dir:
         if not os.path.exists(args.save_dir):
             os.makedirs(args.save_dir)
         torch.save(g.state_dict(), os.path.join(args.save_dir, "g.pth"))
+
     if args.mode == 'unsupervised':
         test_list = [False]
     elif args.mode == 'supervised':
         test_list = [True]
     else:
         test_list = [True, False]
+
     for test in test_list:
         print("supervised test: {}".format(test))
 
@@ -356,46 +246,13 @@ def main():
 
             return total_loss_value.item(), unpack_item_list(losses_value)
 
-        output_normalization = None
-        output_normalization_kwargs = None
-        if args.normalization == "learnable_box":
-            output_normalization = "learnable_box"
-        elif args.normalization == "fixed_box":
-            output_normalization = "fixed_box"
-            output_normalization_kwargs = dict(init_abs_bound=args.box_max - args.box_min)
-        elif args.normalization == "learnable_sphere":
-            output_normalization = "learnable_sphere"
-        elif args.normalization == "fixed_sphere":
-            output_normalization = "fixed_sphere"
-            output_normalization_kwargs = dict(init_r=args.sphere_r)
-        elif args.normalization == "":
-            print("Using no output normalization")
-            output_normalization = None
-        else:
-            raise ValueError("Invalid output normalization:", args.normalization)
-        f = encoders.get_mlp(
-            n_in=args.n,
-            n_out=args.n,
-            layers=[
-                args.n * 10,
-                args.n * 50,
-                args.n * 50,
-                args.n * 50,
-                args.n * 50,
-                args.n * 10,
-            ],
-            output_normalization=output_normalization,
-            output_normalization_kwargs=output_normalization_kwargs
-        )
-        f = f.to(device)
 
-        if args.load_f is not None:
-            f.load_state_dict(torch.load(args.load_f, map_location=device))
 
-        print("f: ", f)
+        f = setup_f(args, device)
+
         optimizer = torch.optim.Adam(f.parameters(), lr=args.lr)
-        h = lambda z: f(g(z))
 
+        h = lambda z: f(g(z))
         if args.identity_mixing_and_solution:
             h = lambda z: z
 
@@ -414,7 +271,7 @@ def main():
             if test
             else global_step <= (args.n_steps * args.more_unsupervised)
         ):
-            data = sample_marginal_and_conditional(size=args.batch_size)
+            data = sample_marginal_and_conditional(latent_space, size=args.batch_size)
 
             if args.lr != 0:
                 total_loss_value, losses_value = train_step(
@@ -428,30 +285,17 @@ def main():
 
             total_loss_values.append(total_loss_value)
             individual_losses_values.append(losses_value)
+
             if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
                 z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
                 hz_disentanglement = h(z_disentanglement)
-                (
-                    linear_disentanglement_score,
-                    _,
-                ), _ = disentanglement_utils.linear_disentanglement(
-                    z_disentanglement, hz_disentanglement, mode="r2"
-                )
-                linear_disentanglement_scores.append(linear_disentanglement_score)
-                (
-                    permutation_disentanglement_score,
-                    _,
-                ), _ = disentanglement_utils.permutation_disentanglement(
-                    z_disentanglement,
-                    hz_disentanglement,
-                    mode="pearson",
-                    solver="munkres",
-                    rescaling=True,
-                )
-                permutation_disentanglement_scores.append(
-                    permutation_disentanglement_score
-                )
-                null_list, var_map = check_bivariate_dependence(h_ind(z_disentanglement), hz_disentanglement)
+
+                linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(
+                    z_disentanglement, hz_disentanglement)
+                null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), hz_disentanglement)
+
+                permutation_disentanglement_scores.append(permutation_disentanglement_score)
+
 
                 if Counter(null_list) == Counter([False, False, False, True]):
                     causal_check.append(1.)
@@ -475,12 +319,9 @@ def main():
 
             else:
                 linear_disentanglement_scores.append(linear_disentanglement_scores[-1])
-                permutation_disentanglement_scores.append(
-                    permutation_disentanglement_scores[-1]
-                )
-                causal_check.append(
-                    causal_check[-1]
-                )
+                permutation_disentanglement_scores.append(permutation_disentanglement_scores[-1])
+                causal_check.append(causal_check[-1])
+
             if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
                 print(
                     f"Step: {global_step} \t",
@@ -503,11 +344,13 @@ def main():
                 ),
             )
         torch.cuda.empty_cache()
+
     final_linear_scores = []
     final_perm_scores = []
+
     with torch.no_grad():
         for i in range(args.num_eval_batches):
-            data = sample_marginal_and_conditional(args.batch_size)
+            data = sample_marginal_and_conditional(latent_space, args.batch_size)
             z1, z2_con_z1, z3 = data
             z1 = z1.to(device)
             z3 = z3.to(device)
@@ -539,6 +382,215 @@ def main():
         )
     )
 
+
+def calc_disentanglement_scores(z_disentanglement, hz_disentanglement):
+
+    (linear_disentanglement_score, _), _ = disentanglement_utils.linear_disentanglement(
+        z_disentanglement, hz_disentanglement, mode="r2"
+    )
+    (
+        permutation_disentanglement_score,
+        _,
+    ), _ = disentanglement_utils.permutation_disentanglement(
+        z_disentanglement,
+        hz_disentanglement,
+        mode="pearson",
+        solver="munkres",
+        rescaling=True,
+    )
+    return linear_disentanglement_score, permutation_disentanglement_score
+
+
+def setup_f(args, device):
+
+    output_normalization, output_normalization_kwargs = configure_output_normalization(args)
+
+    f = encoders.get_mlp(
+        n_in=args.n,
+        n_out=args.n,
+        layers=[
+            args.n * 10,
+            args.n * 50,
+            args.n * 50,
+            args.n * 50,
+            args.n * 50,
+            args.n * 10,
+        ],
+        output_normalization=output_normalization,
+        output_normalization_kwargs=output_normalization_kwargs
+    )
+    f = f.to(device)
+    if args.load_f is not None:
+        f.load_state_dict(torch.load(args.load_f, map_location=device))
+    print("f: ", f)
+    return f
+
+
+def configure_output_normalization(args):
+    output_normalization = None
+    output_normalization_kwargs = None
+    if args.normalization == "learnable_box":
+        output_normalization = "learnable_box"
+    elif args.normalization == "fixed_box":
+        output_normalization = "fixed_box"
+        output_normalization_kwargs = dict(init_abs_bound=args.box_max - args.box_min)
+    elif args.normalization == "learnable_sphere":
+        output_normalization = "learnable_sphere"
+    elif args.normalization == "fixed_sphere":
+        output_normalization = "fixed_sphere"
+        output_normalization_kwargs = dict(init_r=args.sphere_r)
+    elif args.normalization == "":
+        print("Using no output normalization")
+        output_normalization = None
+    else:
+        raise ValueError("Invalid output normalization:", args.normalization)
+    return output_normalization, output_normalization_kwargs
+
+
+def setup_g(args, device):
+
+    # create MLP
+    g = invertible_network_utils.construct_invertible_mlp(
+        n=args.n,
+        n_layers=args.n_mixing_layer,
+        act_fct=args.act_fct,
+        cond_thresh_ratio=0.001,
+        n_iter_cond_thresh=25000,
+        lower_triangular=True,
+        weight_matrix_init='rvs'
+    )
+
+    # allocate to device
+    g = g.to(device)
+
+    # load if needed
+    if args.load_g is not None:
+        g.load_state_dict(torch.load(args.load_g, map_location=device))
+
+    # make it non-trainable
+    for p in g.parameters():
+        p.requires_grad = False
+
+    return g
+
+
+def sample_from_conditional(args, device):
+    if args.c_p == 1:
+        sample_conditional = lambda space, z, size, device=device: space.laplace(
+            z, args.c_param, size, device
+        )
+    elif args.c_p == 2:
+        sample_conditional = lambda space, z, size, device=device: space.normal(
+            z, args.c_param, size, device
+        )
+    elif args.c_p == 0:
+        sample_conditional = (
+            lambda space, z, size, device=device: space.von_mises_fisher(
+                z, args.c_param, size, device,
+            )
+        )
+    else:
+        sample_conditional = (
+            lambda space, z, size, device=device: space.generalized_normal(
+                z, args.c_param, p=args.c_p, size=size, device=device
+            )
+        )
+    return sample_conditional
+
+
+def sample_from_marginal(args, device):
+
+    eta = torch.zeros(args.n)
+    if args.space_type == "sphere":
+        eta[0] = args.sphere_r
+
+    if args.m_p == 1:
+        sample_marginal = lambda space, size, device=device: space.laplace(
+            eta, args.m_param, size, device
+        )
+    elif args.m_p == 2:
+        sample_marginal = lambda space, size, device=device: space.normal(
+            eta, args.m_param, size, device
+        )
+    elif args.m_p == 0:
+        sample_marginal = lambda space, size, device=device: space.uniform(
+            size, device=device
+        )
+    else:
+        sample_marginal = (
+            lambda space, size, device=device: space.generalized_normal(
+                eta, args.m_param, p=args.m_p, size=size, device=device
+            )
+        )
+    return sample_marginal
+
+
+def sample_marginal_and_conditional(latent_space, size, device=device):
+
+    z = latent_space.sample_marginal(size=size, device=device)
+    z3 = latent_space.sample_marginal(size=size, device=device)
+    z_tilde = latent_space.sample_conditional(z, size=size, device=device)
+
+    return z, z_tilde, z3
+
+def setup_loss(args):
+    if args.p:
+        """
+        loss = losses.LpSimCLRLoss(
+            p=args.p, tau=args.tau, simclr_compatibility_mode=False, alpha=args.alpha, simclr_denominator=True
+        )
+        """
+        """
+        loss = losses.LpSimCLRLoss(
+            p=args.p, tau=args.tau, simclr_compatibility_mode=True, alpha=args.alpha, simclr_denominator=False
+        )
+        """
+        loss = losses.LpSimCLRLoss(
+            p=args.p, tau=args.tau, simclr_compatibility_mode=True
+        )
+    else:
+        loss = losses.SimCLRLoss(normalize=False, tau=args.tau, alpha=args.alpha)
+    return loss
+
+
+def setup_space(args):
+    if args.space_type == "box":
+        space = spaces.NBoxSpace(args.n, args.box_min, args.box_max)
+    elif args.space_type == "sphere":
+        space = spaces.NSphereSpace(args.n, args.sphere_r)
+    else:
+        space = spaces.NRealSpace(args.n)
+    return space
+
+
+def setup_seed(seed):
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+
+
+def check_bivariate_dependence(ind_test : HSIC, x1, x2):
+    decisions = []
+    var_map = [1, 1, 2, 2]
+    with torch.no_grad():
+        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 1], device="cpu", bonferroni=4).item())
+        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 0], device="cpu", bonferroni=4).item())
+        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 0], device="cpu", bonferroni=4).item())
+        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 1], device="cpu", bonferroni=4).item())
+
+    return decisions, var_map
+
+def unpack_item_list(lst):
+    if isinstance(lst, tuple):
+        lst = list(lst)
+    result_list = []
+    for it in lst:
+        if isinstance(it, (tuple, list)):
+            result_list.append(unpack_item_list(it))
+        else:
+            result_list.append(it.item())
+    return result_list
 
 if __name__ == "__main__":
     main()
