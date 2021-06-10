@@ -16,6 +16,7 @@ from cl_ica import losses
 from cl_ica import spaces
 from hsic import HSIC
 
+from dep_mat import calc_dependency_matrix, dependency_loss
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
 
@@ -188,6 +189,28 @@ def main():
 
         while (global_step <= args.n_steps if test else global_step <= (args.n_steps * args.more_unsupervised)):
             data = sample_marginal_and_conditional(latent_space, size=args.batch_size)
+
+            """Dependency matrix - BEGIN """
+
+            # 1. get a sample from the latents
+            # these are the noise variables in Wieland's notation
+            # todo: probably we can use something from data?
+            z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
+
+            # 2. calculate the signal mixtures (i.e., the observations)
+            obs = g(z_disentanglement)
+
+            # 3. calculate the dependency matrix
+            dep_mat = calc_dependency_matrix(f, obs)
+
+            # 4. calulate the loss for the dependency matrix
+            dep_loss = dependency_loss(dep_mat)
+
+            # todo: FISTA or similar needed
+            # todo: the above par tshould be integrated into the training loop
+            # todo: dep_loss should be added to the loss in train_and_log_losses
+
+            """Dependency matrix - END """
 
             total_loss_value = train_and_log_losses(args, data, individual_losses_values, loss, optimizer,
                                                     total_loss_values, h, test)
