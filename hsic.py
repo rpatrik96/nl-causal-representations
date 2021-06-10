@@ -60,22 +60,39 @@ class HSIC(object):
 
         return torch.median(dists)
 
-    def run_test(self, x: torch.Tensor, y: torch.Tensor, ls_x: float = None, ls_y: float = None) -> bool:
+    def run_test(self, x, y, device: str = 'cpu', ls_x: float = None, ls_y: float = None, bonferroni: int=1) -> bool:
         """
         Runs the HSIC test with randomly permuting the indices of y.
 
         :param x: tensor of the first sample in the form of (num_samples, num_dim)
-        :param y: tensor of the first sample in the form of (num_samples, num_dim)
+        :param y: tensor of the second sample in the form of (num_samples, num_dim)
         :param ls_x: lenght scale of the x RBF kernel
         :param ls_y: lenght scale of the y RBF kernel
+        :param bonferroni: Bonferroni correction coefficient (= #hypotheses)
 
         :return bool whether H0 (x and y are independent) holds
         """
+        if not torch.is_tensor(x):
+            x = torch.from_numpy(x)
+        if not torch.is_tensor(y):
+            y = torch.from_numpy(y)
+            
+        if len(x.shape) == 1:
+            x = x.unsqueeze(1)
+        if len(y.shape) == 1:
+            y = y.unsqueeze(1)
+
+        x = x.to(device).float()
+        y = y.to(device).float()
 
         if ls_x is None:
             ls_x = self.calc_ls(x)
         if ls_y is None:
             ls_y = self.calc_ls(y)
+
+        alpha_corr = self.alpha / bonferroni
+
+        stat_no_perm = self.test_statistics(x, y, ls_x, ls_y)
 
         num_samples = x.shape[0]
 
@@ -87,11 +104,11 @@ class HSIC(object):
             stats.append(self.test_statistics(x, y[idx], ls_x, ls_y))
 
         stats = torch.tensor(stats)
-        crit_val = torch.quantile(stats, 1 - self.alpha)
+        crit_val = torch.quantile(stats, 1 - alpha_corr)
 
-        p = (stats > crit_val).sum() / self.num_permutations
+        p = (stats > stat_no_perm).sum() / self.num_permutations
 
         print(f"p={p:.3f}, critical value={crit_val:.3f}")
-        print(f"The null hypothesis (x and y is independent) is {p < self.alpha}")
+        print(f"The null hypothesis (x and y is independent) is {p > crit_val}")
 
-        return p < self.alpha
+        return p > crit_val
