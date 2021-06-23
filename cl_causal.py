@@ -16,7 +16,7 @@ from cl_ica import losses
 from cl_ica import spaces
 from hsic import HSIC
 
-from dep_mat import calc_dependency_matrix, dependency_loss
+from dep_mat import calc_jacobian, dependency_loss
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
 
@@ -33,6 +33,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Disentanglement with InfoNCE/Contrastive Learning - MLP Mixing"
     )
+    parser.add_argument('--use-dep-mat', action='store_true')
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
     #############################
@@ -152,7 +153,6 @@ def main():
 
     space = setup_space(args)
     loss = setup_loss(args)
-
     ind_test = HSIC(args.num_permutations)
 
     # distributions
@@ -201,8 +201,8 @@ def main():
             obs = g(z_disentanglement)
 
             # 3. calculate the dependency matrix
-            dep_mat = calc_dependency_matrix(f, obs)
-
+            #x \times f(x)
+            dep_mat = torch.inverse(calc_jacobian(f, obs)).abs().max(0)[0]
             # 4. calulate the loss for the dependency matrix
             dep_loss = dependency_loss(dep_mat)
 
@@ -215,19 +215,21 @@ def main():
             total_loss_value = train_and_log_losses(args, data, individual_losses_values, loss, optimizer,
                                                     total_loss_values, h, test)
 
-            linear_disentanglement_score, permutation_disentanglement_score \
+            linear_disentanglement_scores, permutation_disentanglement_scores \
                 = log_independence_and_disentanglement(args,
                                                        causal_check,
                                                        global_step,
                                                        h,
                                                        h_ind,
+                                                       dep_mat,
                                                        ind_test,
                                                        latent_space,
                                                        linear_disentanglement_scores,
                                                        permutation_disentanglement_scores)
 
-            print_statistics(args, causal_check, f, global_step, linear_disentanglement_score,
-                             permutation_disentanglement_score, total_loss_value, total_loss_values)
+            print_statistics(args, causal_check, f, global_step, linear_disentanglement_scores[-1],
+                             permutation_disentanglement_scores[-1], total_loss_value, total_loss_values, 
+                            dep_mat, dep_loss)
 
             global_step += 1
 
@@ -291,7 +293,7 @@ def train_and_log_losses(args, data, individual_losses_values, loss, optimizer, 
     return total_loss_value
 
 
-def log_independence_and_disentanglement(args, causal_check, global_step, h, h_ind, ind_test, latent_space,
+def log_independence_and_disentanglement(args, causal_check, global_step, h, h_ind, dep_mat, ind_test, latent_space,
                                          linear_disentanglement_scores, permutation_disentanglement_scores):
     if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
 
@@ -300,8 +302,13 @@ def log_independence_and_disentanglement(args, causal_check, global_step, h, h_i
 
         linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(
             z_disentanglement, hz_disentanglement)
-        null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), hz_disentanglement)
-
+        if args.use_dep_mat:
+            null_list = [False] * torch.numel(dep_mat)
+            null_list[torch.argmin(dep_mat).item()] = True
+            var_map = [1, 1, 2, 2]
+        else:
+            null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), hz_disentanglement)
+        linear_disentanglement_scores.append(linear_disentanglement_score)
         permutation_disentanglement_scores.append(permutation_disentanglement_score)
 
         if Counter(null_list) == Counter([False, False, False, True]):
@@ -328,7 +335,7 @@ def log_independence_and_disentanglement(args, causal_check, global_step, h, h_i
         linear_disentanglement_scores.append(linear_disentanglement_scores[-1])
         permutation_disentanglement_scores.append(permutation_disentanglement_scores[-1])
         causal_check.append(causal_check[-1])
-    return linear_disentanglement_score, permutation_disentanglement_score
+    return linear_disentanglement_scores, permutation_disentanglement_scores
 
 
 def report_final_disentanglement_scores(args, device, h, latent_space):
@@ -356,7 +363,8 @@ def report_final_disentanglement_scores(args, device, h, latent_space):
 
 
 def print_statistics(args, causal_check, f, global_step, linear_disentanglement_score,
-                     permutation_disentanglement_score, total_loss_value, total_loss_values):
+                     permutation_disentanglement_score, total_loss_value, total_loss_values, 
+                    dep_mat, dep_loss):
     if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
         print(
             f"Step: {global_step} \t",
@@ -366,6 +374,8 @@ def print_statistics(args, causal_check, f, global_step, linear_disentanglement_
             f"Perm. Disentanglement: {permutation_disentanglement_score:.4f}",
             f"Causal. Check: {causal_check[-1]:.4f}",
         )
+        print(dep_mat)
+        print("dep Loss: {}".format(dep_loss))
         if args.normalization == "learnable_sphere":
             print(f"r: {f[-1].r}")
 
@@ -392,10 +402,18 @@ def check_independence_z_gz(args, h_ind, ind_test, latent_space):
     linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(z_disentanglement,
                                                                                                   h_ind(
                                                                                                       z_disentanglement))
-    null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), z_disentanglement)
     print(f"Id. Lin. Disentanglement: {linear_disentanglement_score:.4f}")
     print(f"Id. Perm. Disentanglement: {permutation_disentanglement_score:.4f}")
     print('Run test with ground truth sources')
+    if args.use_dep_mat:
+        #x \times z
+        dep_mat = calc_jacobian(h_ind, z_disentanglement).abs().max(0)[0]
+        print(dep_mat)
+        null_list = [False] * torch.numel(dep_mat)
+        null_list[torch.argmin(dep_mat).item()] = True
+        var_map = [1, 1, 2, 2]
+    else:
+        null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), z_disentanglement)
     if Counter(null_list) == Counter([False, False, False, True]):
 
         print('concluded a causal effect')

@@ -2,6 +2,16 @@ import torch
 import torch.nn as nn
 from torch.autograd.functional import jacobian
 
+def calc_jacobian(encoder:nn.Module, latents:torch.Tensor)->torch.Tensor:
+    #return B x n_out x n_in
+    jacob = []
+    input_vars = latents.clone().requires_grad_(True)
+    output_vars = encoder(input_vars)
+    for i in range(output_vars.shape[1]):
+        jacob.append(torch.autograd.grad(output_vars[:, i:i+1], input_vars, create_graph=True, 
+                                         grad_outputs=torch.ones(output_vars[:,i:i+1].shape).to(output_vars.device))[0])
+    return torch.stack(jacob, 1)
+
 def calc_dependency_matrix(encoder:nn.Module, latents:torch.Tensor)->torch.Tensor:
     """
     Calculates the dependecy matrix, which is
@@ -12,7 +22,6 @@ def calc_dependency_matrix(encoder:nn.Module, latents:torch.Tensor)->torch.Tenso
 
     # calculate the jacobian
     jacob = jacobian(encoder.forward, latents)
-
     # take the absolute value
     return jacob.abs()
 
