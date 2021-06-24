@@ -144,7 +144,7 @@ def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, 
 
     # constants
     mask_numel = dim * (dim - 1) // 2
-    row_idx, col_idx = torch.tril_indices(dim, dim)
+    row_idx, col_idx = torch.tril_indices(dim, dim, -1)
 
     if variant is None:
         max_variants = 2 ** mask_numel
