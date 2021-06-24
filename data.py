@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -53,17 +55,24 @@ class LinearDataset(Dataset):
 
 
 class NonLinearDataset(Dataset):
-    def __init__(self, num_dim: int, num_layers: int, num_samples: int):
+    def __init__(self, num_dim: int, num_layers: int, num_samples: int, variant:int=None):
         """
+        :param variant:
         :param num_dim: number of dimensions
         :param  num_layers: number of layers
         :param num_samples: number of samples
         """
         super().__init__()
 
+        if variant is not None and variant > (max_elem:=num_dim * (num_dim - 1) // 2):
+            raise ValueError(f"{variant=}, should be lower than {max_elem}!")
+
         self.num_dim = num_dim
         self.num_layers = num_layers
         self.num_samples = num_samples
+        self.variant = variant if variant is None else torch.IntTensor([variant])
+
+        self.graph_idx, self.tril_mask = createARmask(self.num_dim, variant)
 
         self.linears = nn.ModuleList([
             nn.Linear(self.num_dim, self.num_dim, bias=False)
@@ -72,7 +81,7 @@ class NonLinearDataset(Dataset):
 
         # make it lower triangular
         for i in range(self.num_layers - 1):
-            self.linears[i].weight.data = torch.tril(self.linears[i].weight.data)
+            self.linears[i].weight.data = self.tril_mask * self.linears[i].weight.data
 
         self.relus = nn.ModuleList([
             nn.LeakyReLU()
@@ -100,3 +109,52 @@ class NonLinearDataset(Dataset):
 
     def __len__(self):
         return self.num_samples
+
+    @property
+    def num_edges(self) -> torch.Tensor:
+        """
+        Number of edges in the AR graph
+        :return: number of edges
+        """
+        return self.tril_mask.count_nonzero()
+
+
+def tensor2bitlist(x: torch.Intensor, bits: int) -> torch.Tensor:
+    """
+    Converts an integer into a list of binary tensors.
+
+    SourceÉ https://stackoverflow.com/a/63546308
+
+    :param x: number to convert into binary
+    :param bits: number of bits to use
+    :return:
+    """
+
+    mask = 2 ** torch.arange(bits - 1, -1, -1).to(x.device, x.dtype)
+    return x.unsqueeze(-1).bitwise_and(mask).ne(0).byte()
+
+
+def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Create a (sparse) autoregressive triangular mask
+
+    :param dim: dimensionality of the matrix
+    :return:
+    """
+
+    # constants
+    mask_numel = dim * (dim - 1) // 2
+    row_idx, col_idx = torch.tril_indices(dim, dim)
+
+    if variant is None:
+        max_variants = 2 ** mask_numel
+        variant = torch.randint(max_variants, (1,)).int()
+
+    # create mask elements
+    mask_elem = tensor2bitlist(variant, mask_numel)
+
+    # fill the mask
+    mask = torch.zeros((dim, dim))
+    mask[row_idx, col_idx] = mask_elem
+
+    return variant, mask
