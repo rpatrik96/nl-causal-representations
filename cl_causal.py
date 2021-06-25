@@ -203,11 +203,11 @@ def main():
             # 3. calculate the dependency matrix
             #x \times f(x)
             dep_mat = torch.inverse(calc_jacobian(f, obs)).abs().max(0)[0]
-            # 4. calulate the loss for the dependency matrix
+            # 4. calculate the loss for the dependency matrix
             dep_loss = dependency_loss(dep_mat)
 
             # todo: FISTA or similar needed
-            # todo: the above par tshould be integrated into the training loop
+            # todo: the above part should be integrated into the training loop
             # todo: dep_loss should be added to the loss in train_and_log_losses
 
             """Dependency matrix - END """
