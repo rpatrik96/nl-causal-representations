@@ -8,6 +8,9 @@ from typing import Union
 from typing_extensions import Literal
 from cl_ica import encoders
 
+from typing import Tuple
+import sys
+
 
 __all__ = ["construct_invertible_flow", "construct_invertible_mlp"]
 
@@ -25,7 +28,9 @@ def construct_invertible_mlp(
         Literal["smooth_leaky_relu"],
         Literal["softplus"],
     ] = "leaky_relu",
-    lower_triangular = True
+    lower_triangular = True,
+    sparsity = True,
+    variant = None
 ):
     """
     Create an (approximately) invertible mixing network based on an MLP.
@@ -103,7 +108,11 @@ def construct_invertible_mlp(
             elif weight_matrix_init == "rvs":
                 weight_matrix = ortho_group.rvs(n)
             if lower_triangular:
-                weight_matrix = np.tril(weight_matrix)
+                if sparsity:
+                    _, tril_mask = createARmask(n, variant)
+                    weight_matrix = tril_mask * weight_matrix
+                else:
+                    weight_matrix = np.tril(weight_matrix)
             lin_layer.weight.data = torch.tensor(weight_matrix, dtype=torch.float32)
         elif weight_matrix_init == "expand":
             pass
@@ -122,6 +131,45 @@ def construct_invertible_mlp(
         p.requires_grad = False
 
     return mixing_net
+
+def tensor2bitlist(x: torch.IntTensor, bits: int) -> torch.Tensor:
+    """
+    Converts an integer into a list of binary tensors.
+
+    Source https://stackoverflow.com/a/63546308
+
+    :param x: number to convert into binary
+    :param bits: number of bits to use
+    :return:
+    """
+
+    mask = 2 ** torch.arange(bits - 1, -1, -1).to(x.device, x.dtype)
+    return x.unsqueeze(-1).bitwise_and(mask).ne(0).byte()
+
+def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Create a (sparse) autoregressive triangular mask
+
+    :param dim: dimensionality of the matrix
+    :return:
+    """
+
+    # constants
+    mask_numel = dim * (dim - 1) // 2
+    row_idx, col_idx = torch.tril_indices(dim, dim, -1)
+
+    if variant is None:
+        max_variants = 2 ** mask_numel
+        variant = torch.randint(max_variants, (1,)).int()
+
+    # create mask elements
+    mask_elem = tensor2bitlist(variant, mask_numel)
+
+    # fill the mask
+    mask = torch.eye(dim)
+    mask[row_idx, col_idx] = mask_elem.float()
+
+    return variant, mask
 
 
 def construct_invertible_flow(
