@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.autograd.functional import jacobian
 
 def calc_jacobian(encoder:nn.Module, latents:torch.Tensor)->torch.Tensor:
+    # calculate the jacobian
     #return B x n_out x n_in
     jacob = []
     input_vars = latents.clone().requires_grad_(True)

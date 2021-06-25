@@ -33,6 +33,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Disentanglement with InfoNCE/Contrastive Learning - MLP Mixing"
     )
+    parser.add_argument('--variant', type=int, default=0)
     parser.add_argument('--use-dep-mat', action='store_true')
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
@@ -202,7 +203,7 @@ def main():
 
             # 3. calculate the dependency matrix
             #x \times f(x)
-            dep_mat = torch.inverse(calc_jacobian(f, obs)).abs().max(0)[0]
+            dep_mat = calc_jacobian(f, obs).abs().mean(0).T
             # 4. calulate the loss for the dependency matrix
             dep_loss = dependency_loss(dep_mat)
 
@@ -310,7 +311,7 @@ def log_independence_and_disentanglement(args, causal_check, global_step, h, h_i
             null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), hz_disentanglement)
         linear_disentanglement_scores.append(linear_disentanglement_score)
         permutation_disentanglement_scores.append(permutation_disentanglement_score)
-
+        ######Note this is specific to a dense 2x2 triangular matrix!######
         if Counter(null_list) == Counter([False, False, False, True]):
             causal_check.append(1.)
             print('concluded a causal effect')
@@ -407,13 +408,14 @@ def check_independence_z_gz(args, h_ind, ind_test, latent_space):
     print('Run test with ground truth sources')
     if args.use_dep_mat:
         #x \times z
-        dep_mat = calc_jacobian(h_ind, z_disentanglement).abs().max(0)[0]
+        dep_mat = calc_jacobian(h_ind, z_disentanglement).abs().mean(0)
         print(dep_mat)
         null_list = [False] * torch.numel(dep_mat)
         null_list[torch.argmin(dep_mat).item()] = True
         var_map = [1, 1, 2, 2]
     else:
         null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), z_disentanglement)
+    ######Note this is specific to a dense 2x2 triangular matrix!######
     if Counter(null_list) == Counter([False, False, False, True]):
 
         print('concluded a causal effect')
@@ -487,6 +489,7 @@ def configure_output_normalization(args):
 
 def setup_g(args, device):
     # create MLP
+    ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
     g = invertible_network_utils.construct_invertible_mlp(
         n=args.n,
         n_layers=args.n_mixing_layer,
@@ -494,7 +497,9 @@ def setup_g(args, device):
         cond_thresh_ratio=0.001,
         n_iter_cond_thresh=25000,
         lower_triangular=True,
-        weight_matrix_init='rvs'
+        weight_matrix_init='rvs',
+        sparsity=True,
+        variant=torch.from_numpy(np.array([args.variant]))
     )
 
     # allocate to device
