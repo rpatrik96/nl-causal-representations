@@ -154,7 +154,7 @@ def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, 
     mask_elem = tensor2bitlist(variant, mask_numel)
 
     # fill the mask
-    mask = torch.zeros((dim, dim))
+    mask = torch.eye(dim)
     mask[row_idx, col_idx] = mask_elem
 
     return variant, mask
