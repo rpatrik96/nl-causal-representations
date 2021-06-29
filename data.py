@@ -63,9 +63,10 @@ class NonLinearDataset(Dataset):
         :param num_samples: number of samples
         """
         super().__init__()
-
+        """
         if variant is not None and variant > (max_elem:=num_dim * (num_dim - 1) // 2):
             raise ValueError(f"{variant=}, should be lower than {max_elem}!")
+        """
 
         self.num_dim = num_dim
         self.num_layers = num_layers
@@ -119,11 +120,11 @@ class NonLinearDataset(Dataset):
         return self.tril_mask.count_nonzero()
 
 
-def tensor2bitlist(x: torch.Intensor, bits: int) -> torch.Tensor:
+def tensor2bitlist(x: torch.IntTensor, bits: int) -> torch.Tensor:
     """
     Converts an integer into a list of binary tensors.
 
-    SourceÉ https://stackoverflow.com/a/63546308
+    Source https://stackoverflow.com/a/63546308
 
     :param x: number to convert into binary
     :param bits: number of bits to use
@@ -155,6 +156,6 @@ def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, 
 
     # fill the mask
     mask = torch.eye(dim)
-    mask[row_idx, col_idx] = mask_elem
+    mask[row_idx, col_idx] = mask_elem.float()
 
     return variant, mask
