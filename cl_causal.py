@@ -611,6 +611,29 @@ def setup_seed(seed):
         torch.manual_seed(seed)
 
 
+
+def check_multivariate_dependence(ind_test: HSIC, x1:torch.Tensor, x2:torch.Tensor)->torch.Tensor:
+    """
+    Carries out HSIC for the multivariate case, all pairs are tested
+    :param ind_test: the HSIC instance
+    :param x1: tensor of the first batch of variables in the shape of (num_elem, num_dim)
+    :param x2: tensor of the second batch of variables in the shape of (num_elem, num_dim)
+    :return: the adjacency matrix
+    """
+    num_dim = x1.shape[-1]
+    max_edge_num = num_dim**2
+    adjacency_matrix = torch.zeros(num_dim, num_dim).bool()
+
+    with torch.no_grad():
+        for i in range(num_dim):
+            for j in range(num_dim):
+                adjacency_matrix[i,j] = ind_test.run_test(x1[:, i], x2[:, j], device="cpu", bonferroni=max_edge_num).item()
+
+    return adjacency_matrix
+
+
+
+
 def check_bivariate_dependence(ind_test: HSIC, x1, x2):
     decisions = []
     var_map = [1, 1, 2, 2]
