@@ -34,7 +34,8 @@ def parse_args():
         description="Disentanglement with InfoNCE/Contrastive Learning - MLP Mixing"
     )
     parser.add_argument('--variant', type=int, default=0)
-    parser.add_argument('--use-dep-mat', action='store_true')
+    parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
+    parser.add_argument('--preserve-vol', action='store_true', help="Normalize the dependency matrix to have determinant=1")
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
     #############################
@@ -203,7 +204,7 @@ def main():
 
             # 3. calculate the dependency matrix
             #x \times f(x)
-            dep_mat = calc_jacobian(f, obs).abs().mean(0).T
+            dep_mat = calc_jacobian(f, obs, normalize=args.preserve_vol).abs().mean(0).T
             # 4. calulate the loss for the dependency matrix
             dep_loss = dependency_loss(dep_mat)
 
@@ -408,7 +409,7 @@ def check_independence_z_gz(args, h_ind, ind_test, latent_space):
     print('Run test with ground truth sources')
     if args.use_dep_mat:
         #x \times z
-        dep_mat = calc_jacobian(h_ind, z_disentanglement).abs().mean(0)
+        dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=args.preserve_vol).abs().mean(0)
         print(dep_mat)
         null_list = [False] * torch.numel(dep_mat)
         null_list[torch.argmin(dep_mat).item()] = True

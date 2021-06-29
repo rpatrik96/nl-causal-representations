@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd.functional import jacobian
 
-def calc_jacobian(encoder:nn.Module, latents:torch.Tensor)->torch.Tensor:
+def calc_jacobian(encoder:nn.Module, latents:torch.Tensor, normalize:bool=False)->torch.Tensor:
     # calculate the jacobian
     #return B x n_out x n_in
     jacob = []
@@ -11,7 +11,15 @@ def calc_jacobian(encoder:nn.Module, latents:torch.Tensor)->torch.Tensor:
     for i in range(output_vars.shape[1]):
         jacob.append(torch.autograd.grad(output_vars[:, i:i+1], input_vars, create_graph=True, 
                                          grad_outputs=torch.ones(output_vars[:,i:i+1].shape).to(output_vars.device))[0])
-    return torch.stack(jacob, 1)
+                            
+    jacobian = torch.stack(jacob, 1)
+
+    # make the Jacobian volume preserving
+    # print(jacobian.shape)
+    if normalize is True:
+        jacobian *= jacobian.det().abs().pow(1/jacobian.shape[0]).reshape(-1,1,1)
+
+    return jacobian
 
 def calc_dependency_matrix(encoder:nn.Module, latents:torch.Tensor)->torch.Tensor:
     """
