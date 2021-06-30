@@ -1,6 +1,3 @@
-
-import os
-import random
 import sys
 from collections import Counter
 
@@ -21,24 +18,16 @@ from args import parse_args
 from dep_mat import calc_jacobian, dependency_loss
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
-
-use_cuda = torch.cuda.is_available()
-if use_cuda:
-    device = "cuda"
-else:
-    device = "cpu"
-
-print("device:", device)
+from prob_utils import sample_from_marginal, sample_marginal_and_conditional, sample_from_conditional
+from utils import unpack_item_list, setup_seed, save_state_dict, print_statistics, set_learning_mode, set_device
 
 
 def main():
     # setup
     args = parse_args()
 
-    global device
-    if args.no_cuda:
-        device = "cpu"
-        print("Using cpu")
+
+    device = set_device(args)
 
     setup_seed(args.seed)
 
@@ -104,7 +93,7 @@ def main():
             """Dependency matrix - END """
 
             total_loss_value = train_and_log_losses(args, data, individual_losses_values, loss, optimizer,
-                                                    total_loss_values, h, test)
+                                                    total_loss_values, h, test, device)
 
             linear_disentanglement_scores, permutation_disentanglement_scores \
                 = log_independence_and_disentanglement(args,
@@ -119,8 +108,8 @@ def main():
                                                        permutation_disentanglement_scores)
 
             print_statistics(args, causal_check, f, global_step, linear_disentanglement_scores[-1],
-                             permutation_disentanglement_scores[-1], total_loss_value, total_loss_values, 
-                            dep_mat, dep_loss)
+                             permutation_disentanglement_scores[-1], total_loss_value, total_loss_values,
+                             dep_mat, dep_loss)
 
             global_step += 1
 
@@ -130,7 +119,7 @@ def main():
     report_final_disentanglement_scores(args, device, h, latent_space)
 
 
-def train_step(args, data, loss, optimizer, h, test):
+def train_step(args, data, loss, optimizer, h, test, device):
     z1, z2_con_z1, z3 = data
     z1 = z1.to(device)
     z2_con_z1 = z2_con_z1.to(device)
@@ -173,12 +162,14 @@ def train_step(args, data, loss, optimizer, h, test):
     return total_loss_value.item(), unpack_item_list(losses_value)
 
 
-def train_and_log_losses(args, data, individual_losses_values, loss, optimizer, total_loss_values, h, test):
+def train_and_log_losses(args, data, individual_losses_values, loss, optimizer, total_loss_values, h, test, device):
     if args.lr != 0:
-        total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test)
+        total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test,
+                                                    device=device)
     else:
         with torch.no_grad():
-            total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test)
+            total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test,
+                                                        device=device)
     total_loss_values.append(total_loss_value)
     individual_losses_values.append(losses_value)
     return total_loss_value
@@ -253,41 +244,6 @@ def report_final_disentanglement_scores(args, device, h, latent_space):
     print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
 
-def print_statistics(args, causal_check, f, global_step, linear_disentanglement_score,
-                     permutation_disentanglement_score, total_loss_value, total_loss_values, 
-                    dep_mat, dep_loss):
-    if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
-        print(
-            f"Step: {global_step} \t",
-            f"Loss: {total_loss_value:.4f} \t",
-            f"<Loss>: {np.mean(np.array(total_loss_values[-args.n_log_steps:])):.4f} \t",
-            f"Lin. Disentanglement: {linear_disentanglement_score:.4f} \t",
-            f"Perm. Disentanglement: {permutation_disentanglement_score:.4f}",
-            f"Causal. Check: {causal_check[-1]:.4f}",
-        )
-        print(dep_mat)
-        print("dep Loss: {}".format(dep_loss))
-        if args.normalization == "learnable_sphere":
-            print(f"r: {f[-1].r}")
-
-
-def set_learning_mode(args):
-    if args.mode == 'unsupervised':
-        test_list = [False]
-    elif args.mode == 'supervised':
-        test_list = [True]
-    else:
-        test_list = [True, False]
-    return test_list
-
-
-def save_state_dict(args, model, pth="g.pth"):
-    if args.save_dir:
-        if not os.path.exists(args.save_dir):
-            os.makedirs(args.save_dir)
-        torch.save(model.state_dict(), os.path.join(args.save_dir, pth))
-
-
 def check_independence_z_gz(args, h_ind, ind_test, latent_space):
     z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
     linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(z_disentanglement,
@@ -352,7 +308,7 @@ def setup_f(args, device):
     f = f.to(device)
     if args.load_f is not None:
         f.load_state_dict(torch.load(args.load_f, map_location=device))
-    print("f: ", f)
+    print(f"{f=}")
     return f
 
 
@@ -406,64 +362,6 @@ def setup_g(args, device):
     return g
 
 
-def sample_from_conditional(args, device):
-    if args.c_p == 1:
-        sample_conditional = lambda space, z, size, device=device: space.laplace(
-            z, args.c_param, size, device
-        )
-    elif args.c_p == 2:
-        sample_conditional = lambda space, z, size, device=device: space.normal(
-            z, args.c_param, size, device
-        )
-    elif args.c_p == 0:
-        sample_conditional = (
-            lambda space, z, size, device=device: space.von_mises_fisher(
-                z, args.c_param, size, device,
-            )
-        )
-    else:
-        sample_conditional = (
-            lambda space, z, size, device=device: space.generalized_normal(
-                z, args.c_param, p=args.c_p, size=size, device=device
-            )
-        )
-    return sample_conditional
-
-
-def sample_from_marginal(args, device):
-    eta = torch.zeros(args.n)
-    if args.space_type == "sphere":
-        eta[0] = args.sphere_r
-
-    if args.m_p == 1:
-        sample_marginal = lambda space, size, device=device: space.laplace(
-            eta, args.m_param, size, device
-        )
-    elif args.m_p == 2:
-        sample_marginal = lambda space, size, device=device: space.normal(
-            eta, args.m_param, size, device
-        )
-    elif args.m_p == 0:
-        sample_marginal = lambda space, size, device=device: space.uniform(
-            size, device=device
-        )
-    else:
-        sample_marginal = (
-            lambda space, size, device=device: space.generalized_normal(
-                eta, args.m_param, p=args.m_p, size=size, device=device
-            )
-        )
-    return sample_marginal
-
-
-def sample_marginal_and_conditional(latent_space, size, device=device):
-    z = latent_space.sample_marginal(size=size, device=device)
-    z3 = latent_space.sample_marginal(size=size, device=device)
-    z_tilde = latent_space.sample_conditional(z, size=size, device=device)
-
-    return z, z_tilde, z3
-
-
 def setup_loss(args):
     if args.p:
         """
@@ -492,14 +390,6 @@ def setup_space(args):
     else:
         space = spaces.NRealSpace(args.n)
     return space
-
-
-def setup_seed(seed):
-    if seed is not None:
-        np.random.seed(seed)
-        random.seed(seed)
-        torch.manual_seed(seed)
-
 
 
 def check_multivariate_dependence(ind_test: HSIC, x1:torch.Tensor, x2:torch.Tensor)->torch.Tensor:
@@ -536,17 +426,6 @@ def check_bivariate_dependence(ind_test: HSIC, x1, x2):
     return decisions, var_map
 
 
-def unpack_item_list(lst):
-    if isinstance(lst, tuple):
-        lst = list(lst)
-    result_list = []
-    for it in lst:
-        if isinstance(it, (tuple, list)):
-            result_list.append(unpack_item_list(it))
-        else:
-            result_list.append(it.item())
-    return result_list
-
-
 if __name__ == "__main__":
+
     main()

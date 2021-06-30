@@ -1,22 +1,71 @@
+import os
+import random
+
+import numpy as np
 import torch
 
 
-def laplace_log_cdf(x: torch.Tensor, signal_model: torch.distributions.laplace.Laplace):
-    """
-    Log cdf of the Laplace distribution (numerically stable).
-    Source: https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/internal/special_math.py#L281
+def unpack_item_list(lst):
+    if isinstance(lst, tuple):
+        lst = list(lst)
+    result_list = []
+    for it in lst:
+        if isinstance(it, (tuple, list)):
+            result_list.append(unpack_item_list(it))
+        else:
+            result_list.append(it.item())
+    return result_list
 
-    :param x: tensor to be transformed
-    :param signal_model: Laplace distribution from torch.distributions.
-    """
 
-    # transform with location and scale
-    x_tr = (x - signal_model.mean) / signal_model.scale
+def setup_seed(seed):
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
 
-    # x < 0
-    neg_res = torch.log(torch.tensor(0.5)) + x_tr
 
-    # x >= 0
-    pos_res = torch.log1p(-.5 * (-x_tr.abs()).exp())
+def save_state_dict(args, model, pth="g.pth"):
+    if args.save_dir:
+        if not os.path.exists(args.save_dir):
+            os.makedirs(args.save_dir)
+        torch.save(model.state_dict(), os.path.join(args.save_dir, pth))
 
-    return torch.where(x < signal_model.mean, neg_res, pos_res)
+
+def print_statistics(args, causal_check, f, global_step, linear_disentanglement_score,
+                     permutation_disentanglement_score, total_loss_value, total_loss_values,
+                    dep_mat, dep_loss):
+    if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
+        print(
+            f"Step: {global_step} \t",
+            f"Loss: {total_loss_value:.4f} \t",
+            f"<Loss>: {np.mean(np.array(total_loss_values[-args.n_log_steps:])):.4f} \t",
+            f"Lin. Disentanglement: {linear_disentanglement_score:.4f} \t",
+            f"Perm. Disentanglement: {permutation_disentanglement_score:.4f}",
+            f"Causal. Check: {causal_check[-1]:.4f}",
+        )
+        print(dep_mat)
+        print("dep Loss: {}".format(dep_loss))
+        if args.normalization == "learnable_sphere":
+            print(f"r: {f[-1].r}")
+
+
+def set_learning_mode(args):
+    if args.mode == 'unsupervised':
+        test_list = [False]
+    elif args.mode == 'supervised':
+        test_list = [True]
+    else:
+        test_list = [True, False]
+    return test_list
+
+
+def set_device(args):
+
+    if not torch.cuda.is_available() or args.no_cuda is True:
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    print(f"{device=}")
+
+    return device
