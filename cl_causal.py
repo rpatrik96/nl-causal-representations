@@ -68,7 +68,7 @@ def main():
         global_step = len(total_loss_values) + 1
 
         while (global_step <= args.n_steps if test else global_step <= (args.n_steps * args.more_unsupervised)):
-            data = sample_marginal_and_conditional(latent_space, size=args.batch_size)
+            data = sample_marginal_and_conditional(latent_space, size=args.batch_size,device=device)
 
             """Dependency matrix - BEGIN """
 

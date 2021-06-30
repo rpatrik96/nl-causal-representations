@@ -28,7 +28,7 @@ def sample_from_marginal(args, device):
     return sample_marginal
 
 
-def sample_marginal_and_conditional(latent_space, size, device=device):
+def sample_marginal_and_conditional(latent_space, size, device):
     z = latent_space.sample_marginal(size=size, device=device)
     z3 = latent_space.sample_marginal(size=size, device=device)
     z_tilde = latent_space.sample_conditional(z, size=size, device=device)

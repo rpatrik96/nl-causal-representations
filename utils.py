@@ -61,9 +61,9 @@ def set_learning_mode(args):
 
 def set_device(args):
 
+
+    device = "cuda"
     if not torch.cuda.is_available() or args.no_cuda is True:
-        device = "cuda"
-    else:
         device = "cpu"
 
     print(f"{device=}")
