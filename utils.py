@@ -59,7 +59,7 @@ def set_learning_mode(args):
     return test_list
 
 
-def set_device(args):
+def set_device(args)-> None:
 
 
     device = "cuda"
@@ -68,4 +68,4 @@ def set_device(args):
 
     print(f"{device=}")
 
-    return device
+    args.device = device

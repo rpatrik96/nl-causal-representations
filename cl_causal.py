@@ -27,7 +27,7 @@ def main():
     args = parse_args()
 
 
-    device = set_device(args)
+    set_device(args)
 
     setup_seed(args.seed)
 
@@ -36,12 +36,12 @@ def main():
     ind_test = HSIC(args.num_permutations)
 
     # distributions
-    sample_marginal = sample_from_marginal(args, device)
-    sample_conditional = sample_from_conditional(args, device)
+    sample_marginal = sample_from_marginal(args)
+    sample_conditional = sample_from_conditional(args)
 
     latent_space = latent_spaces.LatentSpace(space=space, sample_marginal=sample_marginal,
                                              sample_conditional=sample_conditional, )
-    g = setup_g(args, device)
+    g = setup_g(args)
 
     h_ind = lambda z: g(z)
 
@@ -54,7 +54,7 @@ def main():
     for test in test_list:
         print("supervised test: {}".format(test))
 
-        f = setup_f(args, device)
+        f = setup_f(args)
         optimizer = torch.optim.Adam(f.parameters(), lr=args.lr)
         h = (lambda z: f(g(z))) if not args.identity_mixing_and_solution else (lambda z: z)
 
@@ -68,7 +68,7 @@ def main():
         global_step = len(total_loss_values) + 1
 
         while (global_step <= args.n_steps if test else global_step <= (args.n_steps * args.more_unsupervised)):
-            data = sample_marginal_and_conditional(latent_space, size=args.batch_size,device=device)
+            data = sample_marginal_and_conditional(latent_space, size=args.batch_size,device=args.device)
 
             """Dependency matrix - BEGIN """
 
@@ -93,7 +93,7 @@ def main():
             """Dependency matrix - END """
 
             total_loss_value = train_and_log_losses(args, data, individual_losses_values, loss, optimizer,
-                                                    total_loss_values, h, test, device)
+                                                    total_loss_values, h, test)
 
             linear_disentanglement_scores, permutation_disentanglement_scores \
                 = log_independence_and_disentanglement(args,
@@ -116,10 +116,11 @@ def main():
         save_state_dict(args, f, "{}_f.pth".format("sup" if test else "unsup"))
         torch.cuda.empty_cache()
 
-    report_final_disentanglement_scores(args, device, h, latent_space)
+    report_final_disentanglement_scores(args, h, latent_space)
 
 
-def train_step(args, data, loss, optimizer, h, test, device):
+def train_step(args, data, loss, optimizer, h, test):
+    device = args.device
     z1, z2_con_z1, z3 = data
     z1 = z1.to(device)
     z2_con_z1 = z2_con_z1.to(device)
@@ -162,14 +163,12 @@ def train_step(args, data, loss, optimizer, h, test, device):
     return total_loss_value.item(), unpack_item_list(losses_value)
 
 
-def train_and_log_losses(args, data, individual_losses_values, loss, optimizer, total_loss_values, h, test, device):
+def train_and_log_losses(args, data, individual_losses_values, loss, optimizer, total_loss_values, h, test):
     if args.lr != 0:
-        total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test,
-                                                    device=device)
+        total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test)
     else:
         with torch.no_grad():
-            total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test,
-                                                        device=device)
+            total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test)
     total_loss_values.append(total_loss_value)
     individual_losses_values.append(losses_value)
     return total_loss_value
@@ -220,13 +219,14 @@ def log_independence_and_disentanglement(args, causal_check, global_step, h, h_i
     return linear_disentanglement_scores, permutation_disentanglement_scores
 
 
-def report_final_disentanglement_scores(args, device, h, latent_space):
+def report_final_disentanglement_scores(args, h, latent_space):
+    device = args.device
     final_linear_scores = []
     final_perm_scores = []
 
     with torch.no_grad():
         for i in range(args.num_eval_batches):
-            data = sample_marginal_and_conditional(latent_space, args.batch_size)
+            data = sample_marginal_and_conditional(latent_space, args.batch_size, device)
             z1, z2_con_z1, z3 = data
             z1 = z1.to(device)
             z3 = z3.to(device)
@@ -288,7 +288,7 @@ def calc_disentanglement_scores(z, hz):
     return linear_disentanglement_score, permutation_disentanglement_score
 
 
-def setup_f(args, device):
+def setup_f(args):
     output_normalization, output_normalization_kwargs = configure_output_normalization(args)
 
     f = encoders.get_mlp(
@@ -305,9 +305,9 @@ def setup_f(args, device):
         output_normalization=output_normalization,
         output_normalization_kwargs=output_normalization_kwargs
     )
-    f = f.to(device)
+    f = f.to(args.device)
     if args.load_f is not None:
-        f.load_state_dict(torch.load(args.load_f, map_location=device))
+        f.load_state_dict(torch.load(args.load_f, map_location=args.device))
     print(f"{f=}")
     return f
 
@@ -333,7 +333,7 @@ def configure_output_normalization(args):
     return output_normalization, output_normalization_kwargs
 
 
-def setup_g(args, device):
+def setup_g(args):
     # create MLP
     ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
     g = invertible_network_utils.construct_invertible_mlp(
@@ -349,11 +349,11 @@ def setup_g(args, device):
     )
 
     # allocate to device
-    g = g.to(device)
+    g = g.to(args.device)
 
     # load if needed
     if args.load_g is not None:
-        g.load_state_dict(torch.load(args.load_g, map_location=device))
+        g.load_state_dict(torch.load(args.load_g, map_location=args.device))
 
     # make it non-trainable
     for p in g.parameters():
