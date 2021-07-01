@@ -6,11 +6,8 @@ import torch
 import torch.nn.functional as F
 
 from cl_ica import disentanglement_utils
-from cl_ica import encoders
-from cl_ica import invertible_network_utils
 from cl_ica import latent_spaces
-from cl_ica import losses
-from cl_ica import spaces
+from model import setup_f, setup_g, setup_loss, setup_space, ContrastiveLearningModel
 from hsic import HSIC
 
 from args import parse_args
@@ -28,22 +25,24 @@ def main():
 
 
     set_device(args)
-
     setup_seed(args.seed)
 
-    space = setup_space(args)
-    loss = setup_loss(args)
+    model = ContrastiveLearningModel(args)
+
+    g = model.decoder
+    h_ind = lambda z: g(z)
+
+
+
     ind_test = HSIC(args.num_permutations)
 
     # distributions
     sample_marginal = sample_from_marginal(args)
     sample_conditional = sample_from_conditional(args)
 
-    latent_space = latent_spaces.LatentSpace(space=space, sample_marginal=sample_marginal,
+    latent_space = latent_spaces.LatentSpace(space=(model.space), sample_marginal=sample_marginal,
                                              sample_conditional=sample_conditional, )
-    g = setup_g(args)
 
-    h_ind = lambda z: g(z)
 
     check_independence_z_gz(args, h_ind, ind_test, latent_space)
 
@@ -54,7 +53,7 @@ def main():
     for test in test_list:
         print("supervised test: {}".format(test))
 
-        f = setup_f(args)
+        f = model.encoder
         optimizer = torch.optim.Adam(f.parameters(), lr=args.lr)
         h = (lambda z: f(g(z))) if not args.identity_mixing_and_solution else (lambda z: z)
 
@@ -92,7 +91,7 @@ def main():
 
             """Dependency matrix - END """
 
-            total_loss_value = train_and_log_losses(args, data, individual_losses_values, loss, optimizer,
+            total_loss_value = train_and_log_losses(args, data, individual_losses_values, model.loss, optimizer,
                                                     total_loss_values, h, test)
 
             linear_disentanglement_scores, permutation_disentanglement_scores \
@@ -115,6 +114,8 @@ def main():
 
         save_state_dict(args, f, "{}_f.pth".format("sup" if test else "unsup"))
         torch.cuda.empty_cache()
+
+        model.reset_encoder()
 
     report_final_disentanglement_scores(args, h, latent_space)
 
@@ -286,110 +287,6 @@ def calc_disentanglement_scores(z, hz):
     )
 
     return linear_disentanglement_score, permutation_disentanglement_score
-
-
-def setup_f(args):
-    output_normalization, output_normalization_kwargs = configure_output_normalization(args)
-
-    f = encoders.get_mlp(
-        n_in=args.n,
-        n_out=args.n,
-        layers=[
-            args.n * 10,
-            args.n * 50,
-            args.n * 50,
-            args.n * 50,
-            args.n * 50,
-            args.n * 10,
-        ],
-        output_normalization=output_normalization,
-        output_normalization_kwargs=output_normalization_kwargs
-    )
-    f = f.to(args.device)
-    if args.load_f is not None:
-        f.load_state_dict(torch.load(args.load_f, map_location=args.device))
-    print(f"{f=}")
-    return f
-
-
-def configure_output_normalization(args):
-    output_normalization = None
-    output_normalization_kwargs = None
-    if args.normalization == "learnable_box":
-        output_normalization = "learnable_box"
-    elif args.normalization == "fixed_box":
-        output_normalization = "fixed_box"
-        output_normalization_kwargs = dict(init_abs_bound=args.box_max - args.box_min)
-    elif args.normalization == "learnable_sphere":
-        output_normalization = "learnable_sphere"
-    elif args.normalization == "fixed_sphere":
-        output_normalization = "fixed_sphere"
-        output_normalization_kwargs = dict(init_r=args.sphere_r)
-    elif args.normalization == "":
-        print("Using no output normalization")
-        output_normalization = None
-    else:
-        raise ValueError("Invalid output normalization:", args.normalization)
-    return output_normalization, output_normalization_kwargs
-
-
-def setup_g(args):
-    # create MLP
-    ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
-    g = invertible_network_utils.construct_invertible_mlp(
-        n=args.n,
-        n_layers=args.n_mixing_layer,
-        act_fct=args.act_fct,
-        cond_thresh_ratio=0.001,
-        n_iter_cond_thresh=25000,
-        lower_triangular=True,
-        weight_matrix_init='rvs',
-        sparsity=True,
-        variant=torch.from_numpy(np.array([args.variant]))
-    )
-
-    # allocate to device
-    g = g.to(args.device)
-
-    # load if needed
-    if args.load_g is not None:
-        g.load_state_dict(torch.load(args.load_g, map_location=args.device))
-
-    # make it non-trainable
-    for p in g.parameters():
-        p.requires_grad = False
-
-    return g
-
-
-def setup_loss(args):
-    if args.p:
-        """
-        loss = losses.LpSimCLRLoss(
-            p=args.p, tau=args.tau, simclr_compatibility_mode=False, alpha=args.alpha, simclr_denominator=True
-        )
-        """
-        """
-        loss = losses.LpSimCLRLoss(
-            p=args.p, tau=args.tau, simclr_compatibility_mode=True, alpha=args.alpha, simclr_denominator=False
-        )
-        """
-        loss = losses.LpSimCLRLoss(
-            p=args.p, tau=args.tau, simclr_compatibility_mode=True
-        )
-    else:
-        loss = losses.SimCLRLoss(normalize=False, tau=args.tau, alpha=args.alpha)
-    return loss
-
-
-def setup_space(args):
-    if args.space_type == "box":
-        space = spaces.NBoxSpace(args.n, args.box_min, args.box_max)
-    elif args.space_type == "sphere":
-        space = spaces.NSphereSpace(args.n, args.sphere_r)
-    else:
-        space = spaces.NRealSpace(args.n)
-    return space
 
 
 def check_multivariate_dependence(ind_test: HSIC, x1:torch.Tensor, x2:torch.Tensor)->torch.Tensor:
