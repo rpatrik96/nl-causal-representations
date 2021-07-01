@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from cl_ica import disentanglement_utils
 from cl_ica import latent_spaces
-from model import setup_f, setup_g, setup_loss, setup_space, ContrastiveLearningModel
+from model import ContrastiveLearningModel
 from hsic import HSIC
 
 from args import parse_args
