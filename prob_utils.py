@@ -2,7 +2,7 @@ import torch
 
 
 
-def sample_from_marginal(args):
+def setup_marginal(args):
 
     device = args.device
     eta = torch.zeros(args.n)
@@ -38,7 +38,7 @@ def sample_marginal_and_conditional(latent_space, size, device):
     return z, z_tilde, z3
 
 
-def sample_from_conditional(args):
+def setup_conditional(args):
     device = args.device
     if args.c_p == 1:
         sample_conditional = lambda space, z, size, device=device: space.laplace(

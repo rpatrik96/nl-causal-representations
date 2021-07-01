@@ -5,24 +5,21 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from args import parse_args
 from cl_ica import disentanglement_utils
 from cl_ica import latent_spaces
-from model import ContrastiveLearningModel
-from hsic import HSIC
-
-from args import parse_args
-
 from dep_mat import calc_jacobian, dependency_loss
+from hsic import HSIC
+from model import ContrastiveLearningModel
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
-from prob_utils import sample_from_marginal, sample_marginal_and_conditional, sample_from_conditional
+from prob_utils import setup_marginal, sample_marginal_and_conditional, setup_conditional
 from utils import unpack_item_list, setup_seed, save_state_dict, print_statistics, set_learning_mode, set_device
 
 
 def main():
     # setup
     args = parse_args()
-
 
     set_device(args)
     setup_seed(args.seed)
@@ -32,17 +29,11 @@ def main():
     g = model.decoder
     h_ind = lambda z: g(z)
 
-
-
     ind_test = HSIC(args.num_permutations)
 
     # distributions
-    sample_marginal = sample_from_marginal(args)
-    sample_conditional = sample_from_conditional(args)
-
-    latent_space = latent_spaces.LatentSpace(space=(model.space), sample_marginal=sample_marginal,
-                                             sample_conditional=sample_conditional, )
-
+    latent_space = latent_spaces.LatentSpace(space=(model.space), sample_marginal=(setup_marginal(args)),
+                                             sample_conditional=(setup_conditional(args)), )
 
     check_independence_z_gz(args, h_ind, ind_test, latent_space)
 
@@ -67,7 +58,7 @@ def main():
         global_step = len(total_loss_values) + 1
 
         while (global_step <= args.n_steps if test else global_step <= (args.n_steps * args.more_unsupervised)):
-            data = sample_marginal_and_conditional(latent_space, size=args.batch_size,device=args.device)
+            data = sample_marginal_and_conditional(latent_space, size=args.batch_size, device=args.device)
 
             """Dependency matrix - BEGIN """
 
@@ -80,7 +71,7 @@ def main():
             obs = g(z_disentanglement)
 
             # 3. calculate the dependency matrix
-            #x \times f(x)
+            # x \times f(x)
             dep_mat = calc_jacobian(f, obs, normalize=args.preserve_vol).abs().mean(0).T
             # 4. calculate the loss for the dependency matrix
             dep_loss = dependency_loss(dep_mat)
@@ -254,7 +245,7 @@ def check_independence_z_gz(args, h_ind, ind_test, latent_space):
     print(f"Id. Perm. Disentanglement: {permutation_disentanglement_score:.4f}")
     print('Run test with ground truth sources')
     if args.use_dep_mat:
-        #x \times z
+        # x \times z
         dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=args.preserve_vol).abs().mean(0)
         print(dep_mat)
         null_list = [False] * torch.numel(dep_mat)
@@ -289,7 +280,7 @@ def calc_disentanglement_scores(z, hz):
     return linear_disentanglement_score, permutation_disentanglement_score
 
 
-def check_multivariate_dependence(ind_test: HSIC, x1:torch.Tensor, x2:torch.Tensor)->torch.Tensor:
+def check_multivariate_dependence(ind_test: HSIC, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     """
     Carries out HSIC for the multivariate case, all pairs are tested
     :param ind_test: the HSIC instance
@@ -298,17 +289,16 @@ def check_multivariate_dependence(ind_test: HSIC, x1:torch.Tensor, x2:torch.Tens
     :return: the adjacency matrix
     """
     num_dim = x1.shape[-1]
-    max_edge_num = num_dim**2
+    max_edge_num = num_dim ** 2
     adjacency_matrix = torch.zeros(num_dim, num_dim).bool()
 
     with torch.no_grad():
         for i in range(num_dim):
             for j in range(num_dim):
-                adjacency_matrix[i,j] = ind_test.run_test(x1[:, i], x2[:, j], device="cpu", bonferroni=max_edge_num).item()
+                adjacency_matrix[i, j] = ind_test.run_test(x1[:, i], x2[:, j], device="cpu",
+                                                           bonferroni=max_edge_num).item()
 
     return adjacency_matrix
-
-
 
 
 def check_bivariate_dependence(ind_test: HSIC, x1, x2):
@@ -324,5 +314,4 @@ def check_bivariate_dependence(ind_test: HSIC, x1, x2):
 
 
 if __name__ == "__main__":
-
     main()

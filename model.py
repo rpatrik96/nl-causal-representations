@@ -109,22 +109,23 @@ class ContrastiveLearningModel(nn.Module):
             self.space = spaces.NRealSpace(hparams.n)
 
 
-def configure_output_normalization(args):
-    output_normalization = None
-    output_normalization_kwargs = None
-    if args.normalization == "learnable_box":
-        output_normalization = "learnable_box"
-    elif args.normalization == "fixed_box":
-        output_normalization = "fixed_box"
-        output_normalization_kwargs = dict(init_abs_bound=args.box_max - args.box_min)
-    elif args.normalization == "learnable_sphere":
-        output_normalization = "learnable_sphere"
-    elif args.normalization == "fixed_sphere":
-        output_normalization = "fixed_sphere"
-        output_normalization_kwargs = dict(init_r=args.sphere_r)
-    elif args.normalization == "":
-        print("Using no output normalization")
+    def _configure_output_normalization(self):
+        hparams = self.hparams
         output_normalization = None
-    else:
-        raise ValueError("Invalid output normalization:", args.normalization)
-    return output_normalization, output_normalization_kwargs
+        output_normalization_kwargs = None
+        if hparams.normalization == "learnable_box":
+            output_normalization = "learnable_box"
+        elif hparams.normalization == "fixed_box":
+            output_normalization = "fixed_box"
+            output_normalization_kwargs = dict(init_abs_bound=hparams.box_max - hparams.box_min)
+        elif hparams.normalization == "learnable_sphere":
+            output_normalization = "learnable_sphere"
+        elif hparams.normalization == "fixed_sphere":
+            output_normalization = "fixed_sphere"
+            output_normalization_kwargs = dict(init_r=hparams.sphere_r)
+        elif hparams.normalization == "":
+            print("Using no output normalization")
+            output_normalization = None
+        else:
+            raise ValueError("Invalid output normalization:", hparams.normalization)
+        return output_normalization, output_normalization_kwargs
