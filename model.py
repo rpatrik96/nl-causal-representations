@@ -13,6 +13,7 @@ class ContrastiveLearningModel(nn.Module):
         self.hparams = hparams
 
         self._setup_decoder()
+        self._setup_encoder()
         self._setup_loss()
         self._setup_space()
 
