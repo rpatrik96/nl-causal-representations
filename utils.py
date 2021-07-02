@@ -43,7 +43,7 @@ def print_statistics(args, causal_check, f, global_step, linear_disentanglement_
             f"Perm. Disentanglement: {permutation_disentanglement_score:.4f}",
             f"Causal. Check: {causal_check[-1]:.4f}",
         )
-        print(dep_mat)
+        print(dep_mat.detach())
         print("dep Loss: {}".format(dep_loss))
         if args.normalization == "learnable_sphere":
             print(f"r: {f[-1].r}")

@@ -13,6 +13,7 @@ from prob_utils import setup_marginal, sample_marginal_and_conditional, setup_co
     check_independence_z_gz
 from runner import Runner
 from utils import setup_seed, save_state_dict, print_statistics, set_learning_mode, set_device
+import matplotlib.pyplot as plt
 
 import wandb
 
@@ -33,8 +34,8 @@ def main():
 
     indep_checker = IndependenceChecker(args)
 
-    wandb.init(project="test")
-    wandb.config = args
+    wandb.init(project="test", config=args)
+    wandb.watch(runner.model, log_freq=100, log="all")
     # distributions
     latent_space = latent_spaces.LatentSpace(space=(runner.model.space), sample_marginal=(setup_marginal(args)),
                                              sample_conditional=(setup_conditional(args)), )
@@ -57,6 +58,8 @@ def main():
             causal_check = []
 
         global_step = len(total_loss_values) + 1
+
+        table  = None
 
         while (
                 global_step <= args.n_steps if learning_mode else global_step <= (
@@ -98,7 +101,17 @@ def main():
             print_statistics(args, causal_check, f, global_step, lin_dis_scores[-1], perm_dis_scores[-1], total_loss,
                              total_loss_values, dep_mat, dep_loss)
 
-            wandb.log({"total_loss" : total_loss, "dep_mat" : dep_mat})
+
+            
+
+            data = dep_mat.detach().cpu().reshape(-1,).tolist()
+
+            labels = [f"a_{i}{j}" for i in range(dep_mat.shape[0]) for j in range(dep_mat.shape[1])]
+
+
+            wandb.log({"total_loss" : total_loss, "lin_dis_score" : lin_dis_scores[-1], "perm_dis_score" : perm_dis_scores[-1]}, step=global_step)
+            wandb.log({key:val for key, val in zip(labels, data)}, step=global_step)
+            wandb.log({"d_list" : data}, step=global_step)
 
             global_step += 1
 
