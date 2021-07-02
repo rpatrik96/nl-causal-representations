@@ -1,8 +1,11 @@
 import torch
 from torch.nn import functional as F
 
+from dep_mat import calc_jacobian_loss
+from logger import Logger
 from model import ContrastiveLearningModel
-from utils import unpack_item_list
+from prob_utils import sample_marginal_and_conditional
+from utils import unpack_item_list, save_state_dict
 
 
 class Runner(object):
@@ -14,6 +17,8 @@ class Runner(object):
 
         self.model = ContrastiveLearningModel(self.hparams)
         self.optimizer = torch.optim.Adam(self.model.encoder.parameters(), lr=self.hparams.lr)
+
+        self.logger = Logger(self.hparams, self.model)
 
     def reset_encoder(self):
         self.model.reset_encoder()
@@ -71,3 +76,29 @@ class Runner(object):
                 total_loss, losses = self.train_step(data, h=h, test=test)
 
         return total_loss, losses
+
+    def training_loop(self, g, h_ind, indep_checker, latent_space):
+        for learning_mode in self.hparams.learning_modes:
+            print("supervised test: {}".format(learning_mode))
+
+            self.logger.init_log_lists()
+
+            while (self.logger.global_step <= self.hparams.n_steps if learning_mode else self.logger.global_step <= (
+                    self.hparams.n_steps * self.hparams.more_unsupervised)):
+
+                data = sample_marginal_and_conditional(latent_space, size=self.hparams.batch_size,
+                                                       device=self.hparams.device)
+
+                dep_loss, dep_mat = calc_jacobian_loss(self.hparams, self.model.encoder, g, latent_space)
+
+                total_loss, losses = self.train(data, self.model.h, learning_mode)
+
+                self.logger.log(self.model.h, h_ind, dep_mat, indep_checker, latent_space, losses, total_loss, dep_loss,
+                                self.model.encoder)
+
+            save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
+            torch.cuda.empty_cache()
+
+            self.reset_encoder()
+
+        self.logger.report_final_disentanglement_scores(self.model.h, latent_space)

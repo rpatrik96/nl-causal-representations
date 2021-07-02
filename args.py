@@ -105,6 +105,13 @@ def parse_args():
     parser.add_argument("--n-log-steps", type=int, default=250)
     parser.add_argument("--n-steps", type=int, default=100001)
     parser.add_argument("--resume-training", action="store_true")
+
+
+    # W and B
+    parser.add_argument('--use-wandb', action='store_true', help="Log with Weights&Biases")
+    parser.add_argument("--project", type=str, default="experiment")
+
+
     args = parser.parse_args()
 
     print("Arguments:")

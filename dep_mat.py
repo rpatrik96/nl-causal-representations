@@ -73,15 +73,16 @@ def dependency_loss(dep_mat:torch.Tensor, weight_sparse:float=1., weight_triangu
     return weight_sparse*sparse_loss + weight_triangular*triangular_loss
 
 
-
-def optimize_dependency_matrix(generator:nn.Module, encoder:nn.Module):
-
-    # todo: dummy function
-    # sample latents
-    latents = generator.sample()
-
-    # calculate the dependency matrix
-    dep_mat = calc_dependency_matrix(encoder, latents)
-
+def calc_jacobian_loss(args, f, g, latent_space):
+    # 1. get a sample from the latents
+    # these are the noise variables in Wieland's notation
+    # todo: probably we can use something from data?
+    z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
+    # 2. calculate the signal mixtures (i.e., the observations)
+    obs = g(z_disentanglement)
+    # 3. calculate the dependency matrix
+    # x \times f(x)
+    dep_mat = calc_jacobian(f, obs, normalize=args.preserve_vol).abs().mean(0).T
+    # 4. calculate the loss for the dependency matrix
     dep_loss = dependency_loss(dep_mat)
-
+    return dep_loss, dep_mat
