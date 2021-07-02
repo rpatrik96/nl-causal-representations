@@ -2,18 +2,17 @@ from collections import Counter
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from args import parse_args
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian, dependency_loss
-from hsic import HSIC
-from indep_check import IndependeceChecker
-from model import ContrastiveLearningModel
+from indep_check import IndependenceChecker
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
-from prob_utils import setup_marginal, sample_marginal_and_conditional, setup_conditional, calc_disentanglement_scores
-from utils import unpack_item_list, setup_seed, save_state_dict, print_statistics, set_learning_mode, set_device
+from prob_utils import setup_marginal, sample_marginal_and_conditional, setup_conditional, calc_disentanglement_scores, \
+    check_independence_z_gz
+from runner import Runner
+from utils import setup_seed, save_state_dict, print_statistics, set_learning_mode, set_device
 
 
 def main():
@@ -22,43 +21,41 @@ def main():
 
     set_device(args)
     setup_seed(args.seed)
+    set_learning_mode(args)
 
-    model = ContrastiveLearningModel(args)
+    runner = Runner(args)
 
-    g = model.decoder
+    g = runner.model.decoder
     h_ind = lambda z: g(z)
 
-    indep_check = IndependeceChecker(args)
-
-    ind_test = HSIC(args.num_permutations)
+    indep_checker = IndependenceChecker(args)
 
     # distributions
-    latent_space = latent_spaces.LatentSpace(space=(model.space), sample_marginal=(setup_marginal(args)),
+    latent_space = latent_spaces.LatentSpace(space=(runner.model.space), sample_marginal=(setup_marginal(args)),
                                              sample_conditional=(setup_conditional(args)), )
 
-    indep_check.check_independence_z_gz(h_ind, latent_space)
+    check_independence_z_gz(indep_checker, h_ind, latent_space)
 
     save_state_dict(args, g)
 
-    test_list = set_learning_mode(args)
+    for learning_mode in args.learning_modes:
+        print("supervised test: {}".format(learning_mode))
 
-    for test in test_list:
-        print("supervised test: {}".format(test))
-
-        f = model.encoder
-        optimizer = torch.optim.Adam(f.parameters(), lr=args.lr)
-        h = (lambda z: f(g(z))) if not args.identity_mixing_and_solution else (lambda z: z)
+        f = runner.model.encoder
+        h = runner.model.h
 
         if ("total_loss_values" in locals() and not args.resume_training) or "total_loss_values" not in locals():
             individual_losses_values = []
             total_loss_values = []
-            linear_disentanglement_scores = []
-            permutation_disentanglement_scores = []
+            lin_dis_scores = []
+            perm_dis_scores = []
             causal_check = []
 
         global_step = len(total_loss_values) + 1
 
-        while (global_step <= args.n_steps if test else global_step <= (args.n_steps * args.more_unsupervised)):
+        while (
+                global_step <= args.n_steps if learning_mode else global_step <= (
+                        args.n_steps * args.more_unsupervised)):
             data = sample_marginal_and_conditional(latent_space, size=args.batch_size, device=args.device)
 
             """Dependency matrix - BEGIN """
@@ -83,99 +80,40 @@ def main():
 
             """Dependency matrix - END """
 
-            total_loss_value = train_and_log_losses(args, data, individual_losses_values, model.loss, optimizer,
-                                                    total_loss_values, h, test)
+            total_loss, losses = runner.train(data, h, learning_mode)
 
-            linear_disentanglement_scores, permutation_disentanglement_scores \
-                = log_independence_and_disentanglement(args,
-                                                       causal_check,
-                                                       global_step,
-                                                       h,
-                                                       h_ind,
-                                                       dep_mat,
-                                                       ind_test,
-                                                       latent_space,
-                                                       linear_disentanglement_scores,
-                                                       permutation_disentanglement_scores)
+            individual_losses_values.append(losses)
+            total_loss_values.append(total_loss)
 
-            print_statistics(args, causal_check, f, global_step, linear_disentanglement_scores[-1],
-                             permutation_disentanglement_scores[-1], total_loss_value, total_loss_values,
-                             dep_mat, dep_loss)
+            lin_dis_scores, perm_dis_scores = log_independence_and_disentanglement(args, causal_check, global_step, h,
+                                                                                   h_ind, dep_mat, indep_checker,
+                                                                                   latent_space, lin_dis_scores,
+                                                                                   perm_dis_scores)
+
+            print_statistics(args, causal_check, f, global_step, lin_dis_scores[-1], perm_dis_scores[-1], total_loss,
+                             total_loss_values, dep_mat, dep_loss)
 
             global_step += 1
 
-        save_state_dict(args, f, "{}_f.pth".format("sup" if test else "unsup"))
+        save_state_dict(args, f, "{}_f.pth".format("sup" if learning_mode else "unsup"))
         torch.cuda.empty_cache()
 
-        model.reset_encoder()
+        runner.reset_encoder()
 
     report_final_disentanglement_scores(args, h, latent_space)
 
 
-def train_step(args, data, loss, optimizer, h, test):
-    device = args.device
-    z1, z2_con_z1, z3 = data
-    z1 = z1.to(device)
-    z2_con_z1 = z2_con_z1.to(device)
-    z3 = z3.to(device)
-
-    # create random "negative" pairs
-    # this is faster than sampling z3 again from the marginal distribution
-    # and should also yield samples as if they were sampled from the marginal
-    # import pdb; pdb.set_trace()
-    # z3_shuffle_indices = torch.randperm(len(z1))
-    # z3_shuffle_indices = torch.roll(torch.arange(len(z1)), 1)
-    # z3 = z1[z3_shuffle_indices]
-    # z3 = z3.to(device)
-
-    optimizer.zero_grad()
-
-    z1_rec = h(z1)
-    z2_con_z1_rec = h(z2_con_z1)
-    z3_rec = h(z3)
-    # z3_rec = z1_rec[z3_shuffle_indices]
-
-    if test:
-        total_loss_value = F.mse_loss(z1_rec, z1)
-        losses_value = [total_loss_value]
-    else:
-        total_loss_value, _, losses_value = loss(
-            z1, z2_con_z1, z3, z1_rec, z2_con_z1_rec, z3_rec
-        )
-
-        # writer.add_scalar("loss_hz", total_loss_value, global_step)
-        # writer.add_scalar("loss_z", loss(
-        #    z1, z2_con_z1, z3, z1, z2_con_z1, z3
-        # )[0], global_step)
-        # writer.flush()
-
-    if not args.identity_mixing_and_solution and args.lr != 0:
-        total_loss_value.backward()
-        optimizer.step()
-
-    return total_loss_value.item(), unpack_item_list(losses_value)
-
-
-def train_and_log_losses(args, data, individual_losses_values, loss, optimizer, total_loss_values, h, test):
-    if args.lr != 0:
-        total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test)
-    else:
-        with torch.no_grad():
-            total_loss_value, losses_value = train_step(args, data, loss=loss, optimizer=optimizer, h=h, test=test)
-    total_loss_values.append(total_loss_value)
-    individual_losses_values.append(losses_value)
-    return total_loss_value
-
-
 def log_independence_and_disentanglement(args, causal_check, global_step, h, h_ind, dep_mat,
-                                         ind_checker: IndependeceChecker, latent_space,
-                                         linear_disentanglement_scores, permutation_disentanglement_scores):
+                                         ind_checker: IndependenceChecker, latent_space: latent_spaces.LatentSpace,
+                                         lin_dis_scores: list, perm_dis_scores: list):
     if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
 
         z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
         hz_disentanglement = h(z_disentanglement)
 
         lin_dis_score, perm_dis_score = calc_disentanglement_scores(z_disentanglement, hz_disentanglement)
+        lin_dis_scores.append(lin_dis_score)
+        perm_dis_scores.append(perm_dis_score)
 
         if args.use_dep_mat:
             null_list = [False] * torch.numel(dep_mat)
@@ -184,8 +122,6 @@ def log_independence_and_disentanglement(args, causal_check, global_step, h, h_i
         else:
             null_list, var_map = ind_checker.check_bivariate_dependence(h_ind(z_disentanglement), hz_disentanglement)
 
-        linear_disentanglement_scores.append(lin_dis_score)
-        permutation_disentanglement_scores.append(perm_dis_score)
         ######Note this is specific to a dense 2x2 triangular matrix!######
         if Counter(null_list) == Counter([False, False, False, True]):
             causal_check.append(1.)
@@ -208,10 +144,10 @@ def log_independence_and_disentanglement(args, causal_check, global_step, h, h_i
         """
 
     else:
-        linear_disentanglement_scores.append(linear_disentanglement_scores[-1])
-        permutation_disentanglement_scores.append(permutation_disentanglement_scores[-1])
+        lin_dis_scores.append(lin_dis_scores[-1])
+        perm_dis_scores.append(perm_dis_scores[-1])
         causal_check.append(causal_check[-1])
-    return linear_disentanglement_scores, permutation_disentanglement_scores
+    return lin_dis_scores, perm_dis_scores
 
 
 def report_final_disentanglement_scores(args, h, latent_space):

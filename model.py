@@ -16,11 +16,10 @@ class ContrastiveLearningModel(nn.Module):
         self._setup_loss()
         self._setup_space()
 
-
     def _setup_encoder(self):
         hparams = self.hparams
 
-        output_normalization, output_normalization_kwargs = configure_output_normalization(hparams)
+        output_normalization, output_normalization_kwargs = self._configure_output_normalization(hparams)
 
         encoder = encoders.get_mlp(
             n_in=hparams.n,
@@ -41,8 +40,12 @@ class ContrastiveLearningModel(nn.Module):
             encoder.load_state_dict(torch.load(hparams.load_f, map_location=hparams.device))
         print(f"{encoder=}")
 
-        self.encoder =  encoder
+        self.encoder = encoder
 
+    @property
+    def h(self):
+        return ((lambda z: self.encoder(self.decoder(z))) if not self.hparams.identity_mixing_and_solution else (
+            lambda z: z))
 
     def reset_encoder(self):
         self._setup_encoder()
@@ -76,7 +79,6 @@ class ContrastiveLearningModel(nn.Module):
 
         self.decoder = decoder
 
-
     def _setup_loss(self):
         hparams = self.hparams
 
@@ -97,8 +99,6 @@ class ContrastiveLearningModel(nn.Module):
         else:
             self.loss = losses.SimCLRLoss(normalize=False, tau=hparams.tau, alpha=hparams.alpha)
 
-
-
     def _setup_space(self):
         hparams = self.hparams
         if hparams.space_type == "box":
@@ -107,7 +107,6 @@ class ContrastiveLearningModel(nn.Module):
             self.space = spaces.NSphereSpace(hparams.n, hparams.sphere_r)
         else:
             self.space = spaces.NRealSpace(hparams.n)
-
 
     def _configure_output_normalization(self):
         hparams = self.hparams

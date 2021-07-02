@@ -1,6 +1,10 @@
+import sys
+from collections import Counter
+
 import torch
 
 from cl_ica import disentanglement_utils
+from dep_mat import calc_jacobian
 
 
 def setup_marginal(args):
@@ -96,3 +100,34 @@ def calc_disentanglement_scores(z, hz):
     )
 
     return linear_disentanglement_score, permutation_disentanglement_score
+
+
+def check_independence_z_gz(ind_check, h_ind, latent_space):
+    z_disentanglement = latent_space.sample_marginal(ind_check.hparams.n_eval_samples)
+    lin_dis_score, perm_dis_score = calc_disentanglement_scores(z_disentanglement, h_ind(z_disentanglement))
+
+    print(f"Id. Lin. Disentanglement: {lin_dis_score:.4f}")
+    print(f"Id. Perm. Disentanglement: {perm_dis_score:.4f}")
+    print('Run test with ground truth sources')
+
+    if ind_check.hparams.use_dep_mat:
+        # x \times z
+        dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=ind_check.hparams.preserve_vol).abs().mean(0)
+        print(dep_mat)
+        null_list = [False] * torch.numel(dep_mat)
+        null_list[torch.argmin(dep_mat).item()] = True
+        var_map = [1, 1, 2, 2]
+    else:
+        null_list, var_map = ind_check.check_bivariate_dependence(h_ind(z_disentanglement), z_disentanglement)
+    ######Note this is specific to a dense 2x2 triangular matrix!######
+    if Counter(null_list) == Counter([False, False, False, True]):
+
+        print('concluded a causal effect')
+
+        for i, null in enumerate(null_list):
+            if null:
+                print('cause variable is X{}'.format(str(var_map[i])))
+
+    else:
+        print('no causal effect...?')
+        sys.exit()

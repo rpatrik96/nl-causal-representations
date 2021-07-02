@@ -33,7 +33,7 @@ def save_state_dict(args, model, pth="g.pth"):
 
 def print_statistics(args, causal_check, f, global_step, linear_disentanglement_score,
                      permutation_disentanglement_score, total_loss_value, total_loss_values,
-                    dep_mat, dep_loss):
+                     dep_mat, dep_loss):
     if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
         print(
             f"Step: {global_step} \t",
@@ -51,17 +51,16 @@ def print_statistics(args, causal_check, f, global_step, linear_disentanglement_
 
 def set_learning_mode(args):
     if args.mode == 'unsupervised':
-        test_list = [False]
+        learning_modes = [False]
     elif args.mode == 'supervised':
-        test_list = [True]
+        learning_modes = [True]
     else:
-        test_list = [True, False]
-    return test_list
+        learning_modes = [True, False]
+
+    args.learning_modes = learning_modes
 
 
-def set_device(args)-> None:
-
-
+def set_device(args) -> None:
     device = "cuda"
     if not torch.cuda.is_available() or args.no_cuda is True:
         device = "cpu"

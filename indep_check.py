@@ -1,14 +1,9 @@
-import sys
-from collections import Counter
-
 import torch
 
-from prob_utils import calc_disentanglement_scores
-from dep_mat import calc_jacobian
 from hsic import HSIC
 
 
-class IndependeceChecker(object):
+class IndependenceChecker(object):
     """
     Class for encapsulating independence test-related methods
     """
@@ -17,7 +12,7 @@ class IndependeceChecker(object):
         super().__init__()
         self.hparams = hparams
 
-        self.test = HSIC(hparams.num_premutations)
+        self.test = HSIC(hparams.num_permutations)
 
     def check_bivariate_dependence(self, x1, x2):
         decisions = []
@@ -49,32 +44,3 @@ class IndependeceChecker(object):
 
         return adjacency_matrix
 
-    def check_independence_z_gz(self, h_ind, latent_space):
-        z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
-        lin_dis_score, perm_dis_score = calc_disentanglement_scores(z_disentanglement, h_ind(z_disentanglement))
-
-        print(f"Id. Lin. Disentanglement: {lin_dis_score:.4f}")
-        print(f"Id. Perm. Disentanglement: {perm_dis_score:.4f}")
-        print('Run test with ground truth sources')
-
-        if self.hparams.use_dep_mat:
-            # x \times z
-            dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=self.hparams.preserve_vol).abs().mean(0)
-            print(dep_mat)
-            null_list = [False] * torch.numel(dep_mat)
-            null_list[torch.argmin(dep_mat).item()] = True
-            var_map = [1, 1, 2, 2]
-        else:
-            null_list, var_map = self.check_bivariate_dependence(h_ind(z_disentanglement), z_disentanglement)
-        ######Note this is specific to a dense 2x2 triangular matrix!######
-        if Counter(null_list) == Counter([False, False, False, True]):
-
-            print('concluded a causal effect')
-
-            for i, null in enumerate(null_list):
-                if null:
-                    print('cause variable is X{}'.format(str(var_map[i])))
-
-        else:
-            print('no causal effect...?')
-            sys.exit()
