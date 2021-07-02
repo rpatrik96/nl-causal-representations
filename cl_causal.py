@@ -14,8 +14,11 @@ from prob_utils import setup_marginal, sample_marginal_and_conditional, setup_co
 from runner import Runner
 from utils import setup_seed, save_state_dict, print_statistics, set_learning_mode, set_device
 
+import wandb
+
 
 def main():
+
     # setup
     args = parse_args()
 
@@ -30,6 +33,8 @@ def main():
 
     indep_checker = IndependenceChecker(args)
 
+    wandb.init(project="test")
+    wandb.config = args
     # distributions
     latent_space = latent_spaces.LatentSpace(space=(runner.model.space), sample_marginal=(setup_marginal(args)),
                                              sample_conditional=(setup_conditional(args)), )
@@ -92,6 +97,8 @@ def main():
 
             print_statistics(args, causal_check, f, global_step, lin_dis_scores[-1], perm_dis_scores[-1], total_loss,
                              total_loss_values, dep_mat, dep_loss)
+
+            wandb.log({"total_loss" : total_loss, "dep_mat" : dep_mat})
 
             global_step += 1
 
