@@ -20,7 +20,7 @@ class ContrastiveLearningModel(nn.Module):
     def _setup_encoder(self):
         hparams = self.hparams
 
-        output_normalization, output_normalization_kwargs = self._configure_output_normalization(hparams)
+        output_normalization, output_normalization_kwargs = self._configure_output_normalization()
 
         encoder = encoders.get_mlp(
             n_in=hparams.n,
