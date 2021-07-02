@@ -17,13 +17,14 @@ class Logger(object):
 
         self._setup_exp_management(model)
 
+        self.total_loss_values = None
+
     def _setup_exp_management(self, model):
         wandb.init(entity="causal-representation-learning", project=self.hparams.project, config=self.hparams)
         wandb.watch(model, log_freq=self.hparams.n_log_steps, log="all")
 
     def init_log_lists(self):
-        if (
-                "total_loss_values" in locals() and not self.hparams.resume_training) or "total_loss_values" not in locals():
+        if (self.total_loss_values is not None and not self.hparams.resume_training) or self.total_loss_values is None :
             self.individual_losses_values = []
             self.total_loss_values = []
             self.lin_dis_scores = []
@@ -38,7 +39,6 @@ class Logger(object):
         self.individual_losses_values.append(losses)
         self.total_loss_values.append(total_loss)
 
-        self._log_to_wandb(dep_mat, self.global_step, total_loss)
 
         if self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps:
 
@@ -83,6 +83,8 @@ class Logger(object):
             self.perm_dis_scores.append(self.perm_dis_scores[-1])
             self.causal_check.append(self.causal_check[-1])
 
+        self._log_to_wandb(dep_mat, self.global_step, total_loss)
+        
         self.print_statistics(f, dep_mat, dep_loss)
 
         self.global_step +=1
@@ -91,14 +93,14 @@ class Logger(object):
         if self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps:
             print(
                 f"Step: {self.global_step} \t",
-                f"Loss: {self.total_loss_value[-1]:.4f} \t",
+                f"Loss: {self.total_loss_values[-1]:.4f} \t",
                 f"<Loss>: {np.mean(np.array(self.total_loss_values[-self.hparams.n_log_steps:])):.4f} \t",
                 f"Lin. Disentanglement: {self.lin_dis_scores[-1]:.4f} \t",
                 f"Perm. Disentanglement: {self.perm_dis_scores[-1]:.4f}",
                 f"Causal. Check: {self.causal_check[-1]:.4f}",
             )
             print(dep_mat.detach())
-            print(f"{dep_loss=}")
+            print(f"{dep_loss.item()=:.4f}")
 
             if self.hparams.normalization == "learnable_sphere":
                 print(f"r: {f[-1].r}")
@@ -137,4 +139,4 @@ class Logger(object):
             wandb.log({"total_loss": total_loss, "lin_dis_score": self.lin_dis_scores[-1],
                        "perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
             wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
-            wandb.log({"d_list": data}, step=global_step)
+
