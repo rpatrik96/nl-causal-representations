@@ -3,7 +3,7 @@ from collections import Counter
 
 import torch
 
-from cl_causal import calc_disentanglement_scores
+from prob_utils import calc_disentanglement_scores
 from dep_mat import calc_jacobian
 from hsic import HSIC
 

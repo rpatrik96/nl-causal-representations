@@ -5,7 +5,6 @@ import torch
 import torch.nn.functional as F
 
 from args import parse_args
-from cl_ica import disentanglement_utils
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian, dependency_loss
 from hsic import HSIC
@@ -13,7 +12,7 @@ from indep_check import IndependeceChecker
 from model import ContrastiveLearningModel
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
-from prob_utils import setup_marginal, sample_marginal_and_conditional, setup_conditional
+from prob_utils import setup_marginal, sample_marginal_and_conditional, setup_conditional, calc_disentanglement_scores
 from utils import unpack_item_list, setup_seed, save_state_dict, print_statistics, set_learning_mode, set_device
 
 
@@ -238,19 +237,6 @@ def report_final_disentanglement_scores(args, h, latent_space):
 
     print("linear mean: {} std: {}".format(np.mean(final_linear_scores), np.std(final_linear_scores)))
     print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
-
-
-def calc_disentanglement_scores(z, hz):
-    (linear_disentanglement_score, _), _ = disentanglement_utils.linear_disentanglement(z, hz, mode="r2")
-    (permutation_disentanglement_score, _,), _ = disentanglement_utils.permutation_disentanglement(
-        z,
-        hz,
-        mode="pearson",
-        solver="munkres",
-        rescaling=True,
-    )
-
-    return linear_disentanglement_score, permutation_disentanglement_score
 
 
 if __name__ == "__main__":

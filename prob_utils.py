@@ -1,5 +1,6 @@
 import torch
 
+from cl_ica import disentanglement_utils
 
 
 def setup_marginal(args):
@@ -82,3 +83,16 @@ def laplace_log_cdf(x: torch.Tensor, signal_model: torch.distributions.laplace.L
     pos_res = torch.log1p(-.5 * (-x_tr.abs()).exp())
 
     return torch.where(x < signal_model.mean, neg_res, pos_res)
+
+
+def calc_disentanglement_scores(z, hz):
+    (linear_disentanglement_score, _), _ = disentanglement_utils.linear_disentanglement(z, hz, mode="r2")
+    (permutation_disentanglement_score, _,), _ = disentanglement_utils.permutation_disentanglement(
+        z,
+        hz,
+        mode="pearson",
+        solver="munkres",
+        rescaling=True,
+    )
+
+    return linear_disentanglement_score, permutation_disentanglement_score
