@@ -1,4 +1,3 @@
-import sys
 from collections import Counter
 
 import numpy as np
@@ -10,6 +9,7 @@ from cl_ica import disentanglement_utils
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian, dependency_loss
 from hsic import HSIC
+from indep_check import IndependeceChecker
 from model import ContrastiveLearningModel
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
@@ -29,13 +29,15 @@ def main():
     g = model.decoder
     h_ind = lambda z: g(z)
 
+    indep_check = IndependeceChecker(args)
+
     ind_test = HSIC(args.num_permutations)
 
     # distributions
     latent_space = latent_spaces.LatentSpace(space=(model.space), sample_marginal=(setup_marginal(args)),
                                              sample_conditional=(setup_conditional(args)), )
 
-    check_independence_z_gz(args, h_ind, ind_test, latent_space)
+    indep_check.check_independence_z_gz(h_ind, latent_space)
 
     save_state_dict(args, g)
 
@@ -166,23 +168,25 @@ def train_and_log_losses(args, data, individual_losses_values, loss, optimizer, 
     return total_loss_value
 
 
-def log_independence_and_disentanglement(args, causal_check, global_step, h, h_ind, dep_mat, ind_test, latent_space,
+def log_independence_and_disentanglement(args, causal_check, global_step, h, h_ind, dep_mat,
+                                         ind_checker: IndependeceChecker, latent_space,
                                          linear_disentanglement_scores, permutation_disentanglement_scores):
     if global_step % args.n_log_steps == 1 or global_step == args.n_steps:
 
         z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
         hz_disentanglement = h(z_disentanglement)
 
-        linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(
-            z_disentanglement, hz_disentanglement)
+        lin_dis_score, perm_dis_score = calc_disentanglement_scores(z_disentanglement, hz_disentanglement)
+
         if args.use_dep_mat:
             null_list = [False] * torch.numel(dep_mat)
             null_list[torch.argmin(dep_mat).item()] = True
             var_map = [1, 1, 2, 2]
         else:
-            null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), hz_disentanglement)
-        linear_disentanglement_scores.append(linear_disentanglement_score)
-        permutation_disentanglement_scores.append(permutation_disentanglement_score)
+            null_list, var_map = ind_checker.check_bivariate_dependence(h_ind(z_disentanglement), hz_disentanglement)
+
+        linear_disentanglement_scores.append(lin_dis_score)
+        permutation_disentanglement_scores.append(perm_dis_score)
         ######Note this is specific to a dense 2x2 triangular matrix!######
         if Counter(null_list) == Counter([False, False, False, True]):
             causal_check.append(1.)
@@ -236,37 +240,6 @@ def report_final_disentanglement_scores(args, h, latent_space):
     print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
 
-def check_independence_z_gz(args, h_ind, ind_test, latent_space):
-    z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
-    linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(z_disentanglement,
-                                                                                                  h_ind(
-                                                                                                      z_disentanglement))
-    print(f"Id. Lin. Disentanglement: {linear_disentanglement_score:.4f}")
-    print(f"Id. Perm. Disentanglement: {permutation_disentanglement_score:.4f}")
-    print('Run test with ground truth sources')
-    if args.use_dep_mat:
-        # x \times z
-        dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=args.preserve_vol).abs().mean(0)
-        print(dep_mat)
-        null_list = [False] * torch.numel(dep_mat)
-        null_list[torch.argmin(dep_mat).item()] = True
-        var_map = [1, 1, 2, 2]
-    else:
-        null_list, var_map = check_bivariate_dependence(ind_test, h_ind(z_disentanglement), z_disentanglement)
-    ######Note this is specific to a dense 2x2 triangular matrix!######
-    if Counter(null_list) == Counter([False, False, False, True]):
-
-        print('concluded a causal effect')
-
-        for i, null in enumerate(null_list):
-            if null:
-                print('cause variable is X{}'.format(str(var_map[i])))
-
-    else:
-        print('no causal effect...?')
-        sys.exit()
-
-
 def calc_disentanglement_scores(z, hz):
     (linear_disentanglement_score, _), _ = disentanglement_utils.linear_disentanglement(z, hz, mode="r2")
     (permutation_disentanglement_score, _,), _ = disentanglement_utils.permutation_disentanglement(
@@ -278,39 +251,6 @@ def calc_disentanglement_scores(z, hz):
     )
 
     return linear_disentanglement_score, permutation_disentanglement_score
-
-
-def check_multivariate_dependence(ind_test: HSIC, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
-    """
-    Carries out HSIC for the multivariate case, all pairs are tested
-    :param ind_test: the HSIC instance
-    :param x1: tensor of the first batch of variables in the shape of (num_elem, num_dim)
-    :param x2: tensor of the second batch of variables in the shape of (num_elem, num_dim)
-    :return: the adjacency matrix
-    """
-    num_dim = x1.shape[-1]
-    max_edge_num = num_dim ** 2
-    adjacency_matrix = torch.zeros(num_dim, num_dim).bool()
-
-    with torch.no_grad():
-        for i in range(num_dim):
-            for j in range(num_dim):
-                adjacency_matrix[i, j] = ind_test.run_test(x1[:, i], x2[:, j], device="cpu",
-                                                           bonferroni=max_edge_num).item()
-
-    return adjacency_matrix
-
-
-def check_bivariate_dependence(ind_test: HSIC, x1, x2):
-    decisions = []
-    var_map = [1, 1, 2, 2]
-    with torch.no_grad():
-        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 1], device="cpu", bonferroni=4).item())
-        decisions.append(ind_test.run_test(x1[:, 0], x2[:, 0], device="cpu", bonferroni=4).item())
-        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 0], device="cpu", bonferroni=4).item())
-        decisions.append(ind_test.run_test(x1[:, 1], x2[:, 1], device="cpu", bonferroni=4).item())
-
-    return decisions, var_map
 
 
 if __name__ == "__main__":
