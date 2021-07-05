@@ -1,3 +1,6 @@
 [submodule "icebeem"]
 	path = icebeem
 	url = https://github.com/ilkhem/icebeem
+[submodule "pytorch-flows"]
+	path = pytorch-flows
+	url = https://github.com/ikostrikov/pytorch-flows.git
