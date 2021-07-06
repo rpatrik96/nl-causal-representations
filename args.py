@@ -109,7 +109,7 @@ def parse_args():
 
     # W and B
     parser.add_argument('--use-wandb', action='store_true', help="Log with Weights&Biases")
-    parser.add_argument("--project", type=str, default="experiment")
+    parser.add_argument("--project", type=str, default="experiment", help="This is the name of the experiment on Weights and Biases")
 
 
     args = parser.parse_args()
