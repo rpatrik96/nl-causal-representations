@@ -45,8 +45,10 @@ class AttentionMADE(nn.Module):
     """
 
     def __init__(self, num_inputs, num_hidden, learnable_in_mask, learnable_hidden_mask, learnable_out_mask,
-                 num_cond_inputs=None, act='relu', pre_exp_tanh=False):
+                 num_cond_inputs=None, act='relu', pre_exp_tanh=False, num_components=None):
         super().__init__()
+
+        self.num_components = num_components
 
         self.learnable_in_mask = learnable_in_mask
         self.learnable_hidden_mask = learnable_hidden_mask
@@ -61,14 +63,21 @@ class AttentionMADE(nn.Module):
 
         self.input = DoubleMaskedLinear(num_inputs, num_hidden, input_mask, num_cond_inputs)
         self.hidden = DoubleMaskedLinear(num_hidden, num_hidden, hidden_mask)
-        self.output = DoubleMaskedLinear(num_hidden, num_inputs * 2, output_mask)
+
+        if self.num_components is None:
+            self.output = DoubleMaskedLinear(num_hidden, num_inputs * 2, output_mask)
+        else:
+            self.output = nn.ModuleList([DoubleMaskedLinear(num_hidden, num_inputs * 2, output_mask)for _ in range(num_components)])
 
     def forward(self, inputs, cond_inputs=None, mode='direct'):
         if mode == 'direct':
             h1 = self.activation(self.input(inputs, cond_inputs, learnable_mask=self.learnable_in_mask))
             h2 = self.activation(self.hidden(h1, learnable_mask=self.learnable_hidden_mask))
-            h3 = self.output(h2, learnable_mask=self.learnable_out_mask)
 
+            if self.num_components is None:
+                h3 = self.output(h2, learnable_mask=self.learnable_out_mask)
+            else:
+                h3 = torch.stack([comp(h2, learnable_mask=self.learnable_out_mask) for comp in self.output], axis=0).mean(axis=0)
             m, a = h3.chunk(2, 1)
 
             u = (inputs - m) * torch.exp(-a)
@@ -103,7 +112,7 @@ class AttentionMAF(nn.Module):
         modules = []
         for _ in range(self.num_blocks):
             modules = [
-                AttentionMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act),
+                AttentionMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act, num_components=2),
                 flows.BatchNormFlow(num_inputs),
                 flows.Reverse(num_inputs)]
 
