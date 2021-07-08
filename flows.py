@@ -96,10 +96,11 @@ class AttentionMADE(nn.Module):
 
 class AttentionMAF(nn.Module):
 
-    def __init__(self, num_inputs, num_hidden, num_cond_inputs, num_blocks, act):
+    def __init__(self, num_inputs, num_hidden, num_cond_inputs, num_blocks, num_components, act):
         super().__init__()
 
         self.num_blocks = num_blocks
+        self.num_components = num_components
 
         input_mask = flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
         hidden_mask = flows.get_mask(num_hidden, num_hidden, num_inputs)
@@ -110,9 +111,9 @@ class AttentionMAF(nn.Module):
         self.output_mask = AttentionNet(*output_mask.shape)
 
         modules = []
-        for _ in range(self.num_blocks):
-            modules = [
-                AttentionMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act, num_components=2),
+        for i in range(self.num_blocks):
+            modules += [
+                AttentionMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act, num_components=None if i!=0 else self.num_components),
                 flows.BatchNormFlow(num_inputs),
                 flows.Reverse(num_inputs)]
 
@@ -127,9 +128,10 @@ if __name__ == "__main__":
     num_hidden = 10
     num_outputs = 2
     num_blocks = 3
+    num_components = 5
     batch_size = 32
     act = "relu"
 
-    maf = AttentionMAF(num_inputs, num_hidden, num_outputs, num_blocks, act)
+    maf = AttentionMAF(num_inputs, num_hidden, num_outputs, num_blocks, num_components, act)
 
     maf(torch.randn(batch_size, num_inputs))
