@@ -3,31 +3,10 @@ import importlib
 flows = importlib.import_module("pytorch-flows.flows")
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
 
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
-
-
-def get_mask(in_features, out_features, in_flow_features, mask_type=None):
-    """
-    mask_type: input | None | output
-
-    See Figure 1 for a better illustration:
-    https://arxiv.org/pdf/1502.03509.pdf
-    """
-    if mask_type == 'input':
-        in_degrees = torch.arange(in_features) % in_flow_features
-    else:
-        in_degrees = torch.arange(in_features) % (in_flow_features - 1)
-
-    if mask_type == 'output':
-        out_degrees = torch.arange(out_features) % in_flow_features - 1
-    else:
-        out_degrees = torch.arange(out_features) % (in_flow_features - 1)
-
-    return (out_degrees.unsqueeze(-1) >= in_degrees.unsqueeze(0)).float()
 
 
 class AttentionNet(nn.Module):
@@ -42,18 +21,13 @@ class AttentionNet(nn.Module):
 
 
 class DoubleMaskedLinear(nn.Module):
-    def __init__(self,
-                 in_features,
-                 out_features,
-                 mask,
-                 cond_in_features=None,
-                 bias=True):
+    def __init__(self, in_features, out_features, mask, cond_in_features=None, bias=False):
         super().__init__()
 
         self.linear = nn.Linear(in_features, out_features)
         if cond_in_features is not None:
             self.cond_linear = nn.Linear(
-                cond_in_features, out_features, bias=False)
+                cond_in_features, out_features, bias=bias)
 
         self.register_buffer('mask', mask)
 
@@ -81,9 +55,9 @@ class AttentionMADE(nn.Module):
         activations = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh}
         self.activation = activations[act]
 
-        input_mask = get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
-        hidden_mask = get_mask(num_hidden, num_hidden, num_inputs)
-        output_mask = get_mask(num_hidden, num_inputs * 2, num_inputs, mask_type='output')
+        input_mask = flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
+        hidden_mask = flows.get_mask(num_hidden, num_hidden, num_inputs)
+        output_mask = flows.get_mask(num_hidden, num_inputs * 2, num_inputs, mask_type='output')
 
         self.input = DoubleMaskedLinear(num_inputs, num_hidden, input_mask, num_cond_inputs)
         self.hidden = DoubleMaskedLinear(num_hidden, num_hidden, hidden_mask)
@@ -111,7 +85,6 @@ class AttentionMADE(nn.Module):
             return x, -a.sum(-1, keepdim=True)
 
 
-
 class AttentionMAF(nn.Module):
 
     def __init__(self, num_inputs, num_hidden, num_cond_inputs, num_blocks, act):
@@ -129,19 +102,18 @@ class AttentionMAF(nn.Module):
 
         modules = []
         for _ in range(self.num_blocks):
-            modules = [AttentionMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act),
-                       flows.BatchNormFlow(num_inputs),
-                       flows.Reverse(num_inputs)]
+            modules = [
+                AttentionMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act),
+                flows.BatchNormFlow(num_inputs),
+                flows.Reverse(num_inputs)]
 
         self.model = flows.FlowSequential(*modules)
-
 
     def forward(self, inputs, cond_inputs=None):
         self.model(inputs, cond_inputs)
 
 
 if __name__ == "__main__":
-
     num_inputs = 3
     num_hidden = 10
     num_outputs = 2
