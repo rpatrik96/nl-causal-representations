@@ -44,12 +44,12 @@ class AttentionMADE(nn.Module):
     (https://arxiv.org/abs/1502.03509).
     """
 
-    def __init__(self, num_inputs, num_hidden, learnable_in_mask, learnable_hid_mask, learnable_out_mask,
+    def __init__(self, num_inputs, num_hidden, learnable_in_mask, learnable_hidden_mask, learnable_out_mask,
                  num_cond_inputs=None, act='relu', pre_exp_tanh=False):
         super().__init__()
 
         self.learnable_in_mask = learnable_in_mask
-        self.learnable_hid_mask = learnable_hid_mask
+        self.learnable_hidden_mask = learnable_hidden_mask
         self.learnable_out_mask = learnable_out_mask
 
         activations = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh}
@@ -66,7 +66,7 @@ class AttentionMADE(nn.Module):
     def forward(self, inputs, cond_inputs=None, mode='direct'):
         if mode == 'direct':
             h1 = self.activation(self.input(inputs, cond_inputs, learnable_mask=self.learnable_in_mask))
-            h2 = self.activation(self.hidden(h1, learnable_mask=self.learnable_hid_mask))
+            h2 = self.activation(self.hidden(h1, learnable_mask=self.learnable_hidden_mask))
             h3 = self.output(h2, learnable_mask=self.learnable_out_mask)
 
             m, a = h3.chunk(2, 1)
@@ -92,9 +92,9 @@ class AttentionMAF(nn.Module):
 
         self.num_blocks = num_blocks
 
-        input_mask = get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
-        hidden_mask = get_mask(num_hidden, num_hidden, num_inputs)
-        output_mask = get_mask(num_hidden, num_inputs * 2, num_inputs, mask_type='output')
+        input_mask = flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
+        hidden_mask = flows.get_mask(num_hidden, num_hidden, num_inputs)
+        output_mask = flows.get_mask(num_hidden, num_inputs * 2, num_inputs, mask_type='output')
 
         self.input_mask = AttentionNet(*input_mask.shape)
         self.hidden_mask = AttentionNet(*hidden_mask.shape)
