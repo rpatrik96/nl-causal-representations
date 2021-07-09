@@ -73,7 +73,7 @@ class AttentionMADE(nn.Module):
         if mode == 'direct':
             a, m = self.conditioner_pass(inputs, cond_inputs)
 
-            u = (inputs - m) * torch.exp(-a)
+            u = self.transformer_fwd_pass(a, inputs, m)
 
             return u, -a.sum(-1, keepdim=True)
 
@@ -85,6 +85,13 @@ class AttentionMADE(nn.Module):
                 x[:, i_col] = inputs[:, i_col] * torch.exp(
                     a[:, i_col]) + m[:, i_col]
             return x, -a.sum(-1, keepdim=True)
+
+    def transformer_fwd_pass(self, a, inputs, m):
+        u = (inputs - m) * torch.exp(-a)
+
+        return u
+
+
 
     def conditioner_pass(self, inputs, cond_inputs):
         h1 = self.activation(self.input(inputs, cond_inputs, learnable_mask=self.learnable_in_mask))
