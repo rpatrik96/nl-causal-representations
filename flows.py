@@ -11,10 +11,10 @@ import torch.nn.functional as F
 
 class AttentionNet(nn.Module):
 
-    def __init__(self, in_features, out_features):
+    def __init__(self, in_features, out_features, bias=False):
         super().__init__()
 
-        self.attention = nn.Linear(in_features, out_features)
+        self.attention = nn.Linear(in_features, out_features, bias=bias)
 
     def forward(self, target, attn=None):
         return target * F.softmax(self.attention(target if attn is None else attn), dim=-1)
@@ -106,9 +106,9 @@ class AttentionMAF(nn.Module):
         hidden_mask = flows.get_mask(num_hidden, num_hidden, num_inputs)
         output_mask = flows.get_mask(num_hidden, num_inputs * 2, num_inputs, mask_type='output')
 
-        self.input_mask = AttentionNet(*input_mask.shape)
-        self.hidden_mask = AttentionNet(*hidden_mask.shape)
-        self.output_mask = AttentionNet(*output_mask.shape)
+        self.input_mask = AttentionNet(*input_mask.shape, bias=False)
+        self.hidden_mask = AttentionNet(*hidden_mask.shape, bias=False)
+        self.output_mask = AttentionNet(*output_mask.shape, bias=False)
 
         modules = []
         for i in range(self.num_blocks):
@@ -121,6 +121,10 @@ class AttentionMAF(nn.Module):
 
     def forward(self, inputs, cond_inputs=None):
         self.model(inputs, cond_inputs)
+
+    @property
+    def jacobian(self):
+        return self.output_mask.weight.data@self.hidden_mask.weight.data@self.input_mask.weight.data
 
 
 if __name__ == "__main__":
