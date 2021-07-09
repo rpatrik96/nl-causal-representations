@@ -44,7 +44,7 @@ class AttentionMADE(nn.Module):
     (https://arxiv.org/abs/1502.03509).
     """
 
-    def __init__(self, num_inputs, num_hidden, learnable_in_mask, learnable_hidden_mask, learnable_out_mask,
+    def     __init__(self, num_inputs, num_hidden, learnable_in_mask, learnable_hidden_mask, learnable_out_mask,
                  num_cond_inputs=None, act='relu', pre_exp_tanh=False, num_components=None):
         super().__init__()
 
@@ -71,14 +71,7 @@ class AttentionMADE(nn.Module):
 
     def forward(self, inputs, cond_inputs=None, mode='direct'):
         if mode == 'direct':
-            h1 = self.activation(self.input(inputs, cond_inputs, learnable_mask=self.learnable_in_mask))
-            h2 = self.activation(self.hidden(h1, learnable_mask=self.learnable_hidden_mask))
-
-            if self.num_components is None:
-                h3 = self.output(h2, learnable_mask=self.learnable_out_mask)
-            else:
-                h3 = torch.stack([comp(h2, learnable_mask=self.learnable_out_mask) for comp in self.output], axis=0).mean(axis=0)
-            m, a = h3.chunk(2, 1)
+            a, m = self.conditioner_pass(inputs, cond_inputs)
 
             u = (inputs - m) * torch.exp(-a)
 
@@ -87,11 +80,24 @@ class AttentionMADE(nn.Module):
         else:
             x = torch.zeros_like(inputs)
             for i_col in range(inputs.shape[1]):
-                h = self.input(x, cond_inputs)
-                m, a = self.trunk(h).chunk(2, 1)
+                a, m = self.conditioner_pass(inputs, cond_inputs)
+
                 x[:, i_col] = inputs[:, i_col] * torch.exp(
                     a[:, i_col]) + m[:, i_col]
             return x, -a.sum(-1, keepdim=True)
+
+    def conditioner_pass(self, inputs, cond_inputs):
+        h1 = self.activation(self.input(inputs, cond_inputs, learnable_mask=self.learnable_in_mask))
+        h2 = self.activation(self.hidden(h1, learnable_mask=self.learnable_hidden_mask))
+
+        if self.num_components is None:
+            h3 = self.output(h2, learnable_mask=self.learnable_out_mask)
+        else:
+            h3 = torch.stack([comp(h2, learnable_mask=self.learnable_out_mask) for comp in self.output], axis=0).mean(
+                axis=0)
+        m, a = h3.chunk(2, 1)
+
+        return a, m
 
 
 class AttentionMAF(nn.Module):
