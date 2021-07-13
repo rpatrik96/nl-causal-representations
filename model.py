@@ -26,7 +26,7 @@ class ContrastiveLearningModel(nn.Module):
 
         use_maf = True
         if use_maf is True:
-            encoder = MaskMAF(hparams.n * 10, hparams.n * 50, 2, "relu", False)
+            encoder = MaskMAF(hparams.n, hparams.n * 20, 2, "relu", False)
 
         else:
             encoder = encoders.get_mlp(

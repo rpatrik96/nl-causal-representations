@@ -4,7 +4,7 @@ flows = importlib.import_module("pytorch-flows.flows")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from pdb import set_trace
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
 
@@ -32,8 +32,9 @@ class DoubleMaskedLinear(nn.Module):
         self.register_buffer('mask', mask)
 
     def forward(self, inputs, cond_inputs=None, *, learnable_mask):
-        output = F.linear(inputs, self.linear.weight * self.mask * learnable_mask,
-                          self.linear.bias)
+        # set_trace()
+        # todo: no adaptive mask is used
+        output = F.linear(inputs, self.linear.weight*self.mask*(1+0*F.softmax(learnable_mask.mask.weight, dim=1).T),self.linear.bias)
         if cond_inputs is not None:
             output += self.cond_linear(cond_inputs)
         return output
@@ -126,7 +127,7 @@ class MaskMAF(nn.Module):
         modules = []
         for i in range(self.num_blocks):
             modules += [
-                MaskMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act,
+                MaskMADE(num_inputs, num_hidden, self.input_mask, self.hidden_mask, self.output_mask, num_cond_inputs, act=act,
                          num_components=None if i != 0 else self.num_components),
                 flows.BatchNormFlow(num_inputs)]
 
@@ -135,12 +136,14 @@ class MaskMAF(nn.Module):
 
         self.model = flows.FlowSequential(*modules)
 
-    def forward(self, inputs, cond_inputs=None):
-        self.model(inputs, cond_inputs)
-
     @property
     def jacobian(self):
-        return self.output_mask.weight.data @ self.hidden_mask.weight.data @ self.input_mask.weight.data
+        return self.output_mask.mask.weight.data.T @ self.hidden_mask.mask.weight.data @ self.input_mask.mask.weight.data.T
+
+    def forward(self, inputs, cond_inputs=None):
+        # set_trace()
+        inputs, logdets = self.model(inputs, cond_inputs)
+        return inputs
 
 
 if __name__ == "__main__":
