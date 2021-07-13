@@ -4,3 +4,6 @@ scipy~=1.6.3
 scikit-learn~=0.24.2
 matplotlib~=3.4.2
 tensorflow~=2.5.0
+PyYAML~=5.4.1
+wandb~=0.10.32
+h5py~=3.1.0
