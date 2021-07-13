@@ -20,8 +20,9 @@ class Logger(object):
         self.total_loss_values = None
 
     def _setup_exp_management(self, model):
-        wandb.init(entity="causal-representation-learning", project=self.hparams.project, config=self.hparams)
-        wandb.watch(model, log_freq=self.hparams.n_log_steps, log="all")
+        if self.hparams.use_wandb is True:
+            wandb.init(entity="causal-representation-learning", project=self.hparams.project, config=self.hparams)
+            wandb.watch(model, log_freq=self.hparams.n_log_steps, log="all")
 
     def init_log_lists(self):
         if (self.total_loss_values is not None and not self.hparams.resume_training) or self.total_loss_values is None :
