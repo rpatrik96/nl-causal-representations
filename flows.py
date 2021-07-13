@@ -108,9 +108,10 @@ class MaskMADE(nn.Module):
 
 class MaskMAF(nn.Module):
 
-    def __init__(self, num_inputs, num_hidden, num_cond_inputs, num_blocks, num_components, act):
+    def __init__(self, num_inputs, num_hidden, num_cond_inputs, num_blocks, num_components, act, use_reverse):
         super().__init__()
 
+        self.use_reverse = use_reverse
         self.num_blocks = num_blocks
         self.num_components = num_components
 
@@ -127,8 +128,10 @@ class MaskMAF(nn.Module):
             modules += [
                 MaskMADE(num_inputs, num_hidden, input_mask, hidden_mask, output_mask, num_cond_inputs, act=act,
                          num_components=None if i != 0 else self.num_components),
-                flows.BatchNormFlow(num_inputs),
-                flows.Reverse(num_inputs)]
+                flows.BatchNormFlow(num_inputs)]
+
+            if self.use_reverse is True:
+                modules += [flows.Reverse(num_inputs)]
 
         self.model = flows.FlowSequential(*modules)
 
@@ -148,7 +151,8 @@ if __name__ == "__main__":
     num_components = 5
     batch_size = 32
     act = "relu"
+    use_reverse = False
 
-    maf = MaskMAF(num_inputs, num_hidden, num_outputs, num_blocks, num_components, act)
+    maf = MaskMAF(num_inputs, num_hidden, num_outputs, num_blocks, num_components, act, use_reverse)
 
     maf(torch.randn(batch_size, num_inputs))
