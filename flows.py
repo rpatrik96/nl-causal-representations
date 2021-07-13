@@ -45,7 +45,7 @@ class MaskMADE(nn.Module):
     """
 
     def __init__(self, num_inputs, num_hidden, learnable_in_mask, learnable_hidden_mask, learnable_out_mask,
-                 num_cond_inputs=None, act='relu', pre_exp_tanh=False, num_components=None):
+                 num_cond_inputs=None, act='relu', pre_exp_tanh=False, num_components=1):
         super().__init__()
 
         self.num_components = num_components
@@ -108,7 +108,7 @@ class MaskMADE(nn.Module):
 
 class MaskMAF(nn.Module):
 
-    def __init__(self, num_inputs, num_hidden, num_cond_inputs, num_blocks, num_components, act, use_reverse):
+    def __init__(self, num_inputs, num_hidden, num_blocks, act, use_reverse, num_components=1, num_cond_inputs=None):
         super().__init__()
 
         self.use_reverse = use_reverse
@@ -153,6 +153,6 @@ if __name__ == "__main__":
     act = "relu"
     use_reverse = False
 
-    maf = MaskMAF(num_inputs, num_hidden, num_outputs, num_blocks, num_components, act, use_reverse)
+    maf = MaskMAF(num_inputs, num_hidden, num_blocks, act, use_reverse, num_components, num_outputs)
 
     maf(torch.randn(batch_size, num_inputs))

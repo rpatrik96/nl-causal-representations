@@ -22,20 +22,27 @@ class ContrastiveLearningModel(nn.Module):
 
         output_normalization, output_normalization_kwargs = self._configure_output_normalization()
 
-        encoder = encoders.get_mlp(
-            n_in=hparams.n,
-            n_out=hparams.n,
-            layers=[
-                hparams.n * 10,
-                hparams.n * 50,
-                hparams.n * 50,
-                hparams.n * 50,
-                hparams.n * 50,
-                hparams.n * 10,
-            ],
-            output_normalization=output_normalization,
-            output_normalization_kwargs=output_normalization_kwargs
-        )
+        from flows import MaskMAF
+
+        use_maf = True
+        if use_maf is True:
+            encoder = MaskMAF(hparams.n * 10, hparams.n * 50, 2, "relu", False)
+
+        else:
+            encoder = encoders.get_mlp(
+                n_in=hparams.n,
+                n_out=hparams.n,
+                layers=[
+                    hparams.n * 10,
+                    hparams.n * 50,
+                    hparams.n * 50,
+                    hparams.n * 50,
+                    hparams.n * 50,
+                    hparams.n * 10,
+                ],
+                output_normalization=output_normalization,
+                output_normalization_kwargs=output_normalization_kwargs
+            )
         encoder = encoder.to(hparams.device)
         if hparams.load_f is not None:
             encoder.load_state_dict(torch.load(hparams.load_f, map_location=hparams.device))
