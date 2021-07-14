@@ -18,8 +18,6 @@ def main():
 
     runner = Runner(args)
 
-    g = runner.model.decoder
-    h_ind = lambda z: g(z)
 
     indep_checker = IndependenceChecker(args)
 
@@ -27,11 +25,11 @@ def main():
     latent_space = latent_spaces.LatentSpace(space=(runner.model.space), sample_marginal=(setup_marginal(args)),
                                              sample_conditional=(setup_conditional(args)), )
 
-    check_independence_z_gz(indep_checker, h_ind, latent_space)
+    check_independence_z_gz(indep_checker, runner.model.h_ind, latent_space)
 
-    save_state_dict(args, g)
+    save_state_dict(args, runner.model.decoder)
 
-    runner.training_loop(g, h_ind, indep_checker, latent_space)
+    runner.training_loop(indep_checker, latent_space)
 
 
 if __name__ == "__main__":
