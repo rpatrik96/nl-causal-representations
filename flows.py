@@ -9,6 +9,18 @@ from pdb import set_trace
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
 
 
+class AttentionNet(nn.Module):
+
+    def __init__(self, attention_size):
+        super().__init__()
+
+        self.attention_size = attention_size
+
+        self.attention = nn.Linear(self.attention_size, self.attention_size)
+
+    def forward(self, target, attn=None):
+        return target * F.softmax(self.attention(target if attn is None else attn), dim=-1)
+
 class MaskNet(nn.Module):
 
     def __init__(self, in_features, out_features, bias=False):
@@ -142,8 +154,8 @@ class MaskMAF(nn.Module):
 
     def forward(self, inputs, cond_inputs=None):
         # set_trace()
-        inputs, logdets = self.model(inputs, cond_inputs)
-        return inputs
+        outputs, logdets = self.model(inputs, cond_inputs)
+        return outputs
 
 
 if __name__ == "__main__":
