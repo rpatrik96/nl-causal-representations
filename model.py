@@ -56,6 +56,10 @@ class ContrastiveLearningModel(nn.Module):
         return ((lambda z: self.encoder(self.decoder(z))) if not self.hparams.identity_mixing_and_solution else (
             lambda z: z))
 
+    @property
+    def h_ind(self):
+        return lambda z: self.decoder(z)
+
     def reset_encoder(self):
         self._setup_encoder()
 

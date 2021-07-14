@@ -77,7 +77,7 @@ class Runner(object):
 
         return total_loss, losses
 
-    def training_loop(self, g, h_ind, indep_checker, latent_space):
+    def training_loop(self, indep_checker, latent_space):
         for learning_mode in self.hparams.learning_modes:
             print("supervised test: {}".format(learning_mode))
 
@@ -89,11 +89,11 @@ class Runner(object):
                 data = sample_marginal_and_conditional(latent_space, size=self.hparams.batch_size,
                                                        device=self.hparams.device)
 
-                dep_loss, dep_mat = calc_jacobian_loss(self.hparams, self.model.encoder, g, latent_space)
+                dep_loss, dep_mat = calc_jacobian_loss(self.hparams, self.model.encoder, self.model.decoder, latent_space)
 
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
-                self.logger.log(self.model.h, h_ind, dep_mat, indep_checker, latent_space, losses, total_loss, dep_loss,
+                self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses, total_loss, dep_loss,
                                 self.model.encoder)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
