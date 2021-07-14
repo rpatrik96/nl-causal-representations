@@ -4,3 +4,6 @@
 [submodule "pytorch-flows"]
 	path = pytorch-flows
 	url = https://github.com/ikostrikov/pytorch-flows.git
+[submodule "disentanglement_lib"]
+	path = disentanglement_lib
+	url = https://github.com/google-research/disentanglement_lib.git
