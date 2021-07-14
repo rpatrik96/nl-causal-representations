@@ -4,6 +4,7 @@ flows = importlib.import_module("pytorch-flows.flows")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pdb import set_trace
 
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
@@ -11,21 +12,20 @@ import torch.nn.functional as F
 
 class AttentionNet(nn.Module):
 
-    def __init__(self, attention_size, bias=False, triangular=False):
+    def __init__(self, attention_size, bias=False, transform=lambda x: x):
         super().__init__()
 
-        self.triangular = triangular
+        self.transform = transform
         self.attention_size = attention_size
 
         self.attention = nn.Linear(self.attention_size, self.attention_size, bias=bias)
 
-        if self.triangular is True:
-            self.tril_mask = torch.eye(self.attention_size) + torch.tril(torch.ones_like(self.attention.weight))
+        self.tranform = transform
+        self.attention.weight = nn.Parameter(self.transform(self.attention.weight))
 
     def forward(self, target, attn=None):
-        return target * F.softmax(F.linear(target if attn is None else attn,
-                                           self.attention.weight * (1 if self.triangular is False else self.tril_mask),
-                                           self.attention.bias), dim=-1)
+        # set_trace()
+        return target * F.softmax(F.linear(target if attn is None else attn,self.transform(self.attention.weight),self.attention.bias), dim=-1)
 
 
 class MaskNet(nn.Module):
@@ -39,59 +39,34 @@ class MaskNet(nn.Module):
         return F.softmax(self.mask(input), dim=-1)
 
 
-class DoubleMaskedLinear(nn.Module):
-    def __init__(self, in_features, out_features, mask, cond_in_features=None, bias=False):
-        super().__init__()
-
-        self.linear = nn.Linear(in_features, out_features)
-        if cond_in_features is not None:
-            self.cond_linear = nn.Linear(
-                cond_in_features, out_features, bias=bias)
-
-        self.register_buffer('mask', mask)
-
-    def forward(self, inputs, cond_inputs=None, *, learnable_mask):
-        # set_trace()
-        # todo: no adaptive mask is used
-        output = F.linear(inputs,
-                          self.linear.weight * self.mask * (1 + 0 * F.softmax(learnable_mask.mask.weight, dim=1).T),
-                          self.linear.bias)
-        if cond_inputs is not None:
-            output += self.cond_linear(cond_inputs)
-        return output
-
 
 class MaskMADE(nn.Module):
     """ An implementation of MADE
     (https://arxiv.org/abs/1502.03509).
     """
 
-    def __init__(self, num_inputs, num_hidden, learnable_in_mask, learnable_hidden_mask, learnable_out_mask, attention,
-                 num_cond_inputs=None, act='relu', pre_exp_tanh=False, num_components=1):
+    def __init__(self, num_inputs, num_hidden, attention,
+                 num_cond_inputs=None, act=F.relu, pre_exp_tanh=False, num_components=1):
         super().__init__()
 
         self.attention = attention
         self.num_components = num_components
 
-        self.learnable_in_mask = learnable_in_mask
-        self.learnable_hidden_mask = learnable_hidden_mask
-        self.learnable_out_mask = learnable_out_mask
-
-        activations = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh}
-        self.activation = activations[act]
+        
+        self.activation = act
 
         input_mask = flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
         hidden_mask = flows.get_mask(num_hidden, num_hidden, num_inputs)
         output_mask = flows.get_mask(num_hidden, num_inputs * 2, num_inputs, mask_type='output')
 
-        self.input = DoubleMaskedLinear(num_inputs, num_hidden, input_mask, num_cond_inputs)
-        self.hidden = DoubleMaskedLinear(num_hidden, num_hidden, hidden_mask)
+        self.input = flows.MaskedLinear(num_inputs, num_hidden, input_mask, num_cond_inputs)
+        self.hidden = flows.MaskedLinear(num_hidden, num_hidden, hidden_mask)
 
         if self.num_components is None:
-            self.output = DoubleMaskedLinear(num_hidden, num_inputs * 2, output_mask)
+            self.output = flows.MaskedLinear(num_hidden, num_inputs * 2, output_mask)
         else:
             self.output = nn.ModuleList(
-                [DoubleMaskedLinear(num_hidden, num_inputs * 2, output_mask) for _ in range(num_components)])
+                [flows.MaskedLinear(num_hidden, num_inputs * 2, output_mask) for _ in range(num_components)])
 
     def forward(self, inputs, cond_inputs=None, mode='direct'):
         if mode == 'direct':
@@ -116,13 +91,13 @@ class MaskMADE(nn.Module):
         return u
 
     def conditioner_pass(self, inputs, cond_inputs):
-        h1 = self.activation(self.input(inputs, cond_inputs, learnable_mask=self.learnable_in_mask))
-        h2 = self.activation(self.hidden(h1, learnable_mask=self.learnable_hidden_mask))
+        h1 = self.activation(self.input(inputs, cond_inputs))
+        h2 = self.activation(self.hidden(h1))
 
         if self.num_components is None:
-            h3 = self.output(h2, learnable_mask=self.learnable_out_mask)
+            h3 = self.output(h2, )
         else:
-            h3 = torch.stack([comp(h2, learnable_mask=self.learnable_out_mask) for comp in self.output], axis=0).mean(
+            h3 = torch.stack([comp(h2, ) for comp in self.output], axis=0).mean(
                 axis=0)
         m, a = h3.chunk(2, 1)
 
@@ -138,20 +113,12 @@ class MaskMAF(nn.Module):
         self.num_blocks = num_blocks
         self.num_components = num_components
 
-        input_mask = flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
-        hidden_mask = flows.get_mask(num_hidden, num_hidden, num_inputs)
-        output_mask = flows.get_mask(num_hidden, num_inputs * 2, num_inputs, mask_type='output')
-
-        self.input_mask = MaskNet(*input_mask.shape, bias=False)
-        self.hidden_mask = MaskNet(*hidden_mask.shape, bias=False)
-        self.output_mask = MaskNet(*output_mask.shape, bias=False)
-
-        self.attention = AttentionNet(num_inputs, triangular=True)
+        self.attention = AttentionNet(num_inputs, transform=lambda x: torch.tril(x))
 
         modules = []
         for i in range(self.num_blocks):
             modules += [
-                MaskMADE(num_inputs, num_hidden, self.input_mask, self.hidden_mask, self.output_mask, self.attention,
+                MaskMADE(num_inputs, num_hidden, self.attention,
                          num_cond_inputs, act=act, num_components=None if i != 0 else self.num_components),
                 flows.BatchNormFlow(num_inputs)]
 
@@ -160,27 +127,8 @@ class MaskMAF(nn.Module):
 
         self.model = flows.FlowSequential(*modules)
 
-    @property
-    def jacobian(self):
-        return self.output_mask.mask.weight.data.T @ self.hidden_mask.mask.weight.data @ self.input_mask.mask.weight.data.T
-
     def forward(self, inputs, cond_inputs=None):
         # set_trace()
-        print(self.attention.weight)
+        # print(self.attention.attention.weight)
         outputs, logdets = self.model(inputs, cond_inputs)
         return outputs
-
-
-if __name__ == "__main__":
-    num_inputs = 3
-    num_hidden = 10
-    num_outputs = 2
-    num_blocks = 3
-    num_components = 5
-    batch_size = 32
-    act = "relu"
-    use_reverse = False
-
-    maf = MaskMAF(num_inputs, num_hidden, num_blocks, act, use_reverse, num_components, num_outputs)
-
-    maf(torch.randn(batch_size, num_inputs))

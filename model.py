@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from cl_ica import encoders, invertible_network_utils, losses, spaces
 
@@ -26,7 +27,7 @@ class ContrastiveLearningModel(nn.Module):
 
         use_maf = True
         if use_maf is True:
-            encoder = MaskMAF(hparams.n, hparams.n * 20, 2, "relu", False)
+            encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, False)
 
         else:
             encoder = encoders.get_mlp(
