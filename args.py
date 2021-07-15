@@ -5,6 +5,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Disentanglement with InfoNCE/Contrastive Learning - MLP Mixing"
     )
+    parser.add_argument('--use-flows', action='store_true', help="Use a Flow encoder")
     parser.add_argument('--variant', type=int, default=0)
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
     parser.add_argument('--preserve-vol', action='store_true', help="Normalize the dependency matrix to have determinant=1")
