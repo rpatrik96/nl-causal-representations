@@ -120,7 +120,7 @@ class MaskMAF(nn.Module):
             modules += [
                 MaskMADE(num_inputs, num_hidden, self.attention,
                          num_cond_inputs, act=act, num_components=None if i != 0 else self.num_components),
-                flows.BatchNormFlow(num_inputs)]
+                flows.BatchNormFlow(num_inputs, momentum=0.1)]
 
             if self.use_reverse is True:
                 modules += [flows.Reverse(num_inputs)]

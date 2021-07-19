@@ -26,7 +26,7 @@ class ContrastiveLearningModel(nn.Module):
         from flows import MaskMAF
 
         if self.hparams.use_flows is True:
-            encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, False)
+            encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, use_reverse=hparams.use_reverse)
 
         else:
             encoder = encoders.get_mlp(
