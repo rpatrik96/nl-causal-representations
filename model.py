@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from cl_ica import encoders, invertible_network_utils, losses, spaces
+from flows import MaskMAF
 
 
 class ContrastiveLearningModel(nn.Module):
@@ -22,8 +23,6 @@ class ContrastiveLearningModel(nn.Module):
         hparams = self.hparams
 
         output_normalization, output_normalization_kwargs = self._configure_output_normalization()
-
-        from flows import MaskMAF
 
         if self.hparams.use_flows is True:
             encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, False)

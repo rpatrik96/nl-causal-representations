@@ -86,6 +86,7 @@ class MaskMADE(nn.Module):
             return x, -a.sum(-1, keepdim=True)
 
     def transformer_fwd_pass(self, a, inputs, m):
+        # todo: attention is not invertible
         u = self.attention((inputs - m) * torch.exp(-a))
 
         return u
