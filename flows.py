@@ -15,12 +15,11 @@ class EdgeConfidenceLayer(nn.Module):
     """
     def __init__(self, num_dim):
         super().__init__()
-
-        self.layer = nn.Linear(num_dim, num_dim, bias=False)
-        self.layer.weight = nn.Parameter(torch.tril(torch.ones(num_dim, num_dim)))
+        self.weight = nn.Parameter(torch.tril(torch.ones(num_dim, num_dim)))
 
     def forward(self, x):
-        return torch.sigmoid(self.layer(x))
+        set_trace()
+        return x@torch.sigmoid(self.weight)
 
 class AttentionNet(nn.Module):
 
