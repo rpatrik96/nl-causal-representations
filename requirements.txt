@@ -7,3 +7,4 @@ tensorflow~=2.5.0
 PyYAML~=5.4.1
 wandb~=0.10.32
 h5py~=3.1.0
+torchmetrics~=0.4.1
