@@ -9,6 +9,18 @@ from pdb import set_trace
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
 
+class EdgeConfidenceLayer(nn.Module):
+    """
+    Calculates the confidence of each edge in the causal graph
+    """
+    def __init__(self, num_dim):
+        super().__init__()
+
+        self.layer = nn.Linear(num_dim, num_dim, bias=False)
+        self.layer.weight = nn.Parameter(torch.tril(torch.ones(num_dim, num_dim)))
+
+    def forward(self, x):
+        return torch.sigmoid(self.layer(x))
 
 class AttentionNet(nn.Module):
 
@@ -114,12 +126,12 @@ class MaskMAF(nn.Module):
         self.num_blocks = num_blocks
         self.num_components = num_components
 
-        self.attention = AttentionNet(num_inputs, transform=lambda x: torch.tril(x))
+        self.confidence = EdgeConfidenceLayer(num_inputs)
 
         modules = []
         for i in range(self.num_blocks):
             modules += [
-                MaskMADE(num_inputs, num_hidden, self.attention,
+                MaskMADE(num_inputs, num_hidden, self.confidence,
                          num_cond_inputs, act=act, num_components=None if i != 0 else self.num_components),
                 flows.BatchNormFlow(num_inputs, momentum=0.1)]
 
