@@ -4,15 +4,16 @@ import argparse
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Disentanglement with InfoNCE/Contrastive Learning - MLP Mixing"
-    )
+    )   
     parser.add_argument('--use-flows', action='store_true', help="Use a Flow encoder")
     parser.add_argument('--use-reverse', action='store_true', help="Use reverse layers in the Flow encoder")
     parser.add_argument('--variant', type=int, default=0)
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
+    parser.add_argument('--inject-structure', action='store_true', help="Injects a fixed structure into the flow to see the effect when the GT cannot be recovered")
     parser.add_argument('--preserve-vol', action='store_true', help="Normalize the dependency matrix to have determinant=1")
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
-    #############################
+    #############################   
     parser.add_argument("--sphere-r", type=float, default=1.0)
     parser.add_argument(
         "--box-min",
@@ -112,7 +113,7 @@ def parse_args():
     # W and B
     parser.add_argument('--use-wandb', action='store_true', help="Log with Weights&Biases")
     parser.add_argument("--project", type=str, default="experiment", help="This is the name of the experiment on Weights and Biases")
-
+    parser.add_argument("--notes", type=str, default=None, help="Notes for the run on Weights and Biases")
 
     args = parser.parse_args()
 

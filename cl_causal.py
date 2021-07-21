@@ -25,7 +25,10 @@ def main():
     latent_space = latent_spaces.LatentSpace(space=(runner.model.space), sample_marginal=(setup_marginal(args)),
                                              sample_conditional=(setup_conditional(args)), )
 
-    check_independence_z_gz(indep_checker, runner.model.h_ind, latent_space)
+    dep_mat = check_independence_z_gz(indep_checker, runner.model.h_ind, latent_space)
+
+    if args.use_flows:
+        runner.model.encoder.confidence.inject_structure(dep_mat, args.inject_structure)
 
     save_state_dict(args, runner.model.decoder)
 

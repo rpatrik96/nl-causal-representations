@@ -21,7 +21,7 @@ class Logger(object):
 
     def _setup_exp_management(self, model):
         if self.hparams.use_wandb is True:
-            wandb.init(entity="causal-representation-learning", project=self.hparams.project, config=self.hparams)
+            wandb.init(entity="causal-representation-learning", project=self.hparams.project, notes=self.hparams.notes, config=self.hparams)
             wandb.watch(model, log_freq=self.hparams.n_log_steps, log="all")
 
     def init_log_lists(self):

@@ -110,6 +110,7 @@ def check_independence_z_gz(ind_check, h_ind, latent_space):
     print(f"Id. Perm. Disentanglement: {perm_dis_score:.4f}")
     print('Run test with ground truth sources')
 
+    dep_mat = None
     if ind_check.hparams.use_dep_mat:
         # x \times z
         dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=ind_check.hparams.preserve_vol).abs().mean(0)
@@ -131,3 +132,5 @@ def check_independence_z_gz(ind_check, h_ind, latent_space):
     else:
         print('no causal effect...?')
         sys.exit()
+
+    return dep_mat

@@ -17,9 +17,23 @@ class EdgeConfidenceLayer(nn.Module):
         super().__init__()
         self.weight = nn.Parameter(torch.tril(torch.ones(num_dim, num_dim)))
 
+
+
     def forward(self, x):
-        set_trace()
-        return x@torch.sigmoid(self.weight)
+        return x@torch.clamp(self.weight, 0.0, 1.0)
+
+    def inject_structure(self, adj_mat, inject_structure=False):
+
+        if inject_structure is True:
+            # create an adjacency matrix with a full diagonal but different global structure than the original
+            # the injected matrix is a lower triangular matrix and has at least one 0 element where the original matrix has a 1 element
+            while torch.equal(tmp := torch.clamp(torch.eye(adj_mat.shape[0]).to(adj_mat.device)+torch.tril(torch.bernoulli(.5*torch.ones_like(self.weight)), -1),0.,1.), adj_mat.bool() ) is True or tmp.sum() == 0 or (tmp*adj_mat.bool()).sum() == adj_mat.bool().sum():
+                pass
+
+            self.weight = nn.Parameter(tmp, requires_grad=False)
+
+            print(f"Injected structure with weight: {self.weight}")
+
 
 class AttentionNet(nn.Module):
 
@@ -56,11 +70,11 @@ class MaskMADE(nn.Module):
     (https://arxiv.org/abs/1502.03509).
     """
 
-    def __init__(self, num_inputs, num_hidden, attention,
+    def __init__(self, num_inputs, num_hidden, confidence,
                  num_cond_inputs=None, act=F.relu, pre_exp_tanh=False, num_components=1):
         super().__init__()
 
-        self.attention = attention
+        self.confidence = confidence
         self.num_components = num_components
 
         
@@ -98,7 +112,7 @@ class MaskMADE(nn.Module):
 
     def transformer_fwd_pass(self, a, inputs, m):
         # todo: attention is not invertible
-        u = self.attention((inputs - m) * torch.exp(-a))
+        u = self.confidence((inputs - m) * torch.exp(-a))
 
         return u
 
