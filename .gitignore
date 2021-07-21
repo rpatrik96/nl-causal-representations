@@ -6,3 +6,4 @@ run
 __pycache__
 */__pycache__/*
 wandb/*
+*.sif
