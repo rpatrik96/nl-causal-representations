@@ -13,14 +13,16 @@ class EdgeConfidenceLayer(nn.Module):
     """
     Calculates the confidence of each edge in the causal graph
     """
-    def __init__(self, num_dim):
+    def __init__(self, num_dim, transform:callable=None):
         super().__init__()
-        self.weight = nn.Parameter(torch.tril(torch.ones(num_dim, num_dim)))
+        self.weight = nn.Parameter(torch.tril(torch.ones(num_dim, num_dim),-1))
+
+        self.transform = transform if transform is not None else lambda x: torch.clamp(torch.tril(x), 0.0, 1.0)
 
 
 
     def forward(self, x):
-        return x@torch.clamp(self.weight, 0.0, 1.0)
+        return x@self.transform(self.weight)
 
     def inject_structure(self, adj_mat, inject_structure=False):
 
@@ -30,7 +32,8 @@ class EdgeConfidenceLayer(nn.Module):
             while torch.equal(tmp := torch.clamp(torch.eye(adj_mat.shape[0]).to(adj_mat.device)+torch.tril(torch.bernoulli(.5*torch.ones_like(self.weight)), -1),0.,1.), adj_mat.bool() ) is True or tmp.sum() == 0 or (tmp*adj_mat.bool()).sum() == adj_mat.bool().sum():
                 pass
 
-            self.weight = nn.Parameter(tmp, requires_grad=False)
+            self.weight = nn.Parameter(torch.tril(tmp,-1), requires_grad=False)
+            self.transform = lambda x: torch.clamp(x, 0.0, 1.0)
 
             print(f"Injected structure with weight: {self.weight}")
 
@@ -112,7 +115,7 @@ class MaskMADE(nn.Module):
 
     def transformer_fwd_pass(self, a, inputs, m):
         # todo: attention is not invertible
-        u = self.confidence((inputs - m) * torch.exp(-a))
+        u = (inputs - self.confidence(m)) * torch.exp(-self.confidence(a))
 
         return u
 

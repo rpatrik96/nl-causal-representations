@@ -91,6 +91,9 @@ class Runner(object):
 
                 dep_loss, dep_mat = calc_jacobian_loss(self.hparams, self.model.encoder, self.model.decoder, latent_space)
 
+                if self.hparams.use_flows:
+                    dep_mat = self.model.encoder.confidence.weight.data
+
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses, total_loss, dep_loss,
