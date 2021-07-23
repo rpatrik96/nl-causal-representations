@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 from cl_ica import encoders, invertible_network_utils, losses, spaces
 from flows import MaskMAF
+from pdb import set_trace
 
 
 class ContrastiveLearningModel(nn.Module):
@@ -25,7 +26,9 @@ class ContrastiveLearningModel(nn.Module):
         output_normalization, output_normalization_kwargs = self._configure_output_normalization()
 
         if self.hparams.use_flows is True:
-            encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, use_reverse=hparams.use_reverse)
+            encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, use_reverse=hparams.use_reverse, learnable=hparams.learnable_mask)
+
+            encoder.confidence.to(hparams.device)
 
         else:
             encoder = encoders.get_mlp(

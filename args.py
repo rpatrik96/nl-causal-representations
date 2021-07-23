@@ -11,6 +11,7 @@ def parse_args():
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
     parser.add_argument('--inject-structure', action='store_true', help="Injects a fixed structure into the flow to see the effect when the GT cannot be recovered")
     parser.add_argument('--preserve-vol', action='store_true', help="Normalize the dependency matrix to have determinant=1")
+    parser.add_argument('--learnable-mask', action='store_true', help="Makes the masks in the flow learnable")
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
     #############################   
