@@ -47,6 +47,7 @@ def set_device(args) -> None:
     if not torch.cuda.is_available() or args.no_cuda is True:
         device = "cpu"
 
-    print(f"{device=}")
+    if args.verbose is True:
+        print(f"{device=}")
 
     args.device = device

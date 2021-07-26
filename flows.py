@@ -212,10 +212,12 @@ class MaskMADE(nn.Module):
 
 class MaskMAF(nn.Module):
 
-    def __init__(self, num_inputs, num_hidden, num_blocks, act, use_reverse, learnable=False, num_components=1, num_cond_inputs=None):
+    def __init__(self, num_inputs, num_hidden, num_blocks, act, use_reverse, use_batch_norm, learnable=False,
+                 num_components=1, num_cond_inputs=None):
         super().__init__()
 
         self.use_reverse = use_reverse
+        self.use_batch_norm = use_batch_norm
         self.num_blocks = num_blocks
         self.num_components = num_components
 
@@ -225,8 +227,10 @@ class MaskMAF(nn.Module):
         for i in range(self.num_blocks):
             modules += [
                 MaskMADE(num_inputs, num_hidden, self.confidence,
-                         num_cond_inputs, act=act, num_components=None if i != 0 else self.num_components),
-                flows.BatchNormFlow(num_inputs, momentum=0.1)]
+                         num_cond_inputs, act=act, num_components=None if i != 0 else self.num_components)]
+
+            if self.use_batch_norm is True:
+                modules+=[flows.BatchNormFlow(num_inputs, momentum=0.1)]
 
             if self.use_reverse is True:
                 modules += [flows.Reverse(num_inputs)]

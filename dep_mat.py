@@ -82,7 +82,7 @@ def calc_jacobian_loss(args, f, g, latent_space):
     obs = g(z_disentanglement)
     # 3. calculate the dependency matrix
     # x \times f(x)
-    dep_mat = calc_jacobian(f, obs, normalize=args.preserve_vol).abs().mean(0).T
+    dep_mat = calc_jacobian(f, obs, normalize=args.preserve_vol).abs().mean(0)
     # 4. calculate the loss for the dependency matrix
     dep_loss = dependency_loss(dep_mat)
     return dep_loss, dep_mat
