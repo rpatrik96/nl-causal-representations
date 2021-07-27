@@ -79,7 +79,7 @@ class EdgeConfidenceLayer(nn.Module):
             self.output = nn.Parameter(tmp_out)
             self.transform = lambda x: torch.clamp(x, 0.0, 1.0)
 
-            print(f"Injected structure with weight: {self.mask}")
+            print(f"Injected structure with weight: {self.mask()}")
 
 
 class AttentionNet(nn.Module):
