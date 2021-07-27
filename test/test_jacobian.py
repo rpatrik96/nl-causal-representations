@@ -19,7 +19,7 @@ def args(request):
                               n_mixing_layer=3, n_steps=100001, no_cuda=False, normalization='', notes=None,
                               num_eval_batches=10, num_permutations=50, p=1, preserve_vol=False, project='experiment',
                               resume_training=False, save_dir='', seed=0, space_type='box', sphere_r=1.0, tau=1.0,
-                              use_batch_norm=False, use_dep_mat=True, use_flows=True, use_reverse=False,
+                              use_batch_norm=True, use_dep_mat=True, use_flows=True, use_reverse=False,
                               use_wandb=False, variant=1, verbose=False)
 
     set_device(args)
