@@ -46,3 +46,46 @@ def test_triangularity_decoder_jacobian(model: ContrastiveLearningModel, network
 
     assert (torch.tril(dep_mat) != dep_mat).sum() == 0
 
+
+@pytest.mark.parametrize("network", ["decoder", "encoder"])
+def test_triangularity_naive(model: ContrastiveLearningModel, network):
+    """
+    Checks the AR nature of the model by perturbing the input and observing the changes in the outputs.
+
+    :param model: model to test
+    :param network: model components
+    :return:
+    """
+
+    # constants
+    batch_size = 1
+    tria_check = torch.zeros(model.hparams.n)
+
+    # set to eval mode but remember original state
+    in_training: bool = model.training
+    model.eval()  # otherwise we will get 0 gradients
+
+    # calculate the baseline output - all inputs should be different from 0
+    # this is to avoid degenerate cases making the test succeed
+    y0 = model._modules[network](torch.ones(batch_size, model.hparams.n))
+    print(f"{y0=}")
+
+    # loop for perturbing each input one-by-one
+    for i in range(model.hparams.n):
+        z = torch.ones(batch_size, model.hparams.n)
+        z[:, i] = -1
+
+        y = model._modules[network](z)
+
+        print(f"{i=},{y=}")
+
+        # the indexing is up to the ith element
+        # as input i affects outputs i:n
+        # so a change before that is a failure
+        tria_check[i] = (y[:, :i] != y0[:, :i]).sum()
+
+    # set back to original mode
+    if in_training is True:
+        model.train()
+
+    assert tria_check.sum() == 0
