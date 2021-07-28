@@ -36,12 +36,22 @@ def model(args):
 
 @pytest.mark.parametrize("network", ["decoder", "encoder"])
 def test_triangularity_decoder_jacobian(model: ContrastiveLearningModel, network):
+    """
+
+    Checks the AR nature of the model by calculating the Jacobian.
+
+    :param model: model to test
+    :param network: model components
+    :return:
+    """
+
+    # draw a sample from the latent space
     latent_space = latent_spaces.LatentSpace(space=model.space, sample_marginal=(setup_marginal(model.hparams)),
                                              sample_conditional=(setup_conditional(model.hparams)), )
-
     z = latent_space.sample_marginal(model.hparams.n_eval_samples)
-    dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.preserve_vol).abs().mean(0)
 
+    # calculate the Jacobian
+    dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.preserve_vol).abs().mean(0)
     print(f"{dep_mat=}")
 
     assert (torch.tril(dep_mat) != dep_mat).sum() == 0
