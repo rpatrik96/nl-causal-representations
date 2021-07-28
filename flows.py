@@ -28,9 +28,9 @@ class EdgeConfidenceLayer(nn.Module):
 
         self.num_ones = self.input_mask_fix.bool().sum() + self.hidden_mask_fix.bool().sum() + self.output_mask_fix.bool().sum()
 
-        self.input = nn.Parameter(torch.ones_like(self.input_mask_fix)*self.input_mask_fix)
-        self.hidden = nn.Parameter(torch.ones_like(self.hidden_mask_fix)*self.hidden_mask_fix)
-        self.output= nn.Parameter(torch.ones_like(self.output_mask_fix)*self.output_mask_fix)
+        self.input = nn.Parameter(self.input_mask_fix)
+        self.hidden = nn.Parameter(self.hidden_mask_fix)
+        self.output= nn.Parameter(self.output_mask_fix)
 
     def to(self, device):
         self.input.to(device)
@@ -61,24 +61,24 @@ class EdgeConfidenceLayer(nn.Module):
     def inject_structure(self, adj_mat, inject_structure=False):
 
         if inject_structure is True:
-            # create an adjacency matrix with a full diagonal but different global structure than the original
-            # the injected matrix is a lower triangular matrix and has at least one 0 element where the original matrix has a 1 element
-            while torch.equal( (tmp_out:= torch.bernoulli(.5*torch.ones_like(self.output_mask_fix))*self.output_mask_fix)
-                            @
-                            (tmp_hid:= torch.bernoulli(.5*torch.ones_like(self.hidden_mask_fix))*self.hidden_mask_fix)
-                            @
-                            (tmp_in := torch.bernoulli(.5*torch.ones_like(self.input_mask_fix))*self.input_mask_fix), 
-                            torch.tril(adj_mat, -1)) is True or ((tmp_out@tmp_hid@tmp_in)*adj_mat.bool()).sum() == adj_mat.bool().sum():
-                pass
 
-            
-            
+            num_dim = adj_mat.shape[0]
 
-            self.input = nn.Parameter(tmp_in)
-            self.hidden = nn.Parameter(tmp_hid)
-            self.output = nn.Parameter(tmp_out)
+            row = torch.randint(1, num_dim, (1,))
+            col = torch.randint(0, row.item(), (1,))
+
+            in_cols = self.input_mask_fix[:, col].bool()
+            out_rows = self.output_mask_fix[row, :].bool()
+            hid_rows = self.hidden_mask_fix[out_rows.squeeze(),:].bool()
+            # iterate through the rows that affect output "row", and collect all inputs contained in those rows
+            in_rows_selector = [hid_rows[i - 1].bitwise_or_(hid_rows[i]) for i in reversed(range(1, out_rows.sum()))][-1]
+
+
+            remove_features = in_cols.squeeze().bitwise_and(in_rows_selector.squeeze())
+            self.output_mask_fix[row, remove_features.squeeze()] = 0
+
+            self.output = nn.Parameter(self.output_mask_fix)
             self.transform = lambda x: torch.clamp(x, 0.0, 1.0)
-
             print(f"Injected structure with weight: {self.mask()}")
 
 
