@@ -82,28 +82,6 @@ class EdgeConfidenceLayer(nn.Module):
             print(f"Injected structure with weight: {self.mask()}")
 
 
-        if inject_structure is True:
-            # create an adjacency matrix with a full diagonal but different global structure than the original
-            # the injected matrix is a lower triangular matrix and has at least one 0 element where the original matrix has a 1 element
-            while torch.equal( (tmp_out:= torch.bernoulli(.5*torch.ones_like(self.output_mask_fix))*self.output_mask_fix)
-                            @
-                            (tmp_hid:= torch.bernoulli(.5*torch.ones_like(self.hidden_mask_fix))*self.hidden_mask_fix)
-                            @
-                            (tmp_in := torch.bernoulli(.5*torch.ones_like(self.input_mask_fix))*self.input_mask_fix),
-                            torch.tril(adj_mat, -1)) is True or ((tmp_out@tmp_hid@tmp_in)*adj_mat.bool()).sum() == adj_mat.bool().sum():
-                pass
-
-
-
-
-            self.input = nn.Parameter(tmp_in)
-            self.hidden = nn.Parameter(tmp_hid)
-            self.output = nn.Parameter(tmp_out)
-            self.transform = lambda x: torch.clamp(x, 0.0, 1.0)
-
-            print(f"Injected structure with weight: {self.mask}")
-
-
 class AttentionNet(nn.Module):
 
     def __init__(self, attention_size, bias=False, transform=lambda x: x):
