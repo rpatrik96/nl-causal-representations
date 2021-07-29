@@ -5,8 +5,8 @@ import torch
 import wandb
 
 from cl_ica import latent_spaces
-from indep_check import IndependenceChecker
-from prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional
+from src.indep_check import IndependenceChecker
+from src.prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional
 
 
 class Logger(object):
@@ -21,11 +21,12 @@ class Logger(object):
 
     def _setup_exp_management(self, model):
         if self.hparams.use_wandb is True:
-            wandb.init(entity="causal-representation-learning", project=self.hparams.project, notes=self.hparams.notes, config=self.hparams)
+            wandb.init(entity="causal-representation-learning", project=self.hparams.project, notes=self.hparams.notes,
+                       config=self.hparams)
             wandb.watch(model, log_freq=self.hparams.n_log_steps, log="all")
 
     def init_log_lists(self):
-        if (self.total_loss_values is not None and not self.hparams.resume_training) or self.total_loss_values is None :
+        if (self.total_loss_values is not None and not self.hparams.resume_training) or self.total_loss_values is None:
             self.individual_losses_values = []
             self.total_loss_values = []
             self.lin_dis_scores = []
@@ -39,7 +40,6 @@ class Logger(object):
 
         self.individual_losses_values.append(losses)
         self.total_loss_values.append(total_loss)
-
 
         if self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps:
 
@@ -85,10 +85,10 @@ class Logger(object):
             self.causal_check.append(self.causal_check[-1])
 
         self._log_to_wandb(dep_mat, self.global_step, total_loss)
-        
+
         self.print_statistics(f, dep_mat, dep_loss)
 
-        self.global_step +=1
+        self.global_step += 1
 
     def print_statistics(self, f, dep_mat, dep_loss):
         if self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps:
@@ -140,4 +140,3 @@ class Logger(object):
             wandb.log({"total_loss": total_loss, "lin_dis_score": self.lin_dis_scores[-1],
                        "perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
             wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
-

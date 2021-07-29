@@ -4,10 +4,10 @@ import pytest
 import torch
 
 from cl_ica import latent_spaces
-from dep_mat import calc_jacobian
-from model import ContrastiveLearningModel
-from prob_utils import setup_marginal, setup_conditional
-from utils import setup_seed, set_learning_mode, set_device
+from src.dep_mat import calc_jacobian
+from src.model import ContrastiveLearningModel
+from src.prob_utils import setup_marginal, setup_conditional
+from src.utils import setup_seed, set_learning_mode, set_device
 
 
 @pytest.fixture(params=[2,3])

@@ -55,7 +55,7 @@ class LinearDataset(Dataset):
 
 
 class NonLinearDataset(Dataset):
-    def __init__(self, num_dim: int, num_layers: int, num_samples: int, variant:int=None):
+    def __init__(self, num_dim: int, num_layers: int, num_samples: int, variant: int = None):
         """
         :param variant:
         :param num_dim: number of dimensions
@@ -135,7 +135,7 @@ def tensor2bitlist(x: torch.IntTensor, bits: int) -> torch.Tensor:
     return x.unsqueeze(-1).bitwise_and(mask).ne(0).byte()
 
 
-def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, torch.Tensor]:
+def createARmask(dim: int, variant: torch.IntTensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Create a (sparse) autoregressive triangular mask
 

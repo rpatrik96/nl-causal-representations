@@ -48,9 +48,8 @@ class ICAModel(nn.Module):
         model_entropy = self._ml_objective(self(x), self.signal_model).mean()
 
         # log of the abs determinant of the unmixing matrix
-        #_, log_abs_det = torch.linalg.slogdet(self.W)
+        # _, log_abs_det = torch.linalg.slogdet(self.W)
         _, log_abs_det = torch.slogdet(self.W)
-
 
         # as we need to minimize, there is a minus sign here
         return -model_entropy, -log_abs_det

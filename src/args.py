@@ -11,8 +11,10 @@ def parse_args():
     parser.add_argument('--use-batch-norm', action='store_true', help="Use batchnorm layers in the Flow encoder")
     parser.add_argument('--variant', type=int, default=0)
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
-    parser.add_argument('--inject-structure', action='store_true', help="Injects a fixed structure into the flow to see the effect when the GT cannot be recovered")
-    parser.add_argument('--preserve-vol', action='store_true', help="Normalize the dependency matrix to have determinant=1")
+    parser.add_argument('--inject-structure', action='store_true',
+                        help="Injects a fixed structure into the flow to see the effect when the GT cannot be recovered")
+    parser.add_argument('--preserve-vol', action='store_true',
+                        help="Normalize the dependency matrix to have determinant=1")
     parser.add_argument('--learnable-mask', action='store_true', help="Makes the masks in the flow learnable")
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
@@ -112,10 +114,10 @@ def parse_args():
     parser.add_argument("--n-steps", type=int, default=100001)
     parser.add_argument("--resume-training", action="store_true")
 
-
     # W and B
     parser.add_argument('--use-wandb', action='store_true', help="Log with Weights&Biases")
-    parser.add_argument("--project", type=str, default="experiment", help="This is the name of the experiment on Weights and Biases")
+    parser.add_argument("--project", type=str, default="experiment",
+                        help="This is the name of the experiment on Weights and Biases")
     parser.add_argument("--notes", type=str, default=None, help="Notes for the run on Weights and Biases")
 
     args = parser.parse_args()
@@ -125,4 +127,3 @@ def parse_args():
         print(f"\t{k}: {v}")
 
     return args
-

@@ -1,11 +1,11 @@
 import torch
 from torch.nn import functional as F
 
-from dep_mat import calc_jacobian_loss
-from logger import Logger
-from model import ContrastiveLearningModel
-from prob_utils import sample_marginal_and_conditional
-from utils import unpack_item_list, save_state_dict
+from src.dep_mat import calc_jacobian_loss
+from src.logger import Logger
+from src.model import ContrastiveLearningModel
+from src.prob_utils import sample_marginal_and_conditional
+from src.utils import unpack_item_list, save_state_dict
 
 
 class Runner(object):
@@ -89,14 +89,16 @@ class Runner(object):
                 data = sample_marginal_and_conditional(latent_space, size=self.hparams.batch_size,
                                                        device=self.hparams.device)
 
-                dep_loss, dep_mat = calc_jacobian_loss(self.hparams, self.model.encoder, self.model.decoder, latent_space)
+                dep_loss, dep_mat = calc_jacobian_loss(self.hparams, self.model.encoder, self.model.decoder,
+                                                       latent_space)
 
                 if self.hparams.use_flows:
                     dep_mat = self.model.encoder.confidence.mask()
 
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
-                self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses, total_loss, dep_loss,
+                self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses,
+                                total_loss, dep_loss,
                                 self.model.encoder)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))

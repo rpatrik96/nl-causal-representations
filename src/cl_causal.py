@@ -1,11 +1,11 @@
 from args import parse_args
 from cl_ica import latent_spaces
-from indep_check import IndependenceChecker
+from src.indep_check import IndependenceChecker
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
-from prob_utils import setup_marginal, setup_conditional, check_independence_z_gz
-from runner import Runner
-from utils import setup_seed, save_state_dict, set_learning_mode, set_device
+from src.prob_utils import setup_marginal, setup_conditional, check_independence_z_gz
+from src.runner import Runner
+from src.utils import setup_seed, save_state_dict, set_learning_mode, set_device
 
 
 def main():
@@ -17,7 +17,6 @@ def main():
     set_learning_mode(args)
 
     runner = Runner(args)
-
 
     indep_checker = IndependenceChecker(args)
 

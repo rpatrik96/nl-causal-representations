@@ -1,6 +1,6 @@
 import torch
 
-from hsic import HSIC
+from src.hsic import HSIC
 
 
 class IndependenceChecker(object):
@@ -43,4 +43,3 @@ class IndependenceChecker(object):
                                                                 bonferroni=max_edge_num).item()
 
         return adjacency_matrix
-

@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+
 class HSIC(object):
     def __init__(self, num_permutations: int, alpha: float = .05):
         """
@@ -60,7 +61,7 @@ class HSIC(object):
 
         return torch.median(dists)
 
-    def run_test(self, x, y, device: str = 'cpu', ls_x: float = None, ls_y: float = None, bonferroni: int=1) -> bool:
+    def run_test(self, x, y, device: str = 'cpu', ls_x: float = None, ls_y: float = None, bonferroni: int = 1) -> bool:
         """
         Runs the HSIC test with randomly permuting the indices of y.
 
@@ -76,7 +77,7 @@ class HSIC(object):
             x = torch.from_numpy(x)
         if not torch.is_tensor(y):
             y = torch.from_numpy(y)
-            
+
         if len(x.shape) == 1:
             x = x.unsqueeze(1)
         if len(y.shape) == 1:

@@ -4,8 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from cl_ica import encoders, invertible_network_utils, losses, spaces
-from flows import MaskMAF
-from pdb import set_trace
+from src.flows import MaskMAF
 
 
 class ContrastiveLearningModel(nn.Module):
@@ -145,4 +144,3 @@ class ContrastiveLearningModel(nn.Module):
         else:
             raise ValueError("Invalid output normalization:", hparams.normalization)
         return output_normalization, output_normalization_kwargs
-        

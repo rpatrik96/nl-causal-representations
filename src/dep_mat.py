@@ -14,10 +14,10 @@ def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = F
 
     jacob = []
     input_vars = latents.clone().requires_grad_(True)
-    
+
     # set to eval mode but remember original state
     in_training: bool = encoder.training
-    encoder.eval() #otherwise we will get 0 gradients
+    encoder.eval()  # otherwise we will get 0 gradients
 
     output_vars = encoder(input_vars)
 
@@ -32,7 +32,6 @@ def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = F
     # print(jacobian.shape)
     if normalize is True:
         jacobian *= jacobian.det().abs().pow(1 / jacobian.shape[0]).reshape(-1, 1, 1)
-
 
     # set back to original mode
     if in_training is True:

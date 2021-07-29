@@ -4,25 +4,23 @@ flows = importlib.import_module("pytorch-flows.flows")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pdb import set_trace
 
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
 
-        
-        
 
 class EdgeConfidenceLayer(nn.Module):
     """
     Calculates the confidence of each edge in the causal graph
     """
-    def __init__(self, num_inputs, num_hidden, learnable:bool=False, transform:callable=None):
+
+    def __init__(self, num_inputs, num_hidden, learnable: bool = False, transform: callable = None):
         super().__init__()
 
         self.learnable = learnable
         self.transform = transform if transform is not None else lambda x: torch.clamp(torch.tril(x), 0.0, 1.0)
 
-        self.input_mask_fix= flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
+        self.input_mask_fix = flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
         self.hidden_mask_fix = flows.get_mask(num_hidden, num_hidden, num_inputs)
         self.output_mask_fix = flows.get_mask(num_hidden, num_inputs, num_inputs, mask_type='output')
 
@@ -30,38 +28,33 @@ class EdgeConfidenceLayer(nn.Module):
 
         self.input = nn.Parameter(self.input_mask_fix)
         self.hidden = nn.Parameter(self.hidden_mask_fix)
-        self.output= nn.Parameter(self.output_mask_fix)
+        self.output = nn.Parameter(self.output_mask_fix)
 
     def to(self, device):
         self.input.to(device)
         self.hidden.to(device)
         self.output.to(device)
 
-        self.input_mask_fix= self.input_mask_fix.to(device)
+        self.input_mask_fix = self.input_mask_fix.to(device)
         self.hidden_mask_fix = self.hidden_mask_fix.to(device)
         self.output_mask_fix = self.output_mask_fix.to(device)
-
 
         return self
 
     def mask(self):
-        return self.output.data@self.hidden.data@self.input.data/self.num_ones
+        return self.output.data @ self.hidden.data @ self.input.data / self.num_ones
 
     def input_mask(self):
-        return self.input_mask_fix if self.learnable is False else self.transform(self.input)*self.input_mask_fix
-
+        return self.input_mask_fix if self.learnable is False else self.transform(self.input) * self.input_mask_fix
 
     def hidden_mask(self):
-        return self.hidden_mask_fix if self.learnable is False else self.transform(self.hidden)*self.hidden_mask_fix
+        return self.hidden_mask_fix if self.learnable is False else self.transform(self.hidden) * self.hidden_mask_fix
 
     def output_mask(self):
-        return self.output_mask_fix if self.learnable is False else self.transform(self.output)*self.output_mask_fix
+        return self.output_mask_fix if self.learnable is False else self.transform(self.output) * self.output_mask_fix
 
-        
     def inject_structure(self, adj_mat, inject_structure=False):
-
         if inject_structure is True:
-
             num_dim = adj_mat.shape[0]
 
             row = torch.randint(1, num_dim, (1,))
@@ -69,10 +62,10 @@ class EdgeConfidenceLayer(nn.Module):
 
             in_cols = self.input_mask_fix[:, col].bool()
             out_rows = self.output_mask_fix[row, :].bool()
-            hid_rows = self.hidden_mask_fix[out_rows.squeeze(),:].bool()
+            hid_rows = self.hidden_mask_fix[out_rows.squeeze(), :].bool()
             # iterate through the rows that affect output "row", and collect all inputs contained in those rows
-            in_rows_selector = [hid_rows[i - 1].bitwise_or_(hid_rows[i]) for i in reversed(range(1, out_rows.sum()))][-1]
-
+            in_rows_selector = [hid_rows[i - 1].bitwise_or_(hid_rows[i]) for i in reversed(range(1, out_rows.sum()))][
+                -1]
 
             remove_features = in_cols.squeeze().bitwise_and(in_rows_selector.squeeze())
             self.output_mask_fix[row, remove_features.squeeze()] = 0
@@ -97,7 +90,9 @@ class AttentionNet(nn.Module):
 
     def forward(self, target, attn=None):
         # set_trace()
-        return target * F.softmax(F.linear(target if attn is None else attn,self.transform(self.attention.weight),self.attention.bias), dim=-1)
+        return target * F.softmax(
+            F.linear(target if attn is None else attn, self.transform(self.attention.weight), self.attention.bias),
+            dim=-1)
 
 
 class MaskNet(nn.Module):
@@ -112,7 +107,7 @@ class MaskNet(nn.Module):
 
 
 class LearnableMaskedLinear(nn.Module):
-    def __init__(self,in_features,out_features,learnable_mask,cond_in_features=None,bias=True):
+    def __init__(self, in_features, out_features, learnable_mask, cond_in_features=None, bias=True):
         super().__init__()
         self.linear = nn.Linear(in_features, out_features)
         if cond_in_features is not None:
@@ -128,12 +123,14 @@ class LearnableMaskedLinear(nn.Module):
             output += self.cond_linear(cond_inputs)
         return output
 
+
 class SplitMADESubnet(nn.Module):
     """
     A subnetwork of the split MADE
     """
+
     def __init__(self, num_inputs, num_hidden, num_components, confidence, activation, num_cond_inputs=None):
-        super().__init__() 
+        super().__init__()
 
         self.num_components = num_components
 
@@ -147,8 +144,9 @@ class SplitMADESubnet(nn.Module):
             self.output = LearnableMaskedLinear(num_hidden, num_inputs, self.confidence.output_mask)
         else:
             self.output = nn.ModuleList(
-                [LearnableMaskedLinear(num_hidden, num_inputs, self.confidence.output_mask) for _ in range(num_components)])
-    
+                [LearnableMaskedLinear(num_hidden, num_inputs, self.confidence.output_mask) for _ in
+                 range(num_components)])
+
     def forward(self, inputs, cond_inputs=None):
 
         h1 = self.activation(self.input(inputs, cond_inputs))
@@ -171,11 +169,10 @@ class MaskMADE(nn.Module):
                  num_cond_inputs=None, act=F.relu, pre_exp_tanh=False, num_components=1):
         super().__init__()
 
-
         self.pre_exp_tanh = pre_exp_tanh
 
-        self.s_net = SplitMADESubnet(num_inputs, num_hidden, num_components, confidence,act, num_cond_inputs)
-        self.t_net = SplitMADESubnet(num_inputs, num_hidden, num_components, confidence,act, num_cond_inputs)
+        self.s_net = SplitMADESubnet(num_inputs, num_hidden, num_components, confidence, act, num_cond_inputs)
+        self.t_net = SplitMADESubnet(num_inputs, num_hidden, num_components, confidence, act, num_cond_inputs)
 
     def forward(self, inputs, cond_inputs=None, mode='direct'):
         if mode == 'direct':
@@ -203,7 +200,6 @@ class MaskMADE(nn.Module):
         m = self.s_net(inputs, cond_inputs)
         a = self.t_net(inputs, cond_inputs)
 
-
         if self.pre_exp_tanh:
             a = torch.tanh(a)
 
@@ -230,7 +226,7 @@ class MaskMAF(nn.Module):
                          num_cond_inputs, act=act, num_components=None if i != 0 else self.num_components)]
 
             if self.use_batch_norm is True:
-                modules+=[flows.BatchNormFlow(num_inputs, momentum=0.1)]
+                modules += [flows.BatchNormFlow(num_inputs, momentum=0.1)]
 
             if self.use_reverse is True:
                 modules += [flows.Reverse(num_inputs)]

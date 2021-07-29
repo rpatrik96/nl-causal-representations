@@ -203,8 +203,8 @@ __docformat__ = "restructuredtext"
 # Imports
 # ---------------------------------------------------------------------------
 
-import sys
 import copy
+import sys
 
 # ---------------------------------------------------------------------------
 # Exports
@@ -766,13 +766,13 @@ def linear_disentanglement(z, hz, mode: __Mode = "r2", train_test_split=False):
 
 
 def permutation_disentanglement(
-    z,
-    hz,
-    mode="r2",
-    rescaling=True,
-    solver: Union[Literal["naive", "munkres"]] = "naive",
-    sign_flips=True,
-    cache_permutations=None,
+        z,
+        hz,
+        mode="r2",
+        rescaling=True,
+        solver: Union[Literal["naive", "munkres"]] = "naive",
+        sign_flips=True,
+        cache_permutations=None,
 ):
     """Measure disentanglement up to permutations by either using the Munkres solver
     or naively trying out every possible permutation.
@@ -795,7 +795,7 @@ def permutation_disentanglement(
         assert solver == "naive", "R2 coefficient is only supported with naive solver"
 
     if cache_permutations and not hasattr(
-        permutation_disentanglement, "permutation_matrices"
+            permutation_disentanglement, "permutation_matrices"
     ):
         permutation_disentanglement.permutation_matrices = dict()
 

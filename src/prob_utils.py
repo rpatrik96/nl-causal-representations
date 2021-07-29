@@ -4,11 +4,10 @@ from collections import Counter
 import torch
 
 from cl_ica import disentanglement_utils
-from dep_mat import calc_jacobian
+from src.dep_mat import calc_jacobian
 
 
 def setup_marginal(args):
-
     device = args.device
     eta = torch.zeros(args.n)
     if args.space_type == "sphere":
