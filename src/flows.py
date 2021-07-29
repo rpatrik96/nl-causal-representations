@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import pytorch_flows.flows as torchflows
+from pytorch_flows.flows import get_mask, FlowSequential, Reverse, BatchNormFlow
 
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
@@ -19,9 +19,9 @@ class EdgeConfidenceLayer(nn.Module):
         self.learnable = learnable
         self.transform = transform if transform is not None else lambda x: torch.clamp(torch.tril(x), 0.0, 1.0)
 
-        self.input_mask_fix = torchflows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
-        self.hidden_mask_fix = torchflows.get_mask(num_hidden, num_hidden, num_inputs)
-        self.output_mask_fix = torchflows.get_mask(num_hidden, num_inputs, num_inputs, mask_type='output')
+        self.input_mask_fix = get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
+        self.hidden_mask_fix = get_mask(num_hidden, num_hidden, num_inputs)
+        self.output_mask_fix = get_mask(num_hidden, num_inputs, num_inputs, mask_type='output')
 
         self.num_ones = self.input_mask_fix.bool().sum() + self.hidden_mask_fix.bool().sum() + self.output_mask_fix.bool().sum()
 
@@ -225,12 +225,12 @@ class MaskMAF(nn.Module):
                          num_cond_inputs, act=act, num_components=None if i != 0 else self.num_components)]
 
             if self.use_batch_norm is True:
-                modules += [torchflows.BatchNormFlow(num_inputs, momentum=0.1)]
+                modules += [BatchNormFlow(num_inputs, momentum=0.1)]
 
             if self.use_reverse is True:
-                modules += [torchflows.Reverse(num_inputs)]
+                modules += [Reverse(num_inputs)]
 
-        self.model = torchflows.FlowSequential(*modules)
+        self.model = FlowSequential(*modules)
 
     def forward(self, inputs, cond_inputs=None):
         # set_trace()
