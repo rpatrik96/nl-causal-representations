@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from pytorch_flows import get_mask, FlowSequential, Reverse, BatchNormFlow
+from pytorch_flows.flows import get_mask, FlowSequential, Reverse, BatchNormFlow
 
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
