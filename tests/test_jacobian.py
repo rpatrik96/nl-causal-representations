@@ -12,6 +12,8 @@ from src.utils import setup_seed, set_learning_mode, set_device
 
 @pytest.fixture(params=[2, 3])
 def args(request):
+    import sys
+    print(sys.path)
     args = argparse.Namespace(act_fct='leaky_relu', alpha=0.5, batch_size=6144, box_max=1.0, box_min=0.0, c_p=1,
                               c_param=0.05, identity_mixing_and_solution=False, inject_structure=False,
                               learnable_mask=False, load_f=None, load_g=None, lr=0.0001, m_p=0, m_param=1.0,
