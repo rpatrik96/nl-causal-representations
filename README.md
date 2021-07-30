@@ -2,5 +2,6 @@
 
 Run:
 ```bash
-> python cl_causal.py
+> python src/cl_causal.py
 ```
+
