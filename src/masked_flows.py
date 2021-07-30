@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import pytorch_flows
+import pytorch_flows.flows
 
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
