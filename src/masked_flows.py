@@ -16,7 +16,7 @@ class EdgeConfidenceLayer(nn.Module):
     def __init__(self, num_inputs, num_hidden, learnable: bool = False, transform: callable = None):
         super().__init__()
 
-        self.learnable = learnable 
+        self.learnable = learnable
         self.transform = transform if transform is not None else lambda x: torch.clamp(torch.tril(x), 0.0, 1.0)
 
         self.input_mask_fix = pytorch_flows.flows.get_mask(num_inputs, num_hidden, num_inputs, mask_type='input')
