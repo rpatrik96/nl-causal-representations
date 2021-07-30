@@ -3,8 +3,8 @@
 from abc import ABC, abstractmethod
 import torch
 import numpy as np
-import cl_ica.vmf
-import cl_ica.spaces_utils as sut
+import care_nl_ica.cl_ica.vmf
+import care_nl_ica.cl_ica.spaces_utils as sut
 
 
 class Space(ABC):

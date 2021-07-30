@@ -1,11 +1,8 @@
 """Modified https://github.com/bethgelab/slow_disentanglement/blob/master/scripts/model.py"""
 
-import torch
 import torch.nn as nn
 import torch.nn.init as init
 from torch.autograd import Variable
-import json
-import numpy as np
 
 import layers
 

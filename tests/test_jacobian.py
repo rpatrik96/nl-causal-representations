@@ -3,11 +3,11 @@ import argparse
 import pytest
 import torch
 
-from cl_ica import latent_spaces
-from src.dep_mat import calc_jacobian
-from src.model import ContrastiveLearningModel
-from src.prob_utils import setup_marginal, setup_conditional
-from src.utils import setup_seed, set_learning_mode, set_device
+from care_nl_ica.cl_ica import latent_spaces
+from care_nl_ica.dep_mat import calc_jacobian
+from care_nl_ica.model import ContrastiveLearningModel
+from care_nl_ica.prob_utils import setup_marginal, setup_conditional
+from care_nl_ica.utils import setup_seed, set_learning_mode, set_device
 
 
 @pytest.fixture(params=[2, 3])

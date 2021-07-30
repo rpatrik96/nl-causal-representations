@@ -7,7 +7,7 @@ import torch
 import torch.optim as optim
 from torch.autograd import Variable
 from kitti_masks.model import BetaVAE_H as BetaVAE
-import losses
+from care_nl_ica import losses
 
 
 class Solver(object):

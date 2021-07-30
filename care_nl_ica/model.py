@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from cl_ica import encoders, invertible_network_utils, losses, spaces
-from src.masked_flows import MaskMAF
+from .cl_ica import encoders, invertible_network_utils, losses, spaces
+from .masked_flows import MaskMAF
 
 
 class ContrastiveLearningModel(nn.Module):

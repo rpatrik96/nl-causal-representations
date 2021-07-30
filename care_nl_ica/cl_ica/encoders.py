@@ -1,5 +1,5 @@
 from torch import nn
-import cl_ica.layers as ls
+import care_nl_ica.cl_ica.layers as ls
 from typing import List, Union
 from typing_extensions import Literal
 

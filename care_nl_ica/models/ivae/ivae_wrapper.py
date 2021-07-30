@@ -3,7 +3,7 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
-from data.imca import ConditionalDataset
+from care_nl_ica.data import ConditionalDataset
 from .ivae_core import iVAE
 
 

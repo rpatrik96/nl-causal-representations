@@ -1,7 +1,7 @@
 """Classes that combine spaces with specific probability densities."""
 
 from typing import Callable, List
-from cl_ica.spaces import Space
+from .spaces import Space
 import torch
 
 

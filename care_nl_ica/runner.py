@@ -1,11 +1,11 @@
 import torch
 from torch.nn import functional as F
 
-from src.dep_mat import calc_jacobian_loss
-from src.logger import Logger
-from src.model import ContrastiveLearningModel
-from src.prob_utils import sample_marginal_and_conditional
-from src.utils import unpack_item_list, save_state_dict
+from .dep_mat import calc_jacobian_loss
+from .logger import Logger
+from .model import ContrastiveLearningModel
+from .prob_utils import sample_marginal_and_conditional
+from .utils import unpack_item_list, save_state_dict
 
 
 class Runner(object):

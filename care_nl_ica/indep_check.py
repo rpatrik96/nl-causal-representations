@@ -1,6 +1,6 @@
 import torch
 
-from src.hsic import HSIC
+from .hsic import HSIC
 
 
 class IndependenceChecker(object):

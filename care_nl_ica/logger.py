@@ -4,9 +4,9 @@ import numpy as np
 import torch
 import wandb
 
-from cl_ica import latent_spaces
-from src.indep_check import IndependenceChecker
-from src.prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional
+from .cl_ica import latent_spaces
+from .indep_check import IndependenceChecker
+from .prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional
 
 
 class Logger(object):

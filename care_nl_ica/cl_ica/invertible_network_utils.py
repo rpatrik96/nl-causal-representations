@@ -6,11 +6,9 @@ from torch import nn
 from scipy.stats import ortho_group
 from typing import Union
 from typing_extensions import Literal
-from cl_ica import encoders
+import care_nl_ica.cl_ica.encoders
 
 from typing import Tuple
-import sys
-
 
 __all__ = ["construct_invertible_flow", "construct_invertible_mlp"]
 
