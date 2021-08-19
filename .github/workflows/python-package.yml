@@ -46,7 +46,7 @@ jobs:
     - name: Test with pytest
       run: |
         python -m pip install pytest
-        python -m pytest tests --rootdir=care_nl_ica
+        python -m pytest tests
 
 
 
