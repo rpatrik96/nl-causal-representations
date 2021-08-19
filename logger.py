@@ -35,7 +35,7 @@ class Logger(object):
         self.global_step = len(self.total_loss_values) + 1
 
     def log(self, h, h_ind, dep_mat, ind_checker: IndependenceChecker, latent_space: latent_spaces.LatentSpace, losses,
-            total_loss, dep_loss, f):
+            total_loss, dep_loss, f, causality_metrics):
 
         self.individual_losses_values.append(losses)
         self.total_loss_values.append(total_loss)
@@ -84,7 +84,7 @@ class Logger(object):
             self.perm_dis_scores.append(self.perm_dis_scores[-1])
             self.causal_check.append(self.causal_check[-1])
 
-        self._log_to_wandb(dep_mat, self.global_step, total_loss)
+        self._log_to_wandb(dep_mat, self.global_step, total_loss, causality_metrics)
         
         self.print_statistics(f, dep_mat, dep_loss)
 
@@ -131,7 +131,7 @@ class Logger(object):
         print("linear mean: {} std: {}".format(np.mean(final_linear_scores), np.std(final_linear_scores)))
         print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
-    def _log_to_wandb(self, dep_mat, global_step, total_loss):
+    def _log_to_wandb(self, dep_mat, global_step, total_loss, causality_metrics):
         if self.hparams.use_wandb:
             data = dep_mat.detach().cpu().reshape(-1, ).tolist()
 
@@ -140,4 +140,6 @@ class Logger(object):
             wandb.log({"total_loss": total_loss, "lin_dis_score": self.lin_dis_scores[-1],
                        "perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
             wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
+            wandb.log(causality_metrics, step=global_step)
+
 
