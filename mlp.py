@@ -102,24 +102,25 @@ class ARBottleneckNet(nn.Module):
             # input (coming from the bottleneck) has num_features=self.vars
             if first_feat := self.post_layer_feats[0][0] != self.num_vars:
                 raise ValueError(f"First feature size should be {self.num_vars}, got {first_feat}!")
-            # output has num_features=self.vars
-            if last_feat := self.post_layer_feats[-1][1] != self.num_vars:
-                raise ValueError(f"Last feature size should be {self.num_vars}, got {last_feat}!")
+            # output has num_features=1
+            if last_feat := self.post_layer_feats[-1][1] != 1:
+                raise ValueError(f"Last feature size should be 1, got {last_feat}!")
 
             # create layers with ReLU activations
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
-        return self.post_layers(self.ar_bottleneck(self.pre_layers(x)))
+        return torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x))))
 
 
 
 if __name__ == "__main__":
-    net = ARBottleneckNet(2, [(1, 5), (5, 2)], [(2, 3), (3, 2)])
+    net = ARBottleneckNet(2, [(1, 5), (5, 2)], [(2, 3), (3, 1)])
     mixing = torch.tensor([[2.,3],[4,5]])
     batch_size = 10
     x = torch.randn(batch_size, 2)
     net(x@mixing)
+
 
     # test jacobian
     from dep_mat import calc_jacobian
@@ -158,7 +159,7 @@ if __name__ == "__main__":
         # the indexing is up to the ith element
         # as input i affects outputs i:n
         # so a change before that is a failure
-        tria_check[i] = (y[:, :i] != y0[:, :i]).sum()
+        tria_check[i] = (y[ :i] != y0[ :i]).sum()
 
     # set back to original mode
     if in_training is True:

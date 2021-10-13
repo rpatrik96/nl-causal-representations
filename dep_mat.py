@@ -8,7 +8,7 @@ def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = F
     Calculate the Jacobian more efficiently than ` torch.autograd.functional.jacobian`
     :param encoder: the model to calculate the Jacobian of
     :param latents: the inputs for evaluating the model
-    :param normalize: flag to rescale the Jacobianto have unit norm
+    :param normalize: flag to rescale the Jacobian to have unit norm
     :return: B x n_out x n_in
     """
 
