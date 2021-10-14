@@ -104,7 +104,7 @@ class Runner(object):
                     0)
 
                 # Update the metrics
-                self.metrics.update(y_pred=dep_mat, y_true=gt_jacobian)
+                # self.metrics.update(y_pred=dep_mat, y_true=gt_jacobian)
 
                 # if self.hparams.use_flows:
                 #     dep_mat = self.model.encoder.confidence.mask()
@@ -112,7 +112,7 @@ class Runner(object):
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses,
-                                total_loss, dep_loss, self.model.encoder, self.metrics.compute())
+                                total_loss, dep_loss, self.model.encoder, None)#, self.metrics.compute())
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()

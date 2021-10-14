@@ -84,7 +84,8 @@ class Logger(object):
             self.perm_dis_scores.append(self.perm_dis_scores[-1])
             self.causal_check.append(self.causal_check[-1])
 
-        self._log_to_wandb(dep_mat, self.global_step, total_loss, causality_metrics)
+        # self._log_to_wandb(dep_mat, self.global_step, total_loss, causality_metrics)
+        self._log_to_wandb(dep_mat, self.global_step, total_loss)
         
         self.print_statistics(f, dep_mat, dep_loss)
 

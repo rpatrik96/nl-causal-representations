@@ -16,6 +16,15 @@ class ARMLP(nn.Module):
     def forward(self, x):
         return torch.tril(self.weight) @ x
 
+    def to(self, device):
+        """
+        Move the model to the specified device.
+
+        :param device: The device to move the model to.
+        """
+        super().to(device)
+        self.weight = self.weight.to(device)
+
 
 class FeatureMLP(nn.Module):
     def __init__(self, num_vars: int, in_features: int, out_feature: int, bias: bool = True):
@@ -111,6 +120,21 @@ class ARBottleneckNet(nn.Module):
 
     def forward(self, x):
         return torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x))))
+
+    def to(self, device):
+        """
+        Moves the model to the specified device.
+
+        :param device: device to move the model to
+        :return: self
+        """
+        super().to(device)
+        # move the model to the specified device
+        self.pre_layers.to(device)
+        self.post_layers.to(device)
+        self.ar_bottleneck.to(device)
+
+        return self
 
 
 
