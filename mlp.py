@@ -50,7 +50,7 @@ class FeatureMLP(nn.Module):
 
         # the ith layer only gets the ith variable
         # reassemble into shape (batch_size, num_vars, out_features)
-        return torch.stack([F.relu(mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1)
+        return torch.stack([(mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1)
 
 
 class ARBottleneckNet(nn.Module):
@@ -119,6 +119,8 @@ class ARBottleneckNet(nn.Module):
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
+        from pdb import set_trace
+        # set_trace()
         return torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x))))
 
     def to(self, device):
