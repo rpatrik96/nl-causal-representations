@@ -28,12 +28,14 @@ class ContrastiveLearningModel(nn.Module):
         output_normalization, output_normalization_kwargs = self._configure_output_normalization()
 
         if self.hparams.use_flows is True:
-            # encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, use_reverse=hparams.use_reverse,
-            #                   use_batch_norm=hparams.use_batch_norm, learnable=hparams.learnable_mask)
-            #
-            # encoder.confidence.to(hparams.device)
+            encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, use_reverse=hparams.use_reverse,
+                              use_batch_norm=hparams.use_batch_norm, learnable=hparams.learnable_mask)
+            
+            encoder.confidence.to(hparams.device)
 
-            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *10, hparams.n], [hparams.n, hparams.n*10, hparams.1])
+        elif self.hparams.use_ar_mlp is True:
+
+            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *10, hparams.n], [hparams.n, hparams.n*10, 1])
 
         else:
             encoder = encoders.get_mlp(

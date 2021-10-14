@@ -7,6 +7,7 @@ def parse_args():
     )
     parser.add_argument('--verbose', action='store_true', help="Print out details")
     parser.add_argument('--use-flows', action='store_true', help="Use a Flow encoder")
+    parser.add_argument('--use-ar-mlp', action='store_true', help="Use the AR MLP encoder")
     parser.add_argument('--use-reverse', action='store_true', help="Use reverse layers in the Flow encoder")
     parser.add_argument('--use-batch-norm', action='store_true', help="Use batchnorm layers in the Flow encoder")
     parser.add_argument('--variant', type=int, default=0)
