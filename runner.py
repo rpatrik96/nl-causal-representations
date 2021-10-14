@@ -3,7 +3,9 @@ from torch.nn import functional as F
 
 from dep_mat import calc_jacobian_loss, calc_jacobian
 from logger import Logger
-from metrics import Metrics
+
+import metrics
+
 from model import ContrastiveLearningModel
 from prob_utils import sample_marginal_and_conditional
 from utils import unpack_item_list, save_state_dict
@@ -21,7 +23,7 @@ class Runner(object):
 
         self.logger = Logger(self.hparams, self.model)
 
-        self.metrics = Metrics()
+        self.metrics = metrics.Metrics()
 
     def reset_encoder(self):
         self.model.reset_encoder()

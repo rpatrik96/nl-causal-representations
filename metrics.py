@@ -6,6 +6,7 @@ class Metrics(object):
         """
         Initialize the metrics.
         """
+        super().__init__()
         
         self.accuracy = torchmetrics.Accuracy()
         self.roc_auc = torchmetrics.AUROC()
