@@ -33,7 +33,7 @@ class ContrastiveLearningModel(nn.Module):
             #
             # encoder.confidence.to(hparams.device)
 
-            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *10, hparams.n], [hparams.n, hparams.n*10, hparams.n])
+            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *10, hparams.n], [hparams.n, hparams.n*10, hparams.1])
 
         else:
             encoder = encoders.get_mlp(

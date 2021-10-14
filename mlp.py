@@ -81,10 +81,10 @@ class ARBottleneckNet(nn.Module):
         if len(self.pre_layer_feats):
             # check feature values at the "interface"
             # input (coming from the outer world) has num_features=1
-            if first_feat := self.pre_layer_feats[0] != 1:
+            if (first_feat := self.pre_layer_feats[0]) != 1:
                 raise ValueError(f"First feature size should be 1, got {first_feat}!")
             # output (going into the bottleneck) has num_features=self.vars
-            if last_feat := self.pre_layer_feats[-1] != self.num_vars:
+            if (last_feat := self.pre_layer_feats[-1]) != self.num_vars:
                 raise ValueError(f"Last feature size should be {self.num_vars}, got {last_feat}!")
 
             # create layers with ReLU activations
@@ -100,10 +100,10 @@ class ARBottleneckNet(nn.Module):
 
             # check feature values at the "interface"
             # input (coming from the bottleneck) has num_features=self.vars
-            if first_feat := self.post_layer_feats[0] != self.num_vars:
+            if (first_feat := self.post_layer_feats[0]) != self.num_vars:
                 raise ValueError(f"First feature size should be {self.num_vars}, got {first_feat}!")
             # output has num_features=1
-            if last_feat := self.post_layer_feats[-1] != 1:
+            if (last_feat := self.post_layer_feats[-1]) != 1:
                 raise ValueError(f"Last feature size should be 1, got {last_feat}!")
 
             # create layers with ReLU activations
