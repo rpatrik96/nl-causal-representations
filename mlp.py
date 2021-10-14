@@ -1,10 +1,10 @@
-from typing import List, Tuple
+from typing import List
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-FeatureList = List[Tuple[int, int]]
+FeatureList = List[int]
 
 
 class ARMLP(nn.Module):
@@ -57,7 +57,7 @@ class ARBottleneckNet(nn.Module):
         self.ar_bottleneck = ARMLP(self.num_vars)
 
     def _layer_generator(self, features: FeatureList):
-        return  nn.Sequential(*[FeatureMLP(self.num_vars, in_feat, out_feat) for (in_feat, out_feat) in features])
+        return  nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx+1]) for idx in range(len(features)-1)])
 
     def _init_feature_layers(self):
         """
@@ -81,10 +81,10 @@ class ARBottleneckNet(nn.Module):
         if len(self.pre_layer_feats):
             # check feature values at the "interface"
             # input (coming from the outer world) has num_features=1
-            if first_feat := self.pre_layer_feats[0][0] != 1:
+            if first_feat := self.pre_layer_feats[0] != 1:
                 raise ValueError(f"First feature size should be 1, got {first_feat}!")
             # output (going into the bottleneck) has num_features=self.vars
-            if last_feat := self.pre_layer_feats[-1][1] != self.num_vars:
+            if last_feat := self.pre_layer_feats[-1] != self.num_vars:
                 raise ValueError(f"Last feature size should be {self.num_vars}, got {last_feat}!")
 
             # create layers with ReLU activations
@@ -100,10 +100,10 @@ class ARBottleneckNet(nn.Module):
 
             # check feature values at the "interface"
             # input (coming from the bottleneck) has num_features=self.vars
-            if first_feat := self.post_layer_feats[0][0] != self.num_vars:
+            if first_feat := self.post_layer_feats[0] != self.num_vars:
                 raise ValueError(f"First feature size should be {self.num_vars}, got {first_feat}!")
             # output has num_features=1
-            if last_feat := self.post_layer_feats[-1][1] != 1:
+            if last_feat := self.post_layer_feats[-1] != 1:
                 raise ValueError(f"Last feature size should be 1, got {last_feat}!")
 
             # create layers with ReLU activations
@@ -115,7 +115,7 @@ class ARBottleneckNet(nn.Module):
 
 
 if __name__ == "__main__":
-    net = ARBottleneckNet(2, [(1, 5), (5, 2)], [(2, 3), (3, 1)])
+    net = ARBottleneckNet(2, [1, 5, 2], [2, 3, 1])
     mixing = torch.tensor([[2.,3],[4,5]])
     batch_size = 10
     x = torch.randn(batch_size, 2)
