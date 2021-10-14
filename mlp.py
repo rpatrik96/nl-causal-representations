@@ -14,7 +14,7 @@ class ARMLP(nn.Module):
         self.weight = torch.tril(nn.Linear(num_vars, num_vars).weight)
 
     def forward(self, x):
-        return torch.tril(self.weight @ x)
+        return torch.tril(self.weight) @ x
 
 
 class FeatureMLP(nn.Module):
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
 
     # calculate the Jacobian with autodiff
-    dep_mat =  calc_jacobian(net, x)
+    dep_mat =  calc_jacobian(net, x).abs().mean(0)
     print(f"{dep_mat=}")
 
     assert (torch.tril(dep_mat) != dep_mat).sum() == 0
