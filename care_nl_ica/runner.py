@@ -7,7 +7,7 @@ from .model import ContrastiveLearningModel
 from .prob_utils import sample_marginal_and_conditional
 from .utils import unpack_item_list, save_state_dict
 
-
+from metrics import Metrics
 class Runner(object):
 
     def __init__(self, hparams) -> None:
