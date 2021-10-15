@@ -1,10 +1,11 @@
+import importlib
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import importlib
-
 flows = importlib.import_module("pytorch-flows.flows")
+
 
 # a big part of the code from: https://github.com/ikostrikov/pytorch-flows
 
