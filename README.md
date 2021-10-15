@@ -2,6 +2,8 @@
 
 Run:
 ```bash
-> python src/cl_causal.py
+> python cl_causal.py
 ```
 
+Logging
+https://wandb.ai/causal-representation-learning
