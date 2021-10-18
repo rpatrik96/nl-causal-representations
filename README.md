@@ -1,5 +1,12 @@
 # Identifying nonlinear causal graphs with ICA
 
+## Singularity container build
+
+```bash
+singularity build --fakeroot nv.sif nv.def
+```
+
+
 ## Usage 
 
 1. Clone
