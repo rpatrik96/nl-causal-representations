@@ -38,6 +38,8 @@ class FeatureMLP(nn.Module):
         self.mlps = nn.ModuleList(
             [nn.Linear(self.in_features, self.out_feature, self.bias) for _ in range(self.num_vars)])
 
+        self.act = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_vars)])
+
     def forward(self, x):
         """
 
@@ -50,7 +52,7 @@ class FeatureMLP(nn.Module):
 
         # the ith layer only gets the ith variable
         # reassemble into shape (batch_size, num_vars, out_features)
-        return torch.stack([(mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1)
+        return torch.stack([self.act[i](mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1)
 
 
 class ARBottleneckNet(nn.Module):
