@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from .cl_ica import encoders, invertible_network_utils, losses, spaces
 from .masked_flows import MaskMAF
 
-from mlp import ARBottleneckNet
+from care_nl_ica.mlp import ARBottleneckNet
 
 
 class ContrastiveLearningModel(nn.Module):
