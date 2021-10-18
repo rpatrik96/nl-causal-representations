@@ -3,8 +3,8 @@ from collections import Counter
 
 import torch
 
-from cl_ica import disentanglement_utils
-from dep_mat import calc_jacobian
+from care_nl_ica.cl_ica import disentanglement_utils
+from care_nl_ica.dep_mat import calc_jacobian
 
 
 def setup_marginal(args):
