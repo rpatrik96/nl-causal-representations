@@ -1,9 +1,28 @@
 # Identifying nonlinear causal graphs with ICA
 
-Run:
+## Singularity container build
+
 ```bash
-> python3 care_nl_ica/cl_causal.py
+singularity build --fakeroot nv.sif nv.def
 ```
 
-Logging
+
+## Usage 
+
+1. Clone
+```bash
+ git clone https://github.com/rpatrik96/nl-causal-representations.git
+```
+
+2. Install
+```bash
+pip3 install -e .
+```
+
+3. Run:
+```bash
+ python3 care_nl_ica/cl_causal.py
+```
+
+## Logging
 https://wandb.ai/causal-representation-learning
