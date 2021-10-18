@@ -2,7 +2,7 @@
 
 Run:
 ```bash
-> python cl_causal.py
+> python3 care_nl_ica/cl_causal.py
 ```
 
 Logging
