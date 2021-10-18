@@ -2,12 +2,12 @@ import torch
 from torch.nn import functional as F
 
 from dep_mat import calc_jacobian_loss, calc_jacobian
-from .logger import Logger
-from .model import ContrastiveLearningModel
-from .prob_utils import sample_marginal_and_conditional
-from .utils import unpack_item_list, save_state_dict
+from care_nl_ica.logger import Logger
+from care_nl_ica.model import ContrastiveLearningModel
+from care_nl_ica.prob_utils import sample_marginal_and_conditional
+from care_nl_ica.utils import unpack_item_list, save_state_dict
 
-from metrics import Metrics
+from metric_logger import Metrics
 class Runner(object):
 
     def __init__(self, hparams) -> None:
