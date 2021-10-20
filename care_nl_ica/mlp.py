@@ -10,8 +10,10 @@ FeatureList = List[int]
 class ARMLP(nn.Module):
     def __init__(self, num_vars: int):
         super().__init__()
+        from pdb import set_trace
+        # set_trace()
 
-        self.weight = torch.tril(nn.Linear(num_vars, num_vars).weight)
+        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
     def forward(self, x):
         return torch.tril(self.weight) @ x
