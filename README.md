@@ -21,7 +21,7 @@ pip3 install -e .
 
 3. Run:
 ```bash
- python3 care_nl_ica/cl_causal.py
+ python3 care_nl_ica/cl_causal.py --variant 1 --project mlp-test --use-ar-mlp --use-wandb --use-dep-mat --n-steps 150001 --n 2 --notes "Description of the run"
 ```
 
 ## Logging

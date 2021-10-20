@@ -130,6 +130,6 @@ def check_independence_z_gz(ind_check, h_ind, latent_space):
 
     else:
         print('no causal effect...?')
-        sys.exit()
+        # sys.exit()
 
     return dep_mat

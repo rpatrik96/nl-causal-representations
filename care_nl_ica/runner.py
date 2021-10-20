@@ -109,7 +109,7 @@ class Runner(object):
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses,
-                                total_loss, dep_loss, self.model.encoder, None)#, self.metrics.compute())
+                                total_loss, dep_loss, self.model.encoder, None, None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight)#, self.metrics.compute())
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()
