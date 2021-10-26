@@ -40,6 +40,38 @@ def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = F
     return jacobian
 
 
+def calc_jacobian_numerical(model, x, dim, device,  eps=1e-6):
+    """
+    Calculate the Jacobian numerically
+    :param model: the model to calculate the Jacobian of
+    :param x: the inputs for evaluating the model with dimensions B x n_in
+    :param dim: the dimensionality of the output
+    :param device: the device to calculate the Jacobian on
+    :param eps: the epsilon to use for numerical differentiation
+
+    :return: n_out x n_in
+    """
+
+    # set to eval mode but remember original state
+    in_training: bool = model.training
+    model.eval()  # otherwise we will get 0 gradients
+
+    x = x.clone().requires_grad_(True)
+
+    J = torch.zeros(dim, x.shape[1])
+    
+    for i in range(dim):
+        for j in range(dim):
+            delta = torch.zeros(dim).to(device)
+            delta[j] = eps
+            J[i,j] = (model(x+ delta) - model(x)).abs().mean(0)[i] / (2*eps)
+
+    # reset to original state
+    if in_training is True:
+        model.train()
+
+    return J
+
 def calc_dependency_matrix(encoder: nn.Module, latents: torch.Tensor) -> torch.Tensor:
     """
     Calculates the dependecy matrix, which is
@@ -94,7 +126,7 @@ def dependency_loss(dep_mat: torch.Tensor, weight_sparse: float = 1., weight_tri
     return weight_sparse * sparse_loss + weight_triangular * triangular_loss
 
 
-def calc_jacobian_loss(args, f, g, latent_space):
+def calc_jacobian_loss(args, f, g, latent_space, device, eps=1e-6):
     # 1. get a sample from the latents
     # these are the noise variables in Wieland's notation
     # todo: probably we can use something from data?
@@ -103,7 +135,10 @@ def calc_jacobian_loss(args, f, g, latent_space):
     obs = g(z_disentanglement)
     # 3. calculate the dependency matrix
     # x \times f(x)
-    dep_mat = calc_jacobian(f, obs, normalize=args.preserve_vol).abs().mean(0)
+    dep_mat = calc_jacobian(f, obs.clone(), normalize=args.preserve_vol).abs().mean(0)
+    # 3/b calculate the numerical jacobian
+    # calculate numerical jacobian
+    numerical_jacobian = calc_jacobian_numerical(f, obs,dep_mat.shape[0], device, eps)
     # 4. calculate the loss for the dependency matrix
     dep_loss = dependency_loss(dep_mat)
-    return dep_loss, dep_mat
+    return dep_loss, dep_mat, numerical_jacobian

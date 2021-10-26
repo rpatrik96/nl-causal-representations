@@ -1,7 +1,8 @@
 import torch
 from torch.nn import functional as F
+from torch.autograd.functional import jacobian
 
-from dep_mat import calc_jacobian_loss, calc_jacobian
+from dep_mat import calc_jacobian_loss, calc_jacobian, calc_jacobian_numerical
 from care_nl_ica.logger import Logger
 from care_nl_ica.model import ContrastiveLearningModel
 from care_nl_ica.prob_utils import sample_marginal_and_conditional
@@ -91,14 +92,16 @@ class Runner(object):
                 data = sample_marginal_and_conditional(latent_space, size=self.hparams.batch_size,
                                                        device=self.hparams.device)
 
-                dep_loss, dep_mat = calc_jacobian_loss(self.hparams, self.model.encoder, self.model.decoder,
-                                                       latent_space)
+
+                dep_loss, dep_mat, numerical_jacobian = calc_jacobian_loss(self.hparams, self.model.encoder, self.model.decoder,latent_space, self.model.hparams.device)
+
+                
 
                 # calculate the GT Jacobian
-                gt_jacobian = calc_jacobian(self.model.decoder,
-                                            latent_space.sample_marginal(self.hparams.n_eval_samples),
-                                            normalize=indep_checker.hparams.preserve_vol).abs().mean(
-                    0)
+                # gt_jacobian = calc_jacobian(self.model.decoder,
+                #                             latent_space.sample_marginal(self.hparams.n_eval_samples),
+                #                             normalize=indep_checker.hparams.preserve_vol).abs().mean(
+                #     0)
 
                 # Update the metrics
                 # self.metrics.update(y_pred=dep_mat, y_true=gt_jacobian)
@@ -109,7 +112,7 @@ class Runner(object):
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses,
-                                total_loss, dep_loss, self.model.encoder, None, None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight)#, self.metrics.compute())
+                                total_loss, dep_loss, self.model.encoder, None, None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight, numerical_jacobian)#, self.metrics.compute())
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()

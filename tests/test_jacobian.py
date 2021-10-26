@@ -4,8 +4,10 @@ from collections import namedtuple
 import pytest
 import torch
 
+from torch.autograd.functional import jacobian
+
 from care_nl_ica.cl_ica import latent_spaces
-from care_nl_ica.dep_mat import calc_jacobian
+from care_nl_ica.dep_mat import calc_jacobian, calc_jacobian_numerical
 from care_nl_ica.model import ContrastiveLearningModel
 from care_nl_ica.prob_utils import setup_marginal, setup_conditional
 from care_nl_ica.utils import setup_seed, set_learning_mode, set_device
@@ -42,7 +44,7 @@ def model(args):
 
 
 @pytest.mark.parametrize("network", ["decoder", "encoder"])
-def test_triangularity_decoder_jacobian(model: ContrastiveLearningModel, network):
+def test_triangularity_jacobian(model: ContrastiveLearningModel, network):
     """
 
     Checks the AR nature of the model by calculating the Jacobian.
@@ -60,6 +62,16 @@ def test_triangularity_decoder_jacobian(model: ContrastiveLearningModel, network
     # calculate the Jacobian
     dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.preserve_vol).abs().mean(0)
     print(f"{dep_mat=}")
+
+    # x in shape (Batch, Length)
+    def _func_sum(x):
+        return model._modules[network].forward(x).sum(dim=0)
+
+    # numerical Jacobian
+    print(f"{calc_jacobian_numerical(model._modules[network], z, model.hparams.n, model.hparams.device)=}")
+
+    # same as calc_jacobian, but using the torch jacobian function
+    # print(jacobian(_func_sum, z).permute(1,0,2).abs().mean(0))
 
     assert (torch.tril(dep_mat) != dep_mat).sum() == 0
 
@@ -95,8 +107,6 @@ def test_triangularity_naive(model: ContrastiveLearningModel, network):
     for i in range(model.hparams.n):
         z = torch.ones(batch_size, model.hparams.n).to(model.hparams.device)
         z[:, i] = -1
-
-        print(z.device)
         
         y = model._modules[network](z)
 
