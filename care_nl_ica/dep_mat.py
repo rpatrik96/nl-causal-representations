@@ -56,15 +56,17 @@ def calc_jacobian_numerical(model, x, dim, device,  eps=1e-6):
     in_training: bool = model.training
     model.eval()  # otherwise we will get 0 gradients
 
+    # clone input to avoid problems
     x = x.clone().requires_grad_(True)
 
+    # init jacobian
     J = torch.zeros(dim, x.shape[1])
     
-    for i in range(dim):
-        for j in range(dim):
-            delta = torch.zeros(dim).to(device)
-            delta[j] = eps
-            J[i,j] = (model(x+ delta) - model(x)).abs().mean(0)[i] / (2*eps)
+    # iterate over input dims and perturb
+    for j in range(dim):
+        delta = torch.zeros(dim).to(device)
+        delta[j] = eps
+        J[:,j] = (model(x+ delta) - model(x)).abs().mean(0) / (2*eps)
 
     # reset to original state
     if in_training is True:
