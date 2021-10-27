@@ -25,6 +25,11 @@ class Logger(object):
                        config=self.hparams)
             wandb.watch(model, log_freq=self.hparams.n_log_steps, log="all")
 
+            # define metrics
+            wandb.define_metric("total_loss", summary="min")
+            wandb.define_metric("lin_dis_score", summary="max")
+            wandb.define_metric("perm_dis_score", summary="max")
+
     def init_log_lists(self):
         if (self.total_loss_values is not None and not self.hparams.resume_training) or self.total_loss_values is None:
             self.individual_losses_values = []
@@ -155,4 +160,16 @@ class Logger(object):
                 labels = [f"w_{i}{j}" for i in range(dep_mat.shape[0]) for j in range(dep_mat.shape[1])]
                 data = ar_bottleneck.detach().cpu().reshape(-1, ).tolist()
                 wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
+
+    def log_summary(self, **kwargs):
+        """
+        Logs fixed values to the summary board
+
+        :param kwargs: dict of values to log
+        """
+        if self.hparams.use_wandb is True:
+
+            for key, value in kwargs.items():
+                wandb.run.summary[key] = value
+            
 

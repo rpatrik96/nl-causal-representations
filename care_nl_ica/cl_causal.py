@@ -1,6 +1,8 @@
 import os
 import pip
 
+import wandb
+
 
 def install_package():
     """
@@ -38,6 +40,13 @@ def main():
                                              sample_conditional=(setup_conditional(args)), )
 
     dep_mat = check_independence_z_gz(indep_checker, runner.model.decoder, latent_space)
+
+    # save the ground truth jacobian
+    if dep_mat is not None:
+        cols = [f"a_{i}" for i in range(dep_mat.shape[1])]
+        gt_jacobian = wandb.Table(columns=cols, data=dep_mat.detach().cpu().tolist())
+        runner.logger.log_summary(**{"GT Jacobian": gt_jacobian})
+
 
     if args.use_flows:
         runner.model.encoder.confidence.inject_structure(dep_mat, args.inject_structure)
