@@ -3,10 +3,10 @@ import torch.nn as nn
 from torch.autograd.functional import jacobian
 
 
-def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = False) -> torch.Tensor:
+def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = False) -> torch.Tensor:
     """
     Calculate the Jacobian more efficiently than ` torch.autograd.functional.jacobian`
-    :param encoder: the model to calculate the Jacobian of
+    :param model: the model to calculate the Jacobian of
     :param latents: the inputs for evaluating the model
     :param normalize: flag to rescale the Jacobian to have unit norm
     :return: B x n_out x n_in
@@ -16,10 +16,10 @@ def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = F
     input_vars = latents.clone().requires_grad_(True)
 
     # set to eval mode but remember original state
-    in_training: bool = encoder.training
-    encoder.eval()  # otherwise we will get 0 gradients
+    in_training: bool = model.training
+    model.eval()  # otherwise we will get 0 gradients
 
-    output_vars = encoder(input_vars)
+    output_vars = model(input_vars)
 
     for i in range(output_vars.shape[1]):
         jacob.append(torch.autograd.grad(output_vars[:, i:i + 1], input_vars, create_graph=True,
@@ -30,11 +30,11 @@ def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = F
 
     # make the Jacobian volume preserving
     if normalize is True:
-        jacobian *= jacobian.det().abs().pow(1 / jacobian.shape[0]).reshape(-1, 1, 1)
+        jacobian /= jacobian.det().abs().pow(1 / jacobian.shape[-1]).reshape(-1, 1, 1)
 
     # set back to original mode
     if in_training is True:
-        encoder.train()
+        model.train()
 
     return jacobian
 
