@@ -29,7 +29,6 @@ def calc_jacobian(encoder: nn.Module, latents: torch.Tensor, normalize: bool = F
     jacobian = torch.stack(jacob, 1)
 
     # make the Jacobian volume preserving
-    # print(jacobian.shape)
     if normalize is True:
         jacobian *= jacobian.det().abs().pow(1 / jacobian.shape[0]).reshape(-1, 1, 1)
 
@@ -128,7 +127,7 @@ def dependency_loss(dep_mat: torch.Tensor, weight_sparse: float = 1., weight_tri
     return weight_sparse * sparse_loss + weight_triangular * triangular_loss
 
 
-def calc_jacobian_loss(args, f, g, latent_space, device, eps=1e-6):
+def calc_jacobian_loss(args, f, g, latent_space, device, eps=1e-6, calc_numerical:bool=False):
     # 1. get a sample from the latents
     # these are the noise variables in Wieland's notation
     # todo: probably we can use something from data?
@@ -140,7 +139,7 @@ def calc_jacobian_loss(args, f, g, latent_space, device, eps=1e-6):
     dep_mat = calc_jacobian(f, obs.clone(), normalize=args.preserve_vol).abs().mean(0)
     # 3/b calculate the numerical jacobian
     # calculate numerical jacobian
-    numerical_jacobian = calc_jacobian_numerical(f, obs,dep_mat.shape[0], device, eps)
+    numerical_jacobian = None if calc_numerical is False else calc_jacobian_numerical(f, obs,dep_mat.shape[0], device, eps)
     # 4. calculate the loss for the dependency matrix
     dep_loss = dependency_loss(dep_mat)
     return dep_loss, dep_mat, numerical_jacobian

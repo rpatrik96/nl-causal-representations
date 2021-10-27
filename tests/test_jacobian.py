@@ -44,7 +44,7 @@ def model(args):
 
 
 @pytest.mark.parametrize("network", ["decoder", "encoder"])
-def test_triangularity_jacobian(model: ContrastiveLearningModel, network):
+def test_triangularity_jacobian(model: ContrastiveLearningModel, network, numerical_check:bool=False, built_in_jacobian_check:bool=False):
     """
 
     Checks the AR nature of the model by calculating the Jacobian.
@@ -63,15 +63,19 @@ def test_triangularity_jacobian(model: ContrastiveLearningModel, network):
     dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.preserve_vol).abs().mean(0)
     print(f"{dep_mat=}")
 
-    # x in shape (Batch, Length)
-    def _func_sum(x):
-        return model._modules[network].forward(x).sum(dim=0)
-
+    
     # numerical Jacobian
-    print(f"{calc_jacobian_numerical(model._modules[network], z, model.hparams.n, model.hparams.device)=}")
+    if numerical_check is True:
+        print(f"{calc_jacobian_numerical(model._modules[network], z, model.hparams.n, model.hparams.device)=}")
 
     # same as calc_jacobian, but using the torch jacobian function
-    # print(jacobian(_func_sum, z).permute(1,0,2).abs().mean(0))
+    if built_in_jacobian_check is True:
+
+        # x in shape (Batch, Length)
+        def _func_sum(x):
+            return model._modules[network].forward(x).sum(dim=0)
+
+        print(jacobian(_func_sum, z).permute(1,0,2).abs().mean(0))
 
     assert (torch.tril(dep_mat) != dep_mat).sum() == 0
 

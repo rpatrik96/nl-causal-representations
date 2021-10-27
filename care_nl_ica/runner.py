@@ -97,12 +97,6 @@ class Runner(object):
 
                 
 
-                # calculate the GT Jacobian
-                # gt_jacobian = calc_jacobian(self.model.decoder,
-                #                             latent_space.sample_marginal(self.hparams.n_eval_samples),
-                #                             normalize=indep_checker.hparams.preserve_vol).abs().mean(
-                #     0)
-
                 # Update the metrics
                 # self.metrics.update(y_pred=dep_mat, y_true=gt_jacobian)
 

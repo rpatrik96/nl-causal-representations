@@ -151,9 +151,10 @@ class Logger(object):
             wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
 
             # log the numerical Jacobian
-            labels = [f"a_num_{i}{j}" for i in range(numerical_jacobian.shape[0]) for j in range(numerical_jacobian.shape[1])]
-            data = dep_mat.detach().cpu().reshape(-1, ).tolist()
-            wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
+            if numerical_jacobian is not None:
+                labels = [f"a_num_{i}{j}" for i in range(numerical_jacobian.shape[0]) for j in range(numerical_jacobian.shape[1])]
+                data = dep_mat.detach().cpu().reshape(-1, ).tolist()
+                wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
             
             # log the bottleneck weights
             if ar_bottleneck is not None:
