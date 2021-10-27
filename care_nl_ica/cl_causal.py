@@ -41,11 +41,11 @@ def main():
 
     dep_mat = check_independence_z_gz(indep_checker, runner.model.decoder, latent_space)
 
-    # save the ground truth jacobian
+    # save the ground truth jacobian of the decoder
     if dep_mat is not None:
         cols = [f"a_{i}" for i in range(dep_mat.shape[1])]
         gt_jacobian = wandb.Table(columns=cols, data=dep_mat.detach().cpu().tolist())
-        runner.logger.log_summary(**{"GT Jacobian": gt_jacobian})
+        runner.logger.log_summary(**{"gt_decoder_jacobian": gt_jacobian})
 
 
     if args.use_flows:

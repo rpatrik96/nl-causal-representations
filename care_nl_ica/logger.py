@@ -89,14 +89,14 @@ class Logger(object):
             self.perm_dis_scores.append(self.perm_dis_scores[-1])
             self.causal_check.append(self.causal_check[-1])
 
-        self._log_to_wandb(dep_mat, self.global_step, total_loss, causality_metrics, ar_bottleneck, numerical_jacobian)
+        self._log_to_wandb(dep_mat, self.global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck, numerical_jacobian)
 
         self.print_statistics(f, dep_mat, dep_loss)
 
         self.global_step += 1
 
     def print_statistics(self, f, dep_mat, dep_loss):
-        if self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps:
+        if self.hparams.verbose is True and (self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps):
             print(
                 f"Step: {self.global_step} \t",
                 f"Loss: {self.total_loss_values[-1]:.4f} \t",
@@ -136,11 +136,11 @@ class Logger(object):
         print("linear mean: {} std: {}".format(np.mean(final_linear_scores), np.std(final_linear_scores)))
         print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
-    def _log_to_wandb(self, dep_mat, global_step, total_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
+    def _log_to_wandb(self, dep_mat, global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
         if self.hparams.use_wandb:
 
 
-            wandb.log({"total_loss": total_loss, "lin_dis_score": self.lin_dis_scores[-1],
+            wandb.log({"total_loss": total_loss, "dep_loss" : dep_loss, "lin_dis_score": self.lin_dis_scores[-1],
                        "perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
 
             # wandb.log(causality_metrics, step=global_step)
