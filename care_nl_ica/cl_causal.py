@@ -21,8 +21,6 @@ def main():
     # install the package
     install_package()
 
-    # exit()
-
     # setup
     from args import parse_args
     args = parse_args()

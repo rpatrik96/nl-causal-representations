@@ -50,6 +50,11 @@ class Runner(object):
         z2_con_z1_rec = h(z2_con_z1)
         z3_rec = h(z3)
         # z3_rec = z1_rec[z3_shuffle_indices]
+    
+
+        self.logger.log_scatter_latent_rec(z1, z1_rec, "z1")
+        self.logger.log_scatter_latent_rec(z2_con_z1, z2_con_z1_rec, "z2_con_z1")
+        self.logger.log_scatter_latent_rec(z3, z3_rec, "z3")
 
         if test:
             total_loss_value = F.mse_loss(z1_rec, z1)
