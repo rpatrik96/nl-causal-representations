@@ -71,7 +71,14 @@ class Runner(object):
             # writer.flush()
 
         if not self.hparams.identity_mixing_and_solution and self.hparams.lr != 0:
-            total_loss_value.backward()
+
+            if self.hparams.use_l1 is False:
+                total_loss_value.backward()
+            elif self.hparams.use_ar_mlp is True:
+                # add sparsity loss to the AR MLP bottleneck
+                (total_loss_value+self.model.encoder.bottleneck_l1_norm).backward()
+
+
             self.optimizer.step()
 
         return total_loss_value.item(), unpack_item_list(losses_value)

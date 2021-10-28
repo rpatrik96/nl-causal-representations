@@ -174,11 +174,11 @@ class Logger(object):
                 wandb.run.summary[key] = value
             
     def log_scatter_latent_rec(self, latent, rec, name:str):
-        if self.hparams.use_wandb is True:
+        if self.hparams.use_wandb is True and self.hparams.log_latent_rec is True:
             if self.global_step % (20*self.hparams.n_log_steps) == 1:
                 for i in range(self.hparams.n):
                     # from pdb import set_trace; set_trace()
                     table = wandb.Table(data=torch.stack((latent[:, i], rec[:, i])).T.tolist(), columns = ["latent", "rec"])
 
-                    wandb.log({f"latent_rec_{name}_dim_{i}" : wandb.plot.scatter(table, "latent", "rec",title=f"Latents vs reconsdtruction of {name} in dimension {i}")})
+                    wandb.log({f"latent_rec_{name}_dim_{i}" : wandb.plot.scatter(table, "latent", "rec",title=f"Latents vs reconstruction of {name} in dimension {i}")})
     

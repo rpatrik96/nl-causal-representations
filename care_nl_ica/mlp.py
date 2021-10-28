@@ -123,8 +123,6 @@ class ARBottleneckNet(nn.Module):
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
-        from pdb import set_trace
-        # set_trace()
         return torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x))))
 
     def to(self, device):
@@ -143,58 +141,7 @@ class ARBottleneckNet(nn.Module):
         return self
 
 
-
-if __name__ == "__main__":
-    net = ARBottleneckNet(2, [1, 5, 2], [2, 3, 1])
-    mixing = torch.tensor([[2.,3],[4,5]])
-    batch_size = 10
-    x = torch.randn(batch_size, 2)
-    net(x@mixing)
-
-
-    # test jacobian
-    from dep_mat import calc_jacobian
-
-
-    # calculate the Jacobian with autodiff
-    dep_mat =  calc_jacobian(net, x).abs().mean(0)
-    print(f"{dep_mat=}")
-
-    assert (torch.tril(dep_mat) != dep_mat).sum() == 0
-    
-    
-    # calculate the Jacobian with finite differences
-    # constants
-    batch_size = 1
-    tria_check = torch.zeros(net.num_vars)
-
-    # set to eval mode but remember original state
-    in_training: bool = net.training
-    net.eval()  # otherwise we will get 0 gradients
-
-    # calculate the baseline output - all inputs should be different from 0
-    # this is to avoid degenerate cases making the test succeed
-    y0 = net(torch.ones(batch_size, net.num_vars))
-    print(f"{y0=}")
-
-    # loop for perturbing each input one-by-one
-    for i in range(net.num_vars):
-        z = torch.ones(batch_size, net.num_vars)
-        z[:, i] = -1
-
-        y = net(z)
-
-        print(f"{i=},{y=}")
-
-        # the indexing is up to the ith element
-        # as input i affects outputs i:n
-        # so a change before that is a failure
-        tria_check[i] = (y[ :i] != y0[ :i]).sum()
-
-    # set back to original mode
-    if in_training is True:
-        net.train()
-
-    assert tria_check.sum() == 0
-
+    @property
+    def bottleneck_l1_norm(self):
+        return self.ar_bottleneck.weight.abs().sum()
 
