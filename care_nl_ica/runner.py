@@ -76,7 +76,7 @@ class Runner(object):
                 total_loss_value.backward()
             elif self.hparams.use_ar_mlp is True:
                 # add sparsity loss to the AR MLP bottleneck
-                (total_loss_value+self.model.encoder.bottleneck_l1_norm).backward()
+                (total_loss_value+self.model.hparams.l1*self.model.encoder.bottleneck_l1_norm).backward()
 
 
             self.optimizer.step()

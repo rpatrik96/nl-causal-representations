@@ -12,6 +12,7 @@ def parse_args():
     parser.add_argument('--use-batch-norm', action='store_true', help="Use batchnorm layers in the Flow encoder")
     parser.add_argument('--log-latent-rec', action='store_true', help="Log the latents and their reconstructions")
     parser.add_argument('--use-l1', action='store_true', help="Use L1 on the MLP botleneck")
+    parser.add_argument("--l1", type=float, default=1e-5)
     parser.add_argument('--variant', type=int, default=0)
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
     parser.add_argument('--inject-structure', action='store_true',
