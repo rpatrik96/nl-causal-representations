@@ -43,6 +43,10 @@ def main():
                                              sample_conditional=(setup_conditional(args)), )
 
     dep_mat = check_independence_z_gz(indep_checker, runner.model.decoder, latent_space)
+    # if not args.use_sem:
+        # dep_mat = check_independence_z_gz(indep_checker, runner.model.decoder, latent_space)
+    # else:
+        # dep_mat = runner.model.decoder.weight
 
     # save the ground truth jacobian of the decoder
     if dep_mat is not None:
@@ -53,6 +57,9 @@ def main():
 
     if args.use_flows:
         runner.model.encoder.confidence.inject_structure(dep_mat, args.inject_structure)
+
+    elif args.use_ar_mlp:
+        runner.model.encoder.ar_bottleneck.inject_structure(dep_mat, args.inject_structure)
 
     save_state_dict(args, runner.model.decoder)
 

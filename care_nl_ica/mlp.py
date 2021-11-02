@@ -7,16 +7,20 @@ import torch.nn.functional as F
 FeatureList = List[int]
 
 
-class ARMLP(nn.Module):
+
+class LinearSEM(nn.Module):
     def __init__(self, num_vars: int):
         super().__init__()
-        from pdb import set_trace
-        # set_trace()
+
+
+        self.num_vars = num_vars
 
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
     def forward(self, x):
-        return torch.tril(self.weight) @ x
+        from pdb import set_trace
+        # set_trace()
+        return x @ torch.tril(self.weight).T 
 
     def to(self, device):
         """
@@ -26,6 +30,51 @@ class ARMLP(nn.Module):
         """
         super().to(device)
         self.weight = self.weight.to(device)
+
+        return self
+
+
+
+
+class ARMLP(nn.Module):
+    def __init__(self, num_vars: int, transform:callable=None):
+        super().__init__()
+        from pdb import set_trace
+        # set_trace()
+
+        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
+
+        # structure injection
+        self.transform = transform if transform is not None else lambda x: x
+        self.struct_mask = torch.ones_like(self.weight, requires_grad=False)
+
+    def forward(self, x):
+        from pdb import set_trace
+        # set_trace()
+        return self.transform(torch.tril(self.weight) @ x)
+
+    def to(self, device):
+        """
+        Move the model to the specified device.
+
+        :param device: The device to move the model to.
+        """
+        super().to(device)
+        self.weight = self.weight.to(device)
+
+        return self
+
+    def inject_structure(self, adj_mat, inject_structure=False):
+        if inject_structure is True:
+
+            # set structural mask
+            self.struct_mask = adj_mat > 0
+            
+            # set transform to include structural mask
+            self.transform = lambda x: self.struct_mask @ x
+
+
+            print(f"Injected structure with weight: {self.struct_mask}")
 
 
 class FeatureMLP(nn.Module):
@@ -123,6 +172,8 @@ class ARBottleneckNet(nn.Module):
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
+        from pdb import set_trace
+        # set_trace()
         return torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x))))
 
     def to(self, device):

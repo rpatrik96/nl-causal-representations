@@ -6,7 +6,8 @@ import torch.nn.functional as F
 from .cl_ica import encoders, invertible_network_utils, losses, spaces
 from .masked_flows import MaskMAF
 
-from care_nl_ica.mlp import ARBottleneckNet
+from care_nl_ica.mlp import ARBottleneckNet, ARMLP, LinearSEM
+
 
 
 class ContrastiveLearningModel(nn.Module):
@@ -74,19 +75,25 @@ class ContrastiveLearningModel(nn.Module):
 
     def _setup_decoder(self):
         hparams = self.hparams
-        # create MLP
-        ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
-        decoder = invertible_network_utils.construct_invertible_mlp(
-            n=hparams.n,
-            n_layers=hparams.n_mixing_layer,
-            act_fct=hparams.act_fct,
-            cond_thresh_ratio=0.001,
-            n_iter_cond_thresh=25000,
-            lower_triangular=True,
-            weight_matrix_init='rvs',
-            sparsity=True,
-            variant=torch.from_numpy(np.array([hparams.variant]))
+
+        if hparams.use_sem is False:
+            # create MLP
+            ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
+            decoder = invertible_network_utils.construct_invertible_mlp(
+                n=hparams.n,
+                n_layers=hparams.n_mixing_layer,
+                act_fct=hparams.act_fct,
+                cond_thresh_ratio=0.001,
+                n_iter_cond_thresh=25000,
+                lower_triangular=True,
+                weight_matrix_init='rvs',
+                sparsity=True,
+                variant=torch.from_numpy(np.array([hparams.variant]))
         )
+        else:
+            print("Using SEM as decoder")
+            decoder = LinearSEM(hparams.n)
+            print(decoder.weight)
 
         # allocate to device
         decoder = decoder.to(hparams.device)
