@@ -40,7 +40,7 @@ class Logger(object):
 
         self.global_step = len(self.total_loss_values) + 1
 
-    def log(self, h, h_ind, dep_mat, ind_checker: IndependenceChecker, latent_space: latent_spaces.LatentSpace, losses,
+    def log(self, h, h_ind, dep_mat, enc_dec_jac, ind_checker: IndependenceChecker, latent_space: latent_spaces.LatentSpace, losses,
             total_loss, dep_loss, f, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
 
         self.individual_losses_values.append(losses)
@@ -89,7 +89,7 @@ class Logger(object):
             self.perm_dis_scores.append(self.perm_dis_scores[-1])
             self.causal_check.append(self.causal_check[-1])
 
-        self._log_to_wandb(dep_mat, self.global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck, numerical_jacobian)
+        self._log_to_wandb(dep_mat, enc_dec_jac, self.global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck, numerical_jacobian)
 
         self.print_statistics(f, dep_mat, dep_loss)
 
@@ -136,7 +136,7 @@ class Logger(object):
         print("linear mean: {} std: {}".format(np.mean(final_linear_scores), np.std(final_linear_scores)))
         print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
-    def _log_to_wandb(self, dep_mat, global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
+    def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
         if self.hparams.use_wandb:
 
 
@@ -144,23 +144,26 @@ class Logger(object):
                        "perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
 
             # wandb.log(causality_metrics, step=global_step)
+
+            def log_matrix(name, matrix):
+                labels = [f"{name}_{i}{j}" for i in range(matrix.shape[0]) for j in range(matrix.shape[1])]
+                data = matrix.detach().cpu().reshape(-1, ).tolist()
+                wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
             
             # log the Jacobian
-            labels = [f"a_{i}{j}" for i in range(dep_mat.shape[0]) for j in range(dep_mat.shape[1])]
-            data = dep_mat.detach().cpu().reshape(-1, ).tolist()
-            wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
+            log_matrix("a", dep_mat)
 
+            # log the Encoder-Decoder Jacobian
+            log_matrix("j", enc_dec_jac)
+        
             # log the numerical Jacobian
             if numerical_jacobian is not None:
-                labels = [f"a_num_{i}{j}" for i in range(numerical_jacobian.shape[0]) for j in range(numerical_jacobian.shape[1])]
-                data = dep_mat.detach().cpu().reshape(-1, ).tolist()
-                wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
-            
+                log_matrix("a_num", numerical_jacobian)
+                    
             # log the bottleneck weights
             if ar_bottleneck is not None:
-                labels = [f"w_{i}{j}" for i in range(dep_mat.shape[0]) for j in range(dep_mat.shape[1])]
-                data = ar_bottleneck.detach().cpu().reshape(-1, ).tolist()
-                wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
+                log_matrix("w", ar_bottleneck)
+                
 
     def log_summary(self, **kwargs):
         """

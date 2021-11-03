@@ -105,9 +105,8 @@ class Runner(object):
                                                        device=self.hparams.device)
 
 
-                dep_loss, dep_mat, numerical_jacobian = calc_jacobian_loss(self.hparams, self.model.encoder, self.model.decoder,latent_space, self.model.hparams.device)
+                dep_loss, dep_mat, numerical_jacobian, enc_dec_jac = calc_jacobian_loss(self.model,latent_space)
 
-                
 
                 # Update the metrics
                 # self.metrics.update(y_pred=dep_mat, y_true=gt_jacobian)
@@ -117,7 +116,7 @@ class Runner(object):
 
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
-                self.logger.log(self.model.h, self.model.h_ind, dep_mat, indep_checker, latent_space, losses,
+                self.logger.log(self.model.h, self.model.h_ind, dep_mat, enc_dec_jac, indep_checker, latent_space, losses,
                                 total_loss, dep_loss, self.model.encoder, None, None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight, numerical_jacobian)#, self.metrics.compute())
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))

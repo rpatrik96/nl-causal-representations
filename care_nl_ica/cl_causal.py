@@ -43,18 +43,17 @@ def main():
                                              sample_conditional=(setup_conditional(args)), )
 
     dep_mat = check_independence_z_gz(indep_checker, runner.model.decoder, latent_space)
-    # if not args.use_sem:
-        # dep_mat = check_independence_z_gz(indep_checker, runner.model.decoder, latent_space)
-    # else:
-        # dep_mat = runner.model.decoder.weight
 
     # save the ground truth jacobian of the decoder
     if dep_mat is not None:
         cols = [f"a_{i}" for i in range(dep_mat.shape[1])]
-        gt_jacobian = wandb.Table(columns=cols, data=dep_mat.detach().cpu().tolist())
-        runner.logger.log_summary(**{"gt_decoder_jacobian": gt_jacobian})
+        jac = dep_mat.detach().cpu()
+        gt_jacobian_dec = wandb.Table(columns=cols, data=jac.tolist())
+        gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
+        runner.logger.log_summary(**{"gt_decoder_jacobian": gt_jacobian_dec})
+        runner.logger.log_summary(**{"gt_encoder_jacobian": gt_jacobian_enc})
 
-
+   
     if args.use_flows:
         runner.model.encoder.confidence.inject_structure(dep_mat, args.inject_structure)
 

@@ -157,3 +157,6 @@ class ContrastiveLearningModel(nn.Module):
         else:
             raise ValueError("Invalid output normalization:", hparams.normalization)
         return output_normalization, output_normalization_kwargs
+
+    def forward(self, x):
+        return self.h(x)

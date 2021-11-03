@@ -28,9 +28,23 @@ def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = Fal
 
     jacobian = torch.stack(jacob, 1)
 
-    # make the Jacobian volume preserving
-    if normalize is True:
-        jacobian /= jacobian.det().abs().pow(1 / jacobian.shape[-1]).reshape(-1, 1, 1)
+    # # make the Jacobian volume preserving
+    # if normalize is True:
+    #     jacobian /= jacobian.det().abs().pow(1 / jacobian.shape[-1]).reshape(-1, 1, 1)
+
+    # normalize the jacobian
+    from pdb import set_trace
+    # set_trace()
+    ## seems not to work
+    # if normalize is True:
+    #     norm_factor = torch.linalg.norm(input_vars, dim=1, keepdim=True) / (torch.linalg.norm(output_vars, dim=1, keepdim=True) + 1e-8)
+    #     jacobian *= norm_factor.reshape(-1, 1, 1)
+        
+
+    # if normalize is True:
+    #     factor = torch.matmul(jacobian, input_vars.unsqueeze(-1)).norm(dim=1)
+
+
 
     # set back to original mode
     if in_training is True:
@@ -127,19 +141,26 @@ def dependency_loss(dep_mat: torch.Tensor, weight_sparse: float = 1., weight_tri
     return weight_sparse * sparse_loss + weight_triangular * triangular_loss
 
 
-def calc_jacobian_loss(args, f, g, latent_space, device, eps=1e-6, calc_numerical:bool=False):
+def calc_jacobian_loss(model, latent_space, eps=1e-6, calc_numerical:bool=False):
+
+    args = model.hparams
     # 1. get a sample from the latents
     # these are the noise variables in Wieland's notation
     # todo: probably we can use something from data?
     z_disentanglement = latent_space.sample_marginal(args.n_eval_samples)
     # 2. calculate the signal mixtures (i.e., the observations)
-    obs = g(z_disentanglement)
+    obs = model.decoder(z_disentanglement.clone())
     # 3. calculate the dependency matrix
     # x \times f(x)
-    dep_mat = calc_jacobian(f, obs.clone(), normalize=args.preserve_vol).abs().mean(0)
+    dep_mat = calc_jacobian(model.encoder, obs.clone(), normalize=args.preserve_vol).abs().mean(0)
+
+    jac_enc_dec = calc_jacobian(model, z_disentanglement.clone(), normalize=args.preserve_vol).abs().mean(0)
+                
+
+
     # 3/b calculate the numerical jacobian
     # calculate numerical jacobian
-    numerical_jacobian = None if calc_numerical is False else calc_jacobian_numerical(f, obs,dep_mat.shape[0], device, eps)
+    numerical_jacobian = None if calc_numerical is False else calc_jacobian_numerical(f, obs,dep_mat.shape[0], args.device, eps)
     # 4. calculate the loss for the dependency matrix
     dep_loss = dependency_loss(dep_mat)
-    return dep_loss, dep_mat, numerical_jacobian
+    return dep_loss, dep_mat, numerical_jacobian, jac_enc_dec
