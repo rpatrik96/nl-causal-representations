@@ -119,7 +119,7 @@ class ARBottleneckNet(nn.Module):
         self.ar_bottleneck = ARMLP(self.num_vars)
 
     def _layer_generator(self, features: FeatureList):
-        return  nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx+1]) for idx in range(len(features)-1)])
+        return  nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx+1], self.bias) for idx in range(len(features)-1)])
 
     def _init_feature_layers(self):
         """
