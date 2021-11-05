@@ -139,30 +139,30 @@ class Logger(object):
     def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
         if self.hparams.use_wandb:
 
-
-            wandb.log({"total_loss": total_loss, "dep_loss" : dep_loss, "lin_dis_score": self.lin_dis_scores[-1],
-                       "perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
+            panel_name = "Metrics"
+            wandb.log({f"{panel_name}/total_loss": total_loss, f"{panel_name}/dep_loss" : dep_loss, f"{panel_name}/lin_dis_score": self.lin_dis_scores[-1],
+                       f"{panel_name}/perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
 
             # wandb.log(causality_metrics, step=global_step)
 
-            def log_matrix(name, matrix):
-                labels = [f"{name}_{i}{j}" for i in range(matrix.shape[0]) for j in range(matrix.shape[1])]
+            def log_matrix(name, matrix, panel_name=None):
+                labels = [f"{name}_{i}{j}" if panel_name is None else f"{panel_name}/{name}_{i}{j}" for i in range(matrix.shape[0]) for j in range(matrix.shape[1])]
                 data = matrix.detach().cpu().reshape(-1, ).tolist()
                 wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
             
             # log the Jacobian
-            log_matrix("a", dep_mat)
+            log_matrix("a", dep_mat, "Encoder Jacobian")
 
             # log the Encoder-Decoder Jacobian
-            log_matrix("j", enc_dec_jac)
+            log_matrix("j", enc_dec_jac, "Encoder-Decoder Jacobian")
         
             # log the numerical Jacobian
             if numerical_jacobian is not None:
-                log_matrix("a_num", numerical_jacobian)
+                log_matrix("a_num", numerical_jacobian, "Numerical Encoder Jacobian")
                     
             # log the bottleneck weights
             if ar_bottleneck is not None:
-                log_matrix("w", ar_bottleneck)
+                log_matrix("w", ar_bottleneck, "AR Bottleneck Weights")
                 
 
     def log_summary(self, **kwargs):
