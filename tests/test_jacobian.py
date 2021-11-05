@@ -30,7 +30,7 @@ def args(request):
                               num_eval_batches=10, num_permutations=50, p=1, preserve_vol=False, project='experiment',
                               resume_training=False, save_dir='', seed=0, space_type='box', sphere_r=1.0, tau=1.0,
                               use_batch_norm=True, use_dep_mat=True, use_flows=not request.param.use_ar_mlp, use_reverse=False,
-                              use_wandb=False, variant=1, verbose=False, use_ar_mlp=request.param.use_ar_mlp, use_sem=False)
+                              use_wandb=False, variant=1, verbose=False, use_ar_mlp=request.param.use_ar_mlp, use_sem=False, use_bias=False, l1=0.0, l2=0.0)
 
     set_device(args)
     setup_seed(args.seed)
