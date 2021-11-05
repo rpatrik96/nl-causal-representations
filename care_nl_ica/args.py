@@ -14,7 +14,8 @@ def parse_args():
     parser.add_argument('--use-l1', action='store_true', help="Use L1 on the MLP botleneck")
     parser.add_argument('--use-sem', action='store_true', help="Use SEM as decoder")
     parser.add_argument('--use-bias', action='store_true', help="Use bias in the network")
-    parser.add_argument("--l1", type=float, default=1e-5)
+    parser.add_argument("--l1", type=float, default=0.0, help="L1 regularization")
+    parser.add_argument("--l2", type=float, default=0.0, help="L2 regularization")
     parser.add_argument('--variant', type=int, default=0)
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
     parser.add_argument('--inject-structure', action='store_true',

@@ -56,6 +56,10 @@ class Runner(object):
         self.logger.log_scatter_latent_rec(z2_con_z1, z2_con_z1_rec, "z2_con_z1")
         self.logger.log_scatter_latent_rec(z3, z3_rec, "z3")
 
+        with torch.no_grad():
+            n1 = self.model.decoder(z1)
+            self.logger.log_scatter_latent_rec(n1, z1_rec, "n1_z1_rec")
+  
         if test:
             total_loss_value = F.mse_loss(z1_rec, z1)
             losses_value = [total_loss_value]
@@ -72,11 +76,21 @@ class Runner(object):
 
         if not self.hparams.identity_mixing_and_solution and self.hparams.lr != 0:
 
-            if self.hparams.use_l1 is False:
+            
+            if self.hparams.l2 != 0.0:
+                l2 :float= 0.0
+                for param in self.model.encoder.parameters():
+                    l2 += torch.sum(param**2)
+
+                total_loss_value += self.hparams.l2 * l2
+
+            
+
+            if self.hparams.l1 == 0:
                 total_loss_value.backward()
-            elif self.hparams.use_ar_mlp is True:
+            elif self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
                 # add sparsity loss to the AR MLP bottleneck
-                (total_loss_value+self.model.hparams.l1*self.model.encoder.bottleneck_l1_norm).backward()
+                (total_loss_value+self.hparams.l1*self.model.encoder.bottleneck_l1_norm).backward()
 
 
             self.optimizer.step()
