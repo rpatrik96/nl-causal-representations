@@ -28,21 +28,9 @@ def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = Fal
 
     jacobian = torch.stack(jacob, 1)
 
-    # # make the Jacobian volume preserving
-    # if normalize is True:
-    #     jacobian /= jacobian.det().abs().pow(1 / jacobian.shape[-1]).reshape(-1, 1, 1)
-
-    # normalize the jacobian
-    from pdb import set_trace
-    # set_trace()
-    ## seems not to work
-    # if normalize is True:
-    #     norm_factor = torch.linalg.norm(input_vars, dim=1, keepdim=True) / (torch.linalg.norm(output_vars, dim=1, keepdim=True) + 1e-8)
-    #     jacobian *= norm_factor.reshape(-1, 1, 1)
-        
-
-    # if normalize is True:
-    #     factor = torch.matmul(jacobian, input_vars.unsqueeze(-1)).norm(dim=1)
+    # normalize the Jacobian by making it volume preserving
+    if normalize is True:
+        jacobian /= jacobian.det().abs().pow(1 / jacobian.shape[-1]).reshape(-1, 1, 1)
 
 
 
