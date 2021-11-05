@@ -29,8 +29,14 @@ def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = Fal
     jacobian = torch.stack(jacob, 1)
 
     # normalize the Jacobian by making it volume preserving
+
     if normalize is True:
-        jacobian /= jacobian.det().abs().pow(1 / jacobian.shape[-1]).reshape(-1, 1, 1)
+        # jacobian /= jacobian.det().abs().pow(1 / jacobian.shape[-1]).reshape(-1, 1, 1)
+
+
+        norm_factor = (output_vars.std(dim=0) + 1e-8)
+        jacobian /= norm_factor.reshape(1, 1, -1)
+
 
 
 
