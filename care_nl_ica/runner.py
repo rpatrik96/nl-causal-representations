@@ -53,8 +53,6 @@ class Runner(object):
     
 
         self.logger.log_scatter_latent_rec(z1, z1_rec, "z1")
-        self.logger.log_scatter_latent_rec(z2_con_z1, z2_con_z1_rec, "z2_con_z1")
-        self.logger.log_scatter_latent_rec(z3, z3_rec, "z3")
 
         with torch.no_grad():
             n1 = self.model.decoder(z1)
