@@ -23,6 +23,7 @@ def parse_args():
     parser.add_argument('--preserve-vol', action='store_true',
                         help="Normalize the dependency matrix to have determinant=1")
     parser.add_argument('--learnable-mask', action='store_true', help="Makes the masks in the flow learnable")
+    parser.add_argument('--learn-jacobian', action='store_true', help="Approximates the jacobian in the learning loop with a matrix")
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
     #############################   
@@ -126,9 +127,6 @@ def parse_args():
     parser.add_argument("--project", type=str, default="experiment",
                         help="This is the name of the experiment on Weights and Biases")
     parser.add_argument("--notes", type=str, default=None, help="Notes for the run on Weights and Biases")
-    parser.add_argument("--tags", type=str,
-                        nargs="*",  # 0 or more values expected => creates a list
-                        default=None, help="Tags for the run on Weights and Biases")
 
     args = parser.parse_args()
 

@@ -30,50 +30,72 @@ class Runner(object):
     def train_step(self, data, h, test):
         device = self.hparams.device
 
-        z1, z2_con_z1, z3 = data
-        z1 = z1.to(device)
-        z2_con_z1 = z2_con_z1.to(device)
-        z3 = z3.to(device)
+        n1, n2_con_n1, n3 = data
+        n1 = n1.to(device)
+        n2_con_n1 = n2_con_n1.to(device)
+        n3 = n3.to(device)
 
         # create random "negative" pairs
-        # this is faster than sampling z3 again from the marginal distribution
+        # this is faster than sampling n3 again from the marginal distribution
         # and should also yield samples as if they were sampled from the marginal
         # import pdb; pdb.set_trace()
-        # z3_shuffle_indices = torch.randperm(len(z1))
-        # z3_shuffle_indices = torch.roll(torch.arange(len(z1)), 1)
-        # z3 = z1[z3_shuffle_indices]
-        # z3 = z3.to(device)
+        # n3_shuffle_indices = torch.randperm(len(n1))
+        # n3_shuffle_indices = torch.roll(torch.arange(len(n1)), 1)
+        # n3 = n1[n3_shuffle_indices]
+        # n3 = n3.to(device)
 
         self.optimizer.zero_grad()
 
-        z1_rec = h(z1)
-        z2_con_z1_rec = h(z2_con_z1)
-        z3_rec = h(z3)
-        # z3_rec = z1_rec[z3_shuffle_indices]
+        n1_rec = h(n1)
+        n2_con_n1_rec = h(n2_con_n1)
+        n3_rec = h(n3)
+        # n3_rec = n1_rec[n3_shuffle_indices]
     
 
-        self.logger.log_scatter_latent_rec(z1, z1_rec, "z1")
+        self.logger.log_scatter_latent_rec(n1, n1_rec, "n1")
 
         with torch.no_grad():
-            n1 = self.model.decoder(z1)
-            self.logger.log_scatter_latent_rec(n1, z1_rec, "n1_z1_rec")
+            z1 = self.model.decoder(n1)
+            self.logger.log_scatter_latent_rec(z1, n1_rec, "z1_n1_rec")
   
         if test:
-            total_loss_value = F.mse_loss(z1_rec, z1)
+            total_loss_value = F.mse_loss(n1_rec, n1)
             losses_value = [total_loss_value]
         else:
             total_loss_value, _, losses_value = self.model.loss(
-                z1, z2_con_z1, z3, z1_rec, z2_con_z1_rec, z3_rec
+                n1, n2_con_n1, n3, n1_rec, n2_con_n1_rec, n3_rec
             )
 
-            # writer.add_scalar("loss_hz", total_loss_value, global_step)
-            # writer.add_scalar("loss_z", loss(
-            #    z1, z2_con_z1, z3, z1, z2_con_z1, z3
+            # writer.add_scalar("loss_hn", total_loss_value, global_step)
+            # writer.add_scalar("loss_n", loss(
+            #    n1, n2_con_n1, n3, n1, n2_con_n1, n3
             # )[0], global_step)
             # writer.flush()
 
         if not self.hparams.identity_mixing_and_solution and self.hparams.lr != 0:
 
+
+            # add the learnable jacobian
+            if self.hparams.learn_jacobian is True:
+
+
+                # get the data after mixing (decoding)
+                with torch.no_grad():
+                    z1 = self.model.decoder(n1)
+                    z2_con_z1 = self.model.decoder(n2_con_n1)
+                    z3 = self.model.decoder(n3)
+
+                # reconstruct linearly
+                n1_tilde = self.model.jacob(z1)
+                n2_con_n1_tilde = self.model.decoder(z2_con_z1)
+                n3_tilde = self.model.decoder(z3)
+
+
+                eps = 1e-8
+
+                lin_mse = (n1_tilde - n1_rec.detach()/(n1_rec.detach().std(dim=0) + eps)).pow(2).mean()+ (n2_con_n1_tilde - n2_con_n1_rec.detach()/(n2_con_n1_rec.detach().std(dim=0) + eps)).pow(2).mean() + (n3_tilde - n3_rec.detach()/(n3_rec.detach().std(dim=0)+eps)).pow(2).mean()
+
+                total_loss_value += lin_mse
             
             if self.hparams.l2 != 0.0:
                 l2 :float= 0.0
@@ -129,7 +151,7 @@ class Runner(object):
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, enc_dec_jac, indep_checker, latent_space, losses,
-                                total_loss, dep_loss, self.model.encoder, None, None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight, numerical_jacobian)#, self.metrics.compute())
+                                total_loss, dep_loss, self.model.encoder, None, None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight, numerical_jacobian, self.model.jacob.weight)#, self.metrics.compute())
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()

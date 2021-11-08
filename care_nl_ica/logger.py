@@ -41,7 +41,7 @@ class Logger(object):
         self.global_step = len(self.total_loss_values) + 1
 
     def log(self, h, h_ind, dep_mat, enc_dec_jac, ind_checker: IndependenceChecker, latent_space: latent_spaces.LatentSpace, losses,
-            total_loss, dep_loss, f, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
+            total_loss, dep_loss, f, causality_metrics, ar_bottleneck=None, numerical_jacobian=None, learnable_jacobian=None):
 
         self.individual_losses_values.append(losses)
         self.total_loss_values.append(total_loss)
@@ -89,7 +89,7 @@ class Logger(object):
             self.perm_dis_scores.append(self.perm_dis_scores[-1])
             self.causal_check.append(self.causal_check[-1])
 
-        self._log_to_wandb(dep_mat, enc_dec_jac, self.global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck, numerical_jacobian)
+        self._log_to_wandb(dep_mat, enc_dec_jac, self.global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck, numerical_jacobian,learnable_jacobian)
 
         self.print_statistics(f, dep_mat, dep_loss)
 
@@ -136,7 +136,7 @@ class Logger(object):
         print("linear mean: {} std: {}".format(np.mean(final_linear_scores), np.std(final_linear_scores)))
         print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
-    def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None):
+    def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None, learnable_jacobian=None):
         if self.hparams.use_wandb:
 
             panel_name = "Metrics"
@@ -163,6 +163,10 @@ class Logger(object):
             # log the bottleneck weights
             if ar_bottleneck is not None:
                 log_matrix("w", ar_bottleneck, "AR Bottleneck Weights")
+
+            # log the learnable jacobian
+            if learnable_jacobian is not None:
+                log_matrix("learn_j", learn_jacobian, "Learnable Jacobian Weights")
                 
 
     def log_summary(self, **kwargs):

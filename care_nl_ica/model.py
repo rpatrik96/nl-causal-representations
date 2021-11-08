@@ -22,6 +22,13 @@ class ContrastiveLearningModel(nn.Module):
         self._setup_loss()
         self._setup_space()
 
+        self._setup_learnable_jacobian()
+
+    def _setup_learnable_jacobian(self):
+
+        if self.hparams.learn_jacobian is True:
+            self.jacob = LinearSEM(self.hparams.n)
+
     def _setup_encoder(self):
         hparams = self.hparams
 
