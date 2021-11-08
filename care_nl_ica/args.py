@@ -127,6 +127,10 @@ def parse_args():
     parser.add_argument("--project", type=str, default="experiment",
                         help="This is the name of the experiment on Weights and Biases")
     parser.add_argument("--notes", type=str, default=None, help="Notes for the run on Weights and Biases")
+    parser.add_argument("--tags", type=str,
+                        nargs="*",  # 0 or more values expected => creates a list
+                        default=None, help="Tags for the run on Weights and Biases")
+
 
     args = parser.parse_args()
 
