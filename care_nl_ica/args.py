@@ -46,6 +46,7 @@ def parse_args():
         help="Output normalization to use. If empty, do not normalize at all.", default=""
     )
     parser.add_argument('--mode', type=str, default='unsupervised')
+    parser.add_argument('--data-gen-mode', type=str, default='rvs', choices=['rvs', 'pcl'])
     parser.add_argument(
         "--more-unsupervised",
         type=int,

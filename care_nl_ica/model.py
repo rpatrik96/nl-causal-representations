@@ -38,10 +38,8 @@ class ContrastiveLearningModel(nn.Module):
             self.jacob = LinearSEM(self.hparams.n)
 
             self.jacob = self.jacob.to(self.hparams.device)
-
             self.jacob.weight.requires_grad = True
 
-            print(f"{self.jacob.weight.requires_grad=}")
 
     def _setup_encoder(self):
         hparams = self.hparams
@@ -107,7 +105,7 @@ class ContrastiveLearningModel(nn.Module):
                 cond_thresh_ratio=0.001,
                 n_iter_cond_thresh=25000,
                 lower_triangular=True,
-                weight_matrix_init='rvs',
+                weight_matrix_init=hparams.data_gen_mode,
                 sparsity=True,
                 variant=torch.from_numpy(np.array([hparams.variant]))
         )
