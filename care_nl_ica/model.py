@@ -24,10 +24,24 @@ class ContrastiveLearningModel(nn.Module):
 
         self._setup_learnable_jacobian()
 
+    def parameters(self):
+        parameters = list(self.encoder.parameters())
+
+        if self.hparams.learn_jacobian is True:
+            parameters += list(self.jacob.parameters())
+
+        return parameters
+
     def _setup_learnable_jacobian(self):
 
         if self.hparams.learn_jacobian is True:
             self.jacob = LinearSEM(self.hparams.n)
+
+            self.jacob = self.jacob.to(self.hparams.device)
+
+            self.jacob.weight.requires_grad = True
+
+            print(f"{self.jacob.weight.requires_grad=}")
 
     def _setup_encoder(self):
         hparams = self.hparams

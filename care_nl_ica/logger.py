@@ -166,7 +166,7 @@ class Logger(object):
 
             # log the learnable jacobian
             if learnable_jacobian is not None:
-                log_matrix("learn_j", learn_jacobian, "Learnable Jacobian Weights")
+                log_matrix("learn_j", learnable_jacobian, "Learnable Jacobian Weights")
                 
 
     def log_summary(self, **kwargs):

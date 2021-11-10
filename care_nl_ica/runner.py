@@ -17,7 +17,7 @@ class Runner(object):
         self.hparams = hparams
 
         self.model = ContrastiveLearningModel(self.hparams)
-        self.optimizer = torch.optim.Adam(self.model.encoder.parameters(), lr=self.hparams.lr)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
 
         self.logger = Logger(self.hparams, self.model)
 
@@ -80,20 +80,25 @@ class Runner(object):
 
 
                 # get the data after mixing (decoding)
-                with torch.no_grad():
-                    z1 = self.model.decoder(n1)
-                    z2_con_z1 = self.model.decoder(n2_con_n1)
-                    z3 = self.model.decoder(n3)
+                z1 = self.model.decoder(n1)
+                z2_con_z1 = self.model.decoder(n2_con_n1)
+                z3 = self.model.decoder(n3)
 
                 # reconstruct linearly
                 n1_tilde = self.model.jacob(z1)
-                n2_con_n1_tilde = self.model.decoder(z2_con_z1)
-                n3_tilde = self.model.decoder(z3)
+                n2_con_n1_tilde = self.model.jacob(z2_con_z1)
+                n3_tilde = self.model.jacob(z3)
 
 
                 eps = 1e-8
 
-                lin_mse = (n1_tilde - n1_rec.detach()/(n1_rec.detach().std(dim=0) + eps)).pow(2).mean()+ (n2_con_n1_tilde - n2_con_n1_rec.detach()/(n2_con_n1_rec.detach().std(dim=0) + eps)).pow(2).mean() + (n3_tilde - n3_rec.detach()/(n3_rec.detach().std(dim=0)+eps)).pow(2).mean()
+                # standardize n
+                n1_rec_std = ((n1_rec - n1_rec.mean(dim=0)) / (n1_rec.std(dim=0) + eps) + n1_rec.mean(dim=0)).detach()
+                n2_con_n1_rec_std = ((n2_con_n1_rec - n2_con_n1_rec.mean(dim=0)) / (n2_con_n1_rec.std(dim=0) + eps) + n2_con_n1_rec.mean(dim=0)).detach()
+                n3_rec_std = ((n3_rec - n3_rec.mean(dim=0)) / (n3_rec.std(dim=0) + eps) + n3_rec.mean(dim=0)).detach()
+
+
+                lin_mse = (n1_tilde - n1_rec_std).pow(2).mean()+ (n2_con_n1_tilde - n2_con_n1_rec_std).pow(2).mean() + (n3_tilde - n3_rec_std).pow(2).mean()
 
                 total_loss_value += lin_mse
             
@@ -106,11 +111,12 @@ class Runner(object):
 
             
 
-            if self.hparams.l1 == 0:
-                total_loss_value.backward()
-            elif self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
+            
+            if self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
                 # add sparsity loss to the AR MLP bottleneck
                 (total_loss_value+self.hparams.l1*self.model.encoder.bottleneck_l1_norm).backward()
+            else:
+                total_loss_value.backward()
 
 
             self.optimizer.step()
