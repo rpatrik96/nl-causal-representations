@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from .cl_ica import encoders, invertible_network_utils, losses, spaces
 from .masked_flows import MaskMAF
 
-from care_nl_ica.mlp import ARBottleneckNet, ARMLP, LinearSEM
+from care_nl_ica.mlp import ARBottleneckNet, ARMLP, LinearSEM, NonLinearSEM
 
 
 
@@ -111,7 +111,11 @@ class ContrastiveLearningModel(nn.Module):
         )
         else:
             print("Using SEM as decoder")
-            decoder = LinearSEM(hparams.n)
+            if self.hparams.nonlin_sem is False:
+                decoder = LinearSEM(hparams.n)
+            else:
+                decoder = NonLinearSEM(hparams.n)
+                
             print(decoder.weight)
 
         # allocate to device

@@ -33,6 +33,44 @@ class LinearSEM(nn.Module):
 
         return self
 
+class NonLinearSEM(nn.Module):
+    def __init__(self, num_vars: int):
+        super().__init__()
+
+        self.num_vars = num_vars
+        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
+
+        self.nonlin = [lambda x : x**2, lambda x: torch.sin(x), lambda x: torch.tanh(x), lambda x: torch.relu(x), lambda x : 0, lambda x: x]
+
+
+        # Nonlinearitites
+        self.nonlin_names = ['square', 'sin', 'tanh', 'relu', 'zero', 'identity']
+        self.nonlin_selector = torch.randint(0, len(self.nonlin)-1, (num_vars,))
+
+        # print the selected nonlinearities
+        for i in range(num_vars):
+            print(f"{self.nonlin_names[self.nonlin_selector[i]]}")
+
+
+    def forward(self, x):
+
+        y = torch.zeros_like(x)
+        for i, nonlin_idx in enumerate(self.nonlin_selector):
+            y[:, i] = self.nonlin[nonlin_idx](x[:, i])
+
+        return y @ torch.tril(self.weight).T 
+
+    def to(self, device):
+        """
+        Move the model to the specified device.
+
+        :param device: The device to move the model to.
+        """
+        super().to(device)
+        self.weight = self.weight.to(device)
+
+        return self
+
 
 
 
