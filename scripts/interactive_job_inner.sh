@@ -35,7 +35,7 @@ do
 done 
 # -p is for making sure sshd is killed if singularity is stopped 
 # - R is for generating key
-tmux send-keys "./run_singularity_server.sh /usr/sbin/dropbear -R -E -F $ADDRESSES -s" C-m
+tmux send-keys "./scripts/run_singularity_server.sh /usr/sbin/dropbear -R -E -F $ADDRESSES -s" C-m
  
 while true; do 
         # will fail if session ended 
