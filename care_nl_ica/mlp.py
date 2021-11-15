@@ -90,7 +90,7 @@ class ARMLP(nn.Module):
 
     def forward(self, x):
         from pdb import set_trace
-        set_trace()
+        # set_trace()
         return self.transform(torch.tril(self.weight) @ x)
 
     def to(self, device):
@@ -209,7 +209,7 @@ class ARBottleneckNet(nn.Module):
 
     def forward(self, x):
         from pdb import set_trace
-        set_trace()
+        # set_trace()
         return self.scaling(torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x)))))
 
     def to(self, device):
