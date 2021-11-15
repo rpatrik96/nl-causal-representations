@@ -25,7 +25,7 @@ def args(request):
                               mode='unsupervised', more_unsupervised=1, n=request.param.n, n_eval_samples=512,
                               n_log_steps=250,
                               n_mixing_layer=3, n_steps=100001, no_cuda=False, normalization='', notes=None,
-                              num_eval_batches=10, num_permutations=50, p=1, preserve_vol=False, project='experiment',
+                              num_eval_batches=10, num_permutations=50, p=1, normalize_latents=False, project='experiment',
                               resume_training=False, save_dir='', seed=0, space_type='box', sphere_r=1.0, tau=1.0,
                               use_batch_norm=True, use_dep_mat=True, use_flows=not request.param.use_ar_mlp,
                               use_reverse=False,
@@ -62,7 +62,7 @@ def test_triangularity_jacobian(model: ContrastiveLearningModel, network, numeri
     z = latent_space.sample_marginal(model.hparams.n_eval_samples)
 
     # calculate the Jacobian
-    dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.preserve_vol).abs().mean(0)
+    dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.normalize_latents).abs().mean(0)
     print(f"{dep_mat=}")
 
     # numerical Jacobian

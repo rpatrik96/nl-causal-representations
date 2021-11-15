@@ -112,7 +112,7 @@ def check_independence_z_gz(ind_check, h_ind, latent_space):
     dep_mat = None
     if ind_check.hparams.use_dep_mat:
         # x \times z
-        dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=ind_check.hparams.preserve_vol).abs().mean(0)
+        dep_mat = calc_jacobian(h_ind, z_disentanglement, normalize=ind_check.hparams.normalize_latents).abs().mean(0)
         print(dep_mat)
         null_list = [False] * torch.numel(dep_mat)
         null_list[torch.argmin(dep_mat).item()] = True
