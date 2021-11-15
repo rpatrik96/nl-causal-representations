@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import care_nl_ica.cl_ica.layers as ls
+
 FeatureList = List[int]
 
 
@@ -156,6 +158,8 @@ class ARBottleneckNet(nn.Module):
 
         self.ar_bottleneck = ARMLP(self.num_vars)
 
+        self.scaling = ls.SoftclipLayer(self.num_vars, 1, True)
+
     def _layer_generator(self, features: FeatureList):
         return  nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx+1], self.bias) for idx in range(len(features)-1)])
 
@@ -212,7 +216,7 @@ class ARBottleneckNet(nn.Module):
     def forward(self, x):
         from pdb import set_trace
         # set_trace()
-        return torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x))))
+        return self.scaling(torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x)))))
 
     def to(self, device):
         """
