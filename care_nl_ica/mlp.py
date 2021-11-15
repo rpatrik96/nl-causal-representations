@@ -90,7 +90,7 @@ class ARMLP(nn.Module):
 
     def forward(self, x):
         from pdb import set_trace
-        # set_trace()
+        set_trace()
         return self.transform(torch.tril(self.weight) @ x)
 
     def to(self, device):
@@ -187,9 +187,6 @@ class ARBottleneckNet(nn.Module):
             # input (coming from the outer world) has num_features=1
             if (first_feat := self.pre_layer_feats[0]) != 1:
                 raise ValueError(f"First feature size should be 1, got {first_feat}!")
-            # output (going into the bottleneck) has num_features=self.vars
-            if (last_feat := self.pre_layer_feats[-1]) != self.num_vars:
-                raise ValueError(f"Last feature size should be {self.num_vars}, got {last_feat}!")
 
             # create layers with ReLU activations
             self.pre_layers = self._layer_generator(self.pre_layer_feats)
@@ -203,9 +200,6 @@ class ARBottleneckNet(nn.Module):
         if len(self.post_layer_feats):
 
             # check feature values at the "interface"
-            # input (coming from the bottleneck) has num_features=self.vars
-            if (first_feat := self.post_layer_feats[0]) != self.num_vars:
-                raise ValueError(f"First feature size should be {self.num_vars}, got {first_feat}!")
             # output has num_features=1
             if (last_feat := self.post_layer_feats[-1]) != 1:
                 raise ValueError(f"Last feature size should be 1, got {last_feat}!")
@@ -215,7 +209,7 @@ class ARBottleneckNet(nn.Module):
 
     def forward(self, x):
         from pdb import set_trace
-        # set_trace()
+        set_trace()
         return self.scaling(torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x)))))
 
     def to(self, device):

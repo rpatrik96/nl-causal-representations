@@ -54,7 +54,7 @@ class ContrastiveLearningModel(nn.Module):
 
         elif self.hparams.use_ar_mlp is True:
 
-            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *10, hparams.n], [hparams.n, hparams.n*10, 1], hparams.use_bias)
+            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *30, hparams.n*50], [hparams.n*50, hparams.n*30, 1], hparams.use_bias)
 
         else:
             encoder = encoders.get_mlp(
