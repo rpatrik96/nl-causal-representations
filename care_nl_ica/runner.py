@@ -151,7 +151,12 @@ class Runner(object):
                 # Update the metrics
                 threshold = 3e-3
                 # from pdb import set_trace; set_trace()
-                self.metrics.update(y_pred=(dep_mat.detach().inverse().abs() > threshold).bool().cpu().reshape(-1,1), y_true=(self.gt_jacobian_decoder.abs()>threshold).bool().cpu().reshape(-1,1))
+                inv_abs_dep_mat = dep_mat.detach().inverse().abs()
+                self.metrics.update(y_pred=(inv_abs_dep_mat > threshold).bool().cpu().reshape(-1,1), y_true=(self.gt_jacobian_decoder.abs()>threshold).bool().cpu().reshape(-1,1))
+
+                # calculate the distance between ground truth and predicted jacobian
+                jacobian_norm_diff =  torch.norm(inv_abs_dep_mat - self.gt_jacobian_decoder.abs())
+                jacobian_thresholded_norm_diff =  torch.norm(inv_abs_dep_mat*(inv_abs_dep_mat>threshold) - self.gt_jacobian_decoder.abs())
 
                 # if self.hparams.use_flows:
                 #     dep_mat = self.model.encoder.confidence.mask()
@@ -159,7 +164,7 @@ class Runner(object):
                 total_loss, losses = self.train(data, self.model.h, learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, enc_dec_jac, indep_checker, latent_space, losses,
-                                total_loss,  dep_loss,  self.model.encoder, self.metrics.compute(), None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight, numerical_jacobian, None if self.hparams.learn_jacobian is False else self.model.jacob.weight)
+                                total_loss,  dep_loss,  self.model.encoder, self.metrics.compute(), None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight, numerical_jacobian, None if self.hparams.learn_jacobian is False else self.model.jacob.weight, jacobian_norm_diff, jacobian_thresholded_norm_diff)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()
