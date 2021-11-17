@@ -9,7 +9,7 @@ class Metrics(object):
         super().__init__()
         
         self.accuracy = torchmetrics.Accuracy()
-        self.roc_auc = torchmetrics.AUROC()
+        self.roc_auc = torchmetrics.AUROC(num_classes=2)
         self.auc_score = torchmetrics.AUC()
         self.precision = torchmetrics.Precision()
         self.recall = torchmetrics.Recall()
@@ -35,17 +35,18 @@ class Metrics(object):
         Compute the metrics.
         """
         [tp, fp, tn, fn, sup] = self.stat_scores.compute()
+        panel_name = "Metrics"
         return {
-            'accuracy': self.accuracy.compute(),
-            'roc_auc': self.roc_auc.compute(),
-            'auc_score': self.auc_score.compute(),
-            'precision': self.precision.compute(),
-            'recall': self.recall.compute(),
-            'f1': self.f1.compute(),
-            'hamming_distance': self.hamming_distance.compute(),
-            'tp': tp,
-            'fp': fp,
-            'tn': tn,
-            'fn': fn,
-            'support': sup
+            f'{panel_name}/accuracy': self.accuracy.compute(),
+            # f'{panel_name}/roc_auc': self.roc_auc.compute(),
+            # f'{panel_name}/auc_score': self.auc_score.compute(),
+            f'{panel_name}/precision': self.precision.compute(),
+            f'{panel_name}/recall': self.recall.compute(),
+            f'{panel_name}/f1': self.f1.compute(),
+            f'{panel_name}/hamming_distance': self.hamming_distance.compute(),
+            f'{panel_name}/tp': tp,
+            f'{panel_name}/fp': fp,
+            f'{panel_name}/tn': tn,
+            f'{panel_name}/fn': fn,
+            f'{panel_name}/support': sup
         }

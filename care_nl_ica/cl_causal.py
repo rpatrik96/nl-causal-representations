@@ -48,6 +48,7 @@ def main():
     if dep_mat is not None:
         cols = [f"a_{i}" for i in range(dep_mat.shape[1])]
         jac = dep_mat.detach().cpu()
+        runner.gt_jacobian_decoder = dep_mat.detach().inverse()
         gt_jacobian_dec = wandb.Table(columns=cols, data=jac.tolist())
         gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
         runner.logger.log_summary(**{"gt_decoder_jacobian": gt_jacobian_dec})

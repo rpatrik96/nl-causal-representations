@@ -147,7 +147,7 @@ class FeatureMLP(nn.Module):
 
 
 class ARBottleneckNet(nn.Module):
-    def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True):
+    def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True, normalize: bool = False):
         super().__init__()
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats
@@ -158,7 +158,7 @@ class ARBottleneckNet(nn.Module):
 
         self.ar_bottleneck = ARMLP(self.num_vars)
 
-        self.scaling = ls.SoftclipLayer(self.num_vars, 1, True)
+        self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
     def _layer_generator(self, features: FeatureList):
         return  nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx+1], self.bias) for idx in range(len(features)-1)])

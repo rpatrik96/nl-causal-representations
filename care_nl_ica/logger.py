@@ -143,7 +143,7 @@ class Logger(object):
             wandb.log({f"{panel_name}/total_loss": total_loss, f"{panel_name}/dep_loss" : dep_loss, f"{panel_name}/lin_dis_score": self.lin_dis_scores[-1],
                        f"{panel_name}/perm_dis_score": self.perm_dis_scores[-1]}, step=global_step)
 
-            # wandb.log(causality_metrics, step=global_step)
+            wandb.log(causality_metrics, step=global_step)
 
             def log_matrix(name, matrix, panel_name=None):
                 labels = [f"{name}_{i}{j}" if panel_name is None else f"{panel_name}/{name}_{i}{j}" for i in range(matrix.shape[0]) for j in range(matrix.shape[1])]

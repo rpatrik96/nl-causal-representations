@@ -47,6 +47,7 @@ def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = Fal
 
 
 
+
     # set back to original mode
     if in_training is True:
         model.train()
