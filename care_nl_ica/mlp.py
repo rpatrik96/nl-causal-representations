@@ -19,10 +19,12 @@ class LinearSEM(nn.Module):
 
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
+        self.mask = torch.tril(torch.bernoulli(0.5*torch.ones_like(self.weight)),1) + torch.eye(num_vars)
+
     def forward(self, x):
         from pdb import set_trace
         # set_trace()
-        return x @ torch.tril(self.weight).T 
+        return x @ torch.tril(self.weight*self.mask).T 
 
     def to(self, device):
         """
@@ -32,21 +34,20 @@ class LinearSEM(nn.Module):
         """
         super().to(device)
         self.weight = self.weight.to(device)
+        self.mask = self.mask.to(device)
 
         return self
 
-class NonLinearSEM(nn.Module):
+class NonLinearSEM(LinearSEM):
     def __init__(self, num_vars: int):
-        super().__init__()
+        super().__init__(num_vars=num_vars)
 
-        self.num_vars = num_vars
-        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
-        self.nonlin = [lambda x : x**2, lambda x: torch.sin(x), lambda x: torch.tanh(x), lambda x: torch.relu(x), lambda x : 0, lambda x: x]
+        self.nonlin = [lambda x : x**3, lambda x: torch.tanh(x), lambda x: torch.sigmoid(x), lambda x: torch.nn.functional.leaky_relu(x, .1), lambda x: x]
 
 
         # Nonlinearitites
-        self.nonlin_names = ['square', 'sin', 'tanh', 'relu', 'zero', 'identity']
+        self.nonlin_names = ['cube', 'tanh', 'sigmoid', 'leaky_relu', 'identity']
         self.nonlin_selector = torch.randint(0, len(self.nonlin)-1, (num_vars,))
 
         # print the selected nonlinearities
@@ -60,18 +61,8 @@ class NonLinearSEM(nn.Module):
         for i, nonlin_idx in enumerate(self.nonlin_selector):
             y[:, i] = self.nonlin[nonlin_idx](x[:, i])
 
-        return y @ torch.tril(self.weight).T 
+        return y @ torch.tril(self.weight*self.mask).T 
 
-    def to(self, device):
-        """
-        Move the model to the specified device.
-
-        :param device: The device to move the model to.
-        """
-        super().to(device)
-        self.weight = self.weight.to(device)
-
-        return self
 
 
 

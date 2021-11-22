@@ -149,7 +149,7 @@ class Runner(object):
 
 
                 # Update the metrics
-                threshold = 3e-3
+                threshold = 3e-5
                 # from pdb import set_trace; set_trace()
                 inv_abs_dep_mat = dep_mat.detach().inverse().abs()
                 self.metrics.update(y_pred=(inv_abs_dep_mat > threshold).bool().cpu().reshape(-1,1), y_true=(self.gt_jacobian_decoder.abs()>threshold).bool().cpu().reshape(-1,1))
@@ -158,7 +158,10 @@ class Runner(object):
                 # calculate the optimal threshold for 1 accuracy
                 # calculate the indices where the GT is 0 (in the lower triangular part)
                 sparsity_mask = ((self.gt_jacobian_decoder.abs() <1e-6) *torch.tril(torch.ones_like(self.gt_jacobian_decoder))).bool()
-                optimal_threshold = inv_abs_dep_mat[sparsity_mask].min()
+                if sparsity_mask.sum() > 0:
+                    optimal_threshold = inv_abs_dep_mat[sparsity_mask].max()
+                else:
+                    optimal_threshold = None
 
                 # calculate the distance between ground truth and predicted jacobian
                 jacobian_norm_diff =  torch.norm(inv_abs_dep_mat - self.gt_jacobian_decoder.abs())
