@@ -20,6 +20,7 @@ class LinearSEM(nn.Module):
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
         self.mask = torch.tril(torch.bernoulli(0.5*torch.ones_like(self.weight)),1) + torch.eye(num_vars)
+        self.mask.requires_grad = False
 
     def forward(self, x):
         from pdb import set_trace
@@ -68,21 +69,34 @@ class NonLinearSEM(LinearSEM):
 
 
 class ARMLP(nn.Module):
-    def __init__(self, num_vars: int, transform:callable=None):
+    def __init__(self, num_vars: int, transform:callable=None, residual: bool = False):
         super().__init__()
         from pdb import set_trace
         # set_trace()
 
-        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
+        self.num_vars = num_vars
+        self.residual = residual
 
+        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1))
+        if self.residual is True:
+            self.scaling = nn.Parameter(torch.ones(self.num_vars), requires_grad=True) 
+            
         # structure injection
         self.transform = transform if transform is not None else lambda x: x
         self.struct_mask = torch.ones_like(self.weight, requires_grad=False)
 
+        
+
+    @property
+    def assembled_weight(self):
+        from pdb import set_trace
+        # set_trace()
+        return self.weight if self.residual is False else self.weight + torch.diag(self.scaling)
+
     def forward(self, x):
         from pdb import set_trace
         # set_trace()
-        return self.transform(torch.tril(self.weight) @ x)
+        return self.transform(torch.tril(self.assembled_weight) @ x)
 
     def to(self, device):
         """
@@ -92,6 +106,9 @@ class ARMLP(nn.Module):
         """
         super().to(device)
         self.weight = self.weight.to(device)
+
+        if self.residual is True:
+            self.scaling = self.scaling.to(device)
 
         return self
 
@@ -138,7 +155,7 @@ class FeatureMLP(nn.Module):
 
 
 class ARBottleneckNet(nn.Module):
-    def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True, normalize: bool = False):
+    def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True, normalize: bool = False, residual: bool = False):
         super().__init__()
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats
@@ -147,7 +164,7 @@ class ARBottleneckNet(nn.Module):
 
         self._init_feature_layers()
 
-        self.ar_bottleneck = ARMLP(self.num_vars)
+        self.ar_bottleneck = ARMLP(self.num_vars, residual=residual)
 
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
