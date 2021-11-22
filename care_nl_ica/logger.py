@@ -144,30 +144,32 @@ class Logger(object):
             wandb.log({f"{panel_name}/total_loss": total_loss, f"{panel_name}/dep_loss" : dep_loss, f"{panel_name}/lin_dis_score": self.lin_dis_scores[-1],
                        f"{panel_name}/perm_dis_score": self.perm_dis_scores[-1], f"{panel_name}/jacobian_norm_diff":jacobian_norm_diff, f"{panel_name}/jacobian_thresholded_norm_diff":jacobian_thresholded_norm_diff, f"{panel_name}/optimal_threshold":optimal_threshold}, step=global_step)
 
-            wandb.log(causality_metrics, step=global_step)
+            if self.hparams.verbose is True:
+                wandb.log(causality_metrics, step=global_step)
 
             def log_matrix(name, matrix, panel_name=None):
                 labels = [f"{name}_{i}{j}" if panel_name is None else f"{panel_name}/{name}_{i}{j}" for i in range(matrix.shape[0]) for j in range(matrix.shape[1])]
                 data = matrix.detach().cpu().reshape(-1, ).tolist()
                 wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
             
-            # log the Jacobian
-            log_matrix("a", dep_mat, "Encoder Jacobian")
+            if self.hparams.verbose is True:
+                # log the Jacobian
+                log_matrix("a", dep_mat, "Encoder Jacobian")
 
-            # log the Encoder-Decoder Jacobian
-            log_matrix("j", enc_dec_jac, "Encoder-Decoder Jacobian")
-        
-            # log the numerical Jacobian
-            if numerical_jacobian is not None:
-                log_matrix("a_num", numerical_jacobian, "Numerical Encoder Jacobian")
-                    
-            # log the bottleneck weights
-            if ar_bottleneck is not None:
-                log_matrix("w", ar_bottleneck, "AR Bottleneck Weights")
+                # log the Encoder-Decoder Jacobian
+                log_matrix("j", enc_dec_jac, "Encoder-Decoder Jacobian")
+            
+                # log the numerical Jacobian
+                if numerical_jacobian is not None:
+                    log_matrix("a_num", numerical_jacobian, "Numerical Encoder Jacobian")
+                        
+                # log the bottleneck weights
+                if ar_bottleneck is not None:
+                    log_matrix("w", ar_bottleneck, "AR Bottleneck Weights")
 
-            # log the learnable jacobian
-            if learnable_jacobian is not None:
-                log_matrix("learn_j", learnable_jacobian, "Learnable Jacobian Weights")
+                # log the learnable jacobian
+                if learnable_jacobian is not None:
+                    log_matrix("learn_j", learnable_jacobian, "Learnable Jacobian Weights")
                 
 
     def log_summary(self, **kwargs):
