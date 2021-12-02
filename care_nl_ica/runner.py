@@ -32,7 +32,7 @@ class Runner(object):
         self._calc_dep_mat()
         self._inject_encoder_structure()
 
-    def _calc_dep_mat(self)->None:
+    def _calc_dep_mat(self) -> None:
         dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.latent_space)
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
@@ -43,7 +43,7 @@ class Runner(object):
 
             self._calc_indirect_causes()
 
-    def _calc_indirect_causes(self) ->None:
+    def _calc_indirect_causes(self) -> None:
         """
         Calculates all indirect paths in the encoder (SEM/SCM)
         :return:
@@ -65,14 +65,14 @@ class Runner(object):
 
         self.indirect_causes = indirect_causes
 
-    def _inject_encoder_structure(self)->None:
+    def _inject_encoder_structure(self) -> None:
         if self.hparams.use_flows:
             self.model.encoder.confidence.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
 
         elif self.hparams.use_ar_mlp:
             self.model.encoder.ar_bottleneck.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
 
-    def reset_encoder(self)->None:
+    def reset_encoder(self) -> None:
         self.model.reset_encoder()
         self.optimizer = torch.optim.Adam(self.model.encoder.parameters(), lr=self.hparams.lr)
 
@@ -181,7 +181,6 @@ class Runner(object):
 
             while (self.logger.global_step <= self.hparams.n_steps if learning_mode else self.logger.global_step <= (
                     self.hparams.n_steps * self.hparams.more_unsupervised)):
-
                 data = sample_marginal_and_conditional(self.latent_space, size=self.hparams.batch_size,
                                                        device=self.hparams.device)
 
@@ -216,11 +215,10 @@ class Runner(object):
 
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
 
-    def _dep_mat_metrics(self, inv_abs_dep_mat:torch.Tensor, threshold:float)-> JacobianMetrics:
+    def _dep_mat_metrics(self, inv_abs_dep_mat: torch.Tensor, threshold: float = 3e-5) -> JacobianMetrics:
         # calculate the optimal threshold for 1 accuracy
         # calculate the indices where the GT is 0 (in the lower triangular part)
-        sparsity_mask = ((self.gt_jacobian_decoder.abs() < 1e-6) * torch.tril(
-            torch.ones_like(self.gt_jacobian_decoder))).bool()
+        sparsity_mask = (torch.tril(self.gt_jacobian_decoder.abs() < 1e-6)).bool()
 
         if sparsity_mask.sum() > 0:
             optimal_threshold = inv_abs_dep_mat[sparsity_mask].max()
@@ -233,12 +231,9 @@ class Runner(object):
             inv_abs_dep_mat * (inv_abs_dep_mat > threshold) - self.gt_jacobian_decoder.abs())
 
         # calculate the fraction of correctly identified zeroes
-        incorrect_edges = ((inv_abs_dep_mat * self.indirect_causes) > 3e-5).sum()
-        sparsity_accuracy = (1.-self.indirect_causes.sum())/self.indirect_causes.sum()
-
+        incorrect_edges = ((inv_abs_dep_mat * self.indirect_causes) > threshold).sum()
+        sparsity_accuracy: float = 1. - incorrect_edges / self.indirect_causes.sum()
 
         metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy)
 
         return metrics
-
-
