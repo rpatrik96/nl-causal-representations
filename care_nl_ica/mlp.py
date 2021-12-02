@@ -9,23 +9,39 @@ import care_nl_ica.cl_ica.layers as ls
 FeatureList = List[int]
 
 
+class DoublyStochasticMatrix(nn.Module):
+    def __init__(self, num_vars: int, temperature: float = 1.):
+        super().__init__()
+
+        self.temperature = temperature
+        self.num_vars = num_vars
+        self.weight = nn.Parameter(nn.Linear(num_vars - 1, num_vars - 1).weight)
+
+    @property
+    def matrix(self):
+        beta = torch.sigmoid(self.weight / self.temperature)
+
+        l = ...
+        u = ...
+        x = l + beta * (u - l)
+
+        return x
+
 
 class LinearSEM(nn.Module):
     def __init__(self, num_vars: int):
         super().__init__()
 
-
         self.num_vars = num_vars
 
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
-        self.mask = torch.tril(torch.bernoulli(0.5*torch.ones_like(self.weight)),1) + torch.eye(num_vars)
+        self.mask = torch.tril(torch.bernoulli(0.5 * torch.ones_like(self.weight)), 1) + torch.eye(num_vars)
         self.mask.requires_grad = False
 
     def forward(self, x):
-        from pdb import set_trace
         # set_trace()
-        return x @ torch.tril(self.weight*self.mask).T 
+        return x @ torch.tril(self.weight * self.mask).T
 
     def to(self, device):
         """
