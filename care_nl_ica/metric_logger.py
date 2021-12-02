@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import torch
 import torchmetrics
 
@@ -50,3 +52,10 @@ class Metrics(object):
             f'{panel_name}/fn': fn,
             f'{panel_name}/support': sup
         }
+
+
+class JacobianMetrics(dataclass):
+    norm_diff:float
+    thresholded_norm_diff:float
+    optimal_threshold:float
+    sparsity_accuracy:float
