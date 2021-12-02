@@ -1,6 +1,10 @@
+from collections import Counter
+
 import torch
 
-from  care_nl_ica.hsic import HSIC
+from care_nl_ica.dep_mat import calc_jacobian
+from care_nl_ica.hsic import HSIC
+from care_nl_ica.prob_utils import calc_disentanglement_scores
 
 
 class IndependenceChecker(object):
@@ -43,3 +47,36 @@ class IndependenceChecker(object):
                                                                 bonferroni=max_edge_num).item()
 
         return adjacency_matrix
+
+    def check_independence_z_gz(self, decoder, latent_space)->torch.Tensor:
+        z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
+        lin_dis_score, perm_dis_score = calc_disentanglement_scores(z_disentanglement, decoder(z_disentanglement))
+
+        print(f"Id. Lin. Disentanglement: {lin_dis_score:.4f}")
+        print(f"Id. Perm. Disentanglement: {perm_dis_score:.4f}")
+        print('Run test with ground truth sources')
+
+        dep_mat = None
+        if self.hparams.use_dep_mat:
+            # x \times z
+            dep_mat = calc_jacobian(decoder, z_disentanglement, normalize=self.hparams.normalize_latents).abs().mean(0)
+            print(dep_mat)
+            null_list = [False] * torch.numel(dep_mat)
+            null_list[torch.argmin(dep_mat).item()] = True
+            var_map = [1, 1, 2, 2]
+        else:
+            null_list, var_map = self.check_bivariate_dependence(decoder(z_disentanglement), z_disentanglement)
+        ######Note this is specific to a dense 2x2 triangular matrix!######
+        if Counter(null_list) == Counter([False, False, False, True]):
+
+            print('concluded a causal effect')
+
+            for i, null in enumerate(null_list):
+                if null:
+                    print('cause variable is X{}'.format(str(var_map[i])))
+
+        else:
+            print('no causal effect...?')
+            # sys.exit()
+
+        return dep_mat

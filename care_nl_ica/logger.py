@@ -40,8 +40,11 @@ class Logger(object):
 
         self.global_step = len(self.total_loss_values) + 1
 
-    def log(self, h, h_ind, dep_mat, enc_dec_jac, ind_checker: IndependenceChecker, latent_space: latent_spaces.LatentSpace, losses,
-            total_loss, dep_loss, f, causality_metrics, ar_bottleneck=None, numerical_jacobian=None, learnable_jacobian=None, jacobian_norm_diff=None, jacobian_thresholded_norm_diff=None, optimal_threshold:float=None):
+    def log(self, h, h_ind, dep_mat, enc_dec_jac, ind_checker: IndependenceChecker,
+            latent_space: latent_spaces.LatentSpace, losses,
+            total_loss, dep_loss, f, causality_metrics, ar_bottleneck=None, numerical_jacobian=None,
+            learnable_jacobian=None, jacobian_norm_diff=None, jacobian_thresholded_norm_diff=None,
+            optimal_threshold: float = None):
 
         self.individual_losses_values.append(losses)
         self.total_loss_values.append(total_loss)
@@ -89,15 +92,17 @@ class Logger(object):
             self.perm_dis_scores.append(self.perm_dis_scores[-1])
             self.causal_check.append(self.causal_check[-1])
 
-        
-        self._log_to_wandb(dep_mat, enc_dec_jac, self.global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck, numerical_jacobian,learnable_jacobian, jacobian_norm_diff, jacobian_thresholded_norm_diff, optimal_threshold)
+        self._log_to_wandb(dep_mat, enc_dec_jac, self.global_step, total_loss, dep_loss, causality_metrics,
+                           ar_bottleneck, numerical_jacobian, learnable_jacobian, jacobian_norm_diff,
+                           jacobian_thresholded_norm_diff, optimal_threshold)
 
         self.print_statistics(f, dep_mat, dep_loss)
 
         self.global_step += 1
 
     def print_statistics(self, f, dep_mat, dep_loss):
-        if self.hparams.verbose is True and (self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps):
+        if self.hparams.verbose is True and (
+                self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps):
             print(
                 f"Step: {self.global_step} \t",
                 f"Loss: {self.total_loss_values[-1]:.4f} \t",
@@ -137,32 +142,39 @@ class Logger(object):
         print("linear mean: {} std: {}".format(np.mean(final_linear_scores), np.std(final_linear_scores)))
         print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
-    def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics, ar_bottleneck=None, numerical_jacobian=None, learnable_jacobian=None, jacobian_norm_diff=None, jacobian_thresholded_norm_diff=None, optimal_threshold:float = None):
+    def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics,
+                      ar_bottleneck=None, numerical_jacobian=None, learnable_jacobian=None, jacobian_norm_diff=None,
+                      jacobian_thresholded_norm_diff=None, optimal_threshold: float = None):
         if self.hparams.use_wandb:
 
             panel_name = "Metrics"
-            wandb.log({f"{panel_name}/total_loss": total_loss, f"{panel_name}/dep_loss" : dep_loss, f"{panel_name}/lin_dis_score": self.lin_dis_scores[-1],
-                       f"{panel_name}/perm_dis_score": self.perm_dis_scores[-1], f"{panel_name}/jacobian_norm_diff":jacobian_norm_diff, f"{panel_name}/jacobian_thresholded_norm_diff":jacobian_thresholded_norm_diff, f"{panel_name}/optimal_threshold":optimal_threshold}, step=global_step)
+            wandb.log({f"{panel_name}/total_loss": total_loss, f"{panel_name}/dep_loss": dep_loss,
+                       f"{panel_name}/lin_dis_score": self.lin_dis_scores[-1],
+                       f"{panel_name}/perm_dis_score": self.perm_dis_scores[-1],
+                       f"{panel_name}/jacobian_norm_diff": jacobian_norm_diff,
+                       f"{panel_name}/jacobian_thresholded_norm_diff": jacobian_thresholded_norm_diff,
+                       f"{panel_name}/optimal_threshold": optimal_threshold}, step=global_step)
 
             if self.hparams.verbose is True:
                 wandb.log(causality_metrics, step=global_step)
 
             def log_matrix(name, matrix, panel_name=None):
-                labels = [f"{name}_{i}{j}" if panel_name is None else f"{panel_name}/{name}_{i}{j}" for i in range(matrix.shape[0]) for j in range(matrix.shape[1])]
+                labels = [f"{name}_{i}{j}" if panel_name is None else f"{panel_name}/{name}_{i}{j}" for i in
+                          range(matrix.shape[0]) for j in range(matrix.shape[1])]
                 data = matrix.detach().cpu().reshape(-1, ).tolist()
                 wandb.log({key: val for key, val in zip(labels, data)}, step=global_step)
-            
+
             if self.hparams.verbose is True:
                 # log the Jacobian
                 log_matrix("a", dep_mat, "Encoder Jacobian")
 
                 # log the Encoder-Decoder Jacobian
                 log_matrix("j", enc_dec_jac, "Encoder-Decoder Jacobian")
-            
+
                 # log the numerical Jacobian
                 if numerical_jacobian is not None:
                     log_matrix("a_num", numerical_jacobian, "Numerical Encoder Jacobian")
-                        
+
                 # log the bottleneck weights
                 if ar_bottleneck is not None:
                     log_matrix("w", ar_bottleneck, "AR Bottleneck Weights")
@@ -170,7 +182,6 @@ class Logger(object):
                 # log the learnable jacobian
                 if learnable_jacobian is not None:
                     log_matrix("learn_j", learnable_jacobian, "Learnable Jacobian Weights")
-                
 
     def log_summary(self, **kwargs):
         """
@@ -182,13 +193,22 @@ class Logger(object):
 
             for key, value in kwargs.items():
                 wandb.run.summary[key] = value
-            
-    def log_scatter_latent_rec(self, latent, rec, name:str):
+
+    def log_scatter_latent_rec(self, latent, rec, name: str):
         if self.hparams.use_wandb is True and self.hparams.log_latent_rec is True:
-            if self.global_step % (20*self.hparams.n_log_steps) == 1:
+            if self.global_step % (20 * self.hparams.n_log_steps) == 1:
                 for i in range(self.hparams.n):
                     # from pdb import set_trace; set_trace()
-                    table = wandb.Table(data=torch.stack((latent[:, i], rec[:, i])).T.tolist(), columns = ["latent", "rec"])
+                    table = wandb.Table(data=torch.stack((latent[:, i], rec[:, i])).T.tolist(),
+                                        columns=["latent", "rec"])
 
-                    wandb.log({f"latent_rec_{name}_dim_{i}" : wandb.plot.scatter(table, "latent", "rec",title=f"Latents vs reconstruction of {name} in dimension {i}")})
-    
+                    wandb.log({f"latent_rec_{name}_dim_{i}": wandb.plot.scatter(table, "latent", "rec",
+                                                                                title=f"Latents vs reconstruction of {name} in dimension {i}")})
+
+    def log_jacobian(self, dep_mat):
+        jac = dep_mat.detach().cpu()
+        cols = [f"a_{i}" for i in range(dep_mat.shape[1])]
+        gt_jacobian_dec = wandb.Table(columns=cols, data=jac.tolist())
+        gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
+        self.log_summary(**{"gt_decoder_jacobian": gt_jacobian_dec})
+        self.log_summary(**{"gt_encoder_jacobian": gt_jacobian_enc})

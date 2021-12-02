@@ -39,22 +39,21 @@ class LinearSEM(nn.Module):
 
         return self
 
+
 class NonLinearSEM(LinearSEM):
     def __init__(self, num_vars: int):
         super().__init__(num_vars=num_vars)
 
-
-        self.nonlin = [lambda x : x**3, lambda x: torch.tanh(x), lambda x: torch.sigmoid(x), lambda x: torch.nn.functional.leaky_relu(x, .1), lambda x: x]
-
+        self.nonlin = [lambda x: x ** 3, lambda x: torch.tanh(x), lambda x: torch.sigmoid(x),
+                       lambda x: torch.nn.functional.leaky_relu(x, .1), lambda x: x]
 
         # Nonlinearitites
         self.nonlin_names = ['cube', 'tanh', 'sigmoid', 'leaky_relu', 'identity']
-        self.nonlin_selector = torch.randint(0, len(self.nonlin)-1, (num_vars,))
+        self.nonlin_selector = torch.randint(0, len(self.nonlin) - 1, (num_vars,))
 
         # print the selected nonlinearities
         for i in range(num_vars):
             print(f"{self.nonlin_names[self.nonlin_selector[i]]}")
-
 
     def forward(self, x):
 
@@ -62,39 +61,32 @@ class NonLinearSEM(LinearSEM):
         for i, nonlin_idx in enumerate(self.nonlin_selector):
             y[:, i] = self.nonlin[nonlin_idx](x[:, i])
 
-        return y @ torch.tril(self.weight*self.mask).T 
-
-
-
+        return y @ torch.tril(self.weight * self.mask).T
 
 
 class ARMLP(nn.Module):
-    def __init__(self, num_vars: int, transform:callable=None, residual: bool = False):
+    def __init__(self, num_vars: int, transform: callable = None, residual: bool = False):
         super().__init__()
-        from pdb import set_trace
         # set_trace()
 
         self.num_vars = num_vars
         self.residual = residual
 
-        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1))
+        self.weight = nn.Parameter(
+            torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1))
         if self.residual is True:
-            self.scaling = nn.Parameter(torch.ones(self.num_vars), requires_grad=True) 
-            
-        # structure injection
+            self.scaling = nn.Parameter(torch.ones(self.num_vars), requires_grad=True)
+
+            # structure injection
         self.transform = transform if transform is not None else lambda x: x
         self.struct_mask = torch.ones_like(self.weight, requires_grad=False)
 
-        
-
     @property
     def assembled_weight(self):
-        from pdb import set_trace
         # set_trace()
         return self.weight if self.residual is False else self.weight + torch.diag(self.scaling)
 
     def forward(self, x):
-        from pdb import set_trace
         # set_trace()
         return self.transform(torch.tril(self.assembled_weight) @ x)
 
@@ -114,13 +106,11 @@ class ARMLP(nn.Module):
 
     def inject_structure(self, adj_mat, inject_structure=False):
         if inject_structure is True:
-
             # set structural mask
             self.struct_mask = adj_mat > 0
-            
+
             # set transform to include structural mask
             self.transform = lambda x: self.struct_mask @ x
-
 
             print(f"Injected structure with weight: {self.struct_mask}")
 
@@ -155,7 +145,8 @@ class FeatureMLP(nn.Module):
 
 
 class ARBottleneckNet(nn.Module):
-    def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True, normalize: bool = False, residual: bool = False):
+    def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
+                 normalize: bool = False, residual: bool = False):
         super().__init__()
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats
@@ -169,7 +160,8 @@ class ARBottleneckNet(nn.Module):
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
     def _layer_generator(self, features: FeatureList):
-        return  nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx+1], self.bias) for idx in range(len(features)-1)])
+        return nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias) for idx in
+                               range(len(features) - 1)])
 
     def _init_feature_layers(self):
         """
@@ -216,7 +208,6 @@ class ARBottleneckNet(nn.Module):
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
-        from pdb import set_trace
         # set_trace()
         return self.scaling(torch.squeeze(self.post_layers(self.ar_bottleneck(self.pre_layers(x)))))
 
@@ -235,8 +226,6 @@ class ARBottleneckNet(nn.Module):
 
         return self
 
-
     @property
     def bottleneck_l1_norm(self):
         return self.ar_bottleneck.weight.abs().sum()
-
