@@ -116,7 +116,7 @@ class ContrastiveLearningModel(nn.Module):
             else:
                 decoder = NonLinearSEM(hparams.n)
                 
-            print(decoder.weight)
+            print(f"{decoder.weight=}")
 
         # allocate to device
         decoder = decoder.to(hparams.device)
