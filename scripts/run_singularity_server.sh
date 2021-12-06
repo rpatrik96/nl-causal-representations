@@ -22,15 +22,16 @@ mkdir -p "$tmp_dir"/.pylint.d
 mkdir -p "$tmp_dir"/.cache 
  
 singularity exec -p --nv \
-        --bind "$tmp_dir"/.vscode-server:/home/bethge/$userName/.vscode-server \
-        --bind "$tmp_dir"/.conda:/home/bethge/$userName/.conda \
-        --bind "$tmp_dir"/.ipython:/home/bethge/$userName/.ipython \
-        --bind "$tmp_dir"/.jupyter:/home/bethge/$userName/.jupyter \
-        --bind "$tmp_dir"/.local:/home/bethge/$userName/.local \
-        --bind "$tmp_dir"/.pylint.d:/home/bethge/$userName/.pylint.d \
-        --bind "$tmp_dir"/.cache:/home/bethge/$userName/.cache \
+        --bind "$tmp_dir"/.vscode-server:/mnt/qb/work/$userName/.vscode-server \
+        --bind "$tmp_dir"/.conda:/mnt/qb/work/$userName/.conda \
+        --bind "$tmp_dir"/.ipython:/mnt/qb/work/$userName/.ipython \
+        --bind "$tmp_dir"/.jupyter:/mnt/qb/work/$userName/.jupyter \
+        --bind "$tmp_dir"/.local:/mnt/qb/work/$userName/.local \
+        --bind "$tmp_dir"/.pylint.d:/mnt/qb/work/$userName/.pylint.d \
+        --bind "$tmp_dir"/.cache:/mnt/qb/work/$userName/.cache \
         --bind /scratch_local \
-        --bind /mnt/qb/bethge \
+        --bind /home/bethge/preizinger \
+        --bind /mnt/qb/work/bethge \
         "$LOCAL_IMAGE" "$@"
  
 rm -rf "$tmp_dir"

@@ -53,8 +53,8 @@ class Metrics(object):
             f'{panel_name}/support': sup
         }
 
-
-class JacobianMetrics(dataclass):
+@dataclass
+class JacobianMetrics:
     norm_diff:float
     thresholded_norm_diff:float
     optimal_threshold:float

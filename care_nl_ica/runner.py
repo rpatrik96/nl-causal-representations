@@ -48,22 +48,25 @@ class Runner(object):
         Calculates all indirect paths in the encoder (SEM/SCM)
         :return:
         """
+
+        from pdb import set_trace
+        set_trace()
         # calculate the indirect cause mask
         eps = 1e-6
-        matrix_power = self.gt_jacobian_decoder.abs() > eps
+        matrix_power = direct_causes = torch.tril((self.gt_jacobian_decoder.abs() > eps).float(), -1)
         indirect_causes = torch.zeros_like(self.gt_jacobian_decoder)
 
         # add together the matrix powers of the adjacency matrix
         # this yields all indirect paths
         for i in range(self.gt_jacobian_decoder.shape[0]):
-            matrix_power = matrix_power @ indirect_causes
+            matrix_power = matrix_power @ direct_causes
 
             if matrix_power.sum() == 0:
                 break
 
             indirect_causes += matrix_power
 
-        self.indirect_causes = indirect_causes
+        self.indirect_causes = indirect_causes.bool().float() # convert all non-1 value to 1
 
     def _inject_encoder_structure(self) -> None:
         if self.hparams.use_flows:

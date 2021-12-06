@@ -1,10 +1,10 @@
 #!/bin/bash
 
-for variant in 1 #2 7 25 45646
+for seed in 7676
 do
-    for n in 8
+    for n in 4
     do  
-        ./scripts/start_preemptable_job.sh --use-ar-mlp --variant ${variant} --n ${n} --note "metrics test normalization" --tags normalization --normalize-latents &
+        ./scripts/start_preemptable_job.sh --use-ar-mlp --seed ${seed} --n ${n} --note "metrics test normalization" --tags normalization nonlinear sem residual --use-sem --nonlin-sem --normalize-latents &
         sleep 20
     done
 done
