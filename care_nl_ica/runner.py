@@ -49,8 +49,6 @@ class Runner(object):
         :return:
         """
 
-        from pdb import set_trace
-        set_trace()
         # calculate the indirect cause mask
         eps = 1e-6
         matrix_power = direct_causes = torch.tril((self.gt_jacobian_decoder.abs() > eps).float(), -1)
@@ -229,12 +227,12 @@ class Runner(object):
             optimal_threshold = None
 
         # calculate the distance between ground truth and predicted jacobian
-        norm_diff = torch.norm(inv_abs_dep_mat - self.gt_jacobian_decoder.abs())
-        thresholded_norm_diff = torch.norm(
-            inv_abs_dep_mat * (inv_abs_dep_mat > threshold) - self.gt_jacobian_decoder.abs())
+        norm_diff: float = torch.norm(inv_abs_dep_mat - self.gt_jacobian_decoder.abs()).sum()
+        thresholded_norm_diff: float = torch.norm(
+            inv_abs_dep_mat * (inv_abs_dep_mat > threshold) - self.gt_jacobian_decoder.abs()).sum()
 
         # calculate the fraction of correctly identified zeroes
-        incorrect_edges = ((inv_abs_dep_mat * self.indirect_causes) > threshold).sum()
+        incorrect_edges: float = ((inv_abs_dep_mat * self.indirect_causes) > threshold).sum()
         sparsity_accuracy: float = 1. - incorrect_edges / self.indirect_causes.sum()
 
         metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy)
