@@ -73,6 +73,8 @@ class Runner(object):
         # correct for causes where both the direct and indirect paths are present
         self.indirect_causes = self.indirect_causes * ((self.indirect_causes - direct_causes) >0).float()
 
+        print(f"{self.indirect_causes=}")
+
 
     def _inject_encoder_structure(self) -> None:
         if self.hparams.inject_structure is True:
