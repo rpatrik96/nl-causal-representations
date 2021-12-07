@@ -226,7 +226,7 @@ class Runner(object):
 
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
 
-    def _dep_mat_metrics(self, abs_dep_mat: torch.Tensor, threshold: float = 3e-5) -> JacobianMetrics:
+    def _dep_mat_metrics(self, abs_dep_mat: torch.Tensor, threshold: float = 1e-3) -> JacobianMetrics:
         # calculate the optimal threshold for 1 accuracy
         # calculate the indices where the GT is 0 (in the lower triangular part)
         sparsity_mask = (torch.tril(self.gt_jacobian_encoder.abs() < 1e-6)).bool()
