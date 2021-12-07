@@ -243,7 +243,7 @@ class Runner(object):
 
         # calculate the fraction of correctly identified zeroes
         incorrect_edges: float = ((abs_dep_mat * self.indirect_causes) > threshold).sum()
-        sparsity_accuracy: float = 1. - incorrect_edges / self.indirect_causes.sum()
+        sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum()+1e-8) 
 
         metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy)
 
