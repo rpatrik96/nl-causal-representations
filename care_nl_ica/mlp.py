@@ -40,9 +40,7 @@ class LinearSEM(nn.Module):
 
         self.mask = torch.tril(torch.bernoulli(0.5 * torch.ones_like(self.weight)), 1) + torch.eye(num_vars)
         self.mask.requires_grad = False
-
-        set_trace()
-
+        
         print(f"{self.mask=}")
 
     def forward(self, x):
