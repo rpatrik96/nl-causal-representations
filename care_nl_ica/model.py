@@ -54,7 +54,7 @@ class ContrastiveLearningModel(nn.Module):
 
         elif self.hparams.use_ar_mlp is True:
 
-            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *10, hparams.n*30, hparams.n*40], [hparams.n*40, hparams.n*30, hparams.n*10, 1], hparams.use_bias, hparams.normalization == "fixed_box", residual=True)
+            encoder = ARBottleneckNet(hparams.n, [1, hparams.n *5, hparams.n*8, hparams.n*12], [hparams.n*12, hparams.n*8, hparams.n*5, 1], hparams.use_bias, hparams.normalization == "fixed_box", residual=True)
 
         else: 
             encoder = encoders.get_mlp(
@@ -115,6 +115,7 @@ class ContrastiveLearningModel(nn.Module):
                 decoder = LinearSEM(hparams.n)
             else:
                 decoder = NonLinearSEM(hparams.n)
+
                 
             print(f"{decoder.weight=}")
 

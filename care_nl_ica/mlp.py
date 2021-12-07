@@ -8,6 +8,8 @@ import care_nl_ica.cl_ica.layers as ls
 
 FeatureList = List[int]
 
+from pdb import set_trace
+
 
 class DoublyStochasticMatrix(nn.Module):
     def __init__(self, num_vars: int, temperature: float = 1.):
@@ -39,8 +41,19 @@ class LinearSEM(nn.Module):
         self.mask = torch.tril(torch.bernoulli(0.5 * torch.ones_like(self.weight)), 1) + torch.eye(num_vars)
         self.mask.requires_grad = False
 
+        set_trace()
+
+        print(f"{self.mask=}")
+
     def forward(self, x):
-        # set_trace()
+        z = torch.zeros_like(x)
+        w = torch.tril(self.weight * self.mask)
+
+        for i in range(self.num_vars):
+           z[:, i] = w[i, i]*x[:, i]
+
+           if i != 0:
+               z[:, i] = z[:, i]+ z[:, :i]@w[i,:i]
         return x @ torch.tril(self.weight * self.mask).T
 
     def to(self, device):
@@ -73,11 +86,17 @@ class NonLinearSEM(LinearSEM):
 
     def forward(self, x):
 
-        y = torch.zeros_like(x)
-        for i, nonlin_idx in enumerate(self.nonlin_selector):
-            y[:, i] = self.nonlin[nonlin_idx](x[:, i])
+        z = torch.zeros_like(x)
+        w = torch.tril(self.weight * self.mask)
 
-        return y @ torch.tril(self.weight * self.mask).T
+        for i, nonlin_idx in enumerate(self.nonlin_selector):
+           z[:, i] = w[i, i]*self.nonlin[nonlin_idx](x[:, i])
+
+           if i != 0:
+               z[:, i] = z[:, i]+ z[:, :i]@w[i,:i]
+
+        return z
+
 
 
 class ARMLP(nn.Module):
@@ -93,8 +112,8 @@ class ARMLP(nn.Module):
         if self.residual is True:
             self.scaling = nn.Parameter(torch.ones(self.num_vars), requires_grad=True)
 
-            # structure injection
-        self.transform = transform if transform is not None else lambda x: x
+        # structure injection
+        self.transform = transform if transform is not None else lambda w: w
         self.struct_mask = torch.ones_like(self.weight, requires_grad=False)
 
     @property
@@ -104,7 +123,7 @@ class ARMLP(nn.Module):
 
     def forward(self, x):
         # set_trace()
-        return self.transform(torch.tril(self.assembled_weight) @ x)
+        return self.transform(torch.tril(self.assembled_weight)) @ x
 
     def to(self, device):
         """
@@ -123,12 +142,13 @@ class ARMLP(nn.Module):
     def inject_structure(self, adj_mat, inject_structure=False):
         if inject_structure is True:
             # set structural mask
-            self.struct_mask = adj_mat > 0
+            self.struct_mask = (adj_mat.abs() > 0).float()
+            self.struct_mask.requires_grad = False
 
             # set transform to include structural mask
-            self.transform = lambda x: self.struct_mask @ x
+            self.transform = lambda w: self.struct_mask * w
 
-            print(f"Injected structure with weight: {self.struct_mask}")
+            print(f"Injected structure with weight: \n {self.struct_mask}")
 
 
 class FeatureMLP(nn.Module):

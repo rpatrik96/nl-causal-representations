@@ -37,7 +37,10 @@ class Runner(object):
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
             self.gt_jacobian_decoder = dep_mat.detach()
-            # self.gt_jacobian_encoder = torch.tril(dep_mat.detach().inverse())
+            self.gt_jacobian_encoder = torch.tril(dep_mat.detach().inverse())
+
+            print(f"{self.gt_jacobian_encoder=}")
+
 
             self.logger.log_jacobian(dep_mat)
 
@@ -51,12 +54,14 @@ class Runner(object):
 
         # calculate the indirect cause mask
         eps = 1e-6
-        matrix_power = direct_causes = torch.tril((self.gt_jacobian_decoder.abs() > eps).float(), -1)
-        indirect_causes = torch.zeros_like(self.gt_jacobian_decoder)
+        matrix_power = direct_causes = torch.tril((self.gt_jacobian_encoder.abs() > eps).float(), -1)
+        indirect_causes = torch.zeros_like(self.gt_jacobian_encoder)
+
+        
 
         # add together the matrix powers of the adjacency matrix
         # this yields all indirect paths
-        for i in range(self.gt_jacobian_decoder.shape[0]):
+        for i in range(self.gt_jacobian_encoder.shape[0]):
             matrix_power = matrix_power @ direct_causes
 
             if matrix_power.sum() == 0:
@@ -64,14 +69,18 @@ class Runner(object):
 
             indirect_causes += matrix_power
 
-        self.indirect_causes = indirect_causes.bool().float() # convert all non-1 value to 1
+        self.indirect_causes = indirect_causes.bool().float() # convert all non-1 value to 1 (for safety)
+        # correct for causes where both the direct and indirect paths are present
+        self.indirect_causes = self.indirect_causes * ((self.indirect_causes - direct_causes) >0).float()
+
 
     def _inject_encoder_structure(self) -> None:
-        if self.hparams.use_flows:
-            self.model.encoder.confidence.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
+        if self.hparams.inject_structure is True:
+            if self.hparams.use_flows:
+                self.model.encoder.confidence.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
 
-        elif self.hparams.use_ar_mlp:
-            self.model.encoder.ar_bottleneck.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
+            elif self.hparams.use_ar_mlp:
+                self.model.encoder.ar_bottleneck.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
 
     def reset_encoder(self) -> None:
         self.model.reset_encoder()
@@ -189,12 +198,11 @@ class Runner(object):
 
                 # Update the metrics
                 threshold = 3e-5
-                # from pdb import set_trace; set_trace()
-                inv_abs_dep_mat = dep_mat.detach().inverse().abs()
-                self.metrics.update(y_pred=(inv_abs_dep_mat > threshold).bool().cpu().reshape(-1, 1),
-                                    y_true=(self.gt_jacobian_decoder.abs() > threshold).bool().cpu().reshape(-1, 1))
+                abs_dep_mat = dep_mat.detach().abs()
+                self.metrics.update(y_pred=(abs_dep_mat > threshold).bool().cpu().reshape(-1, 1),
+                                    y_true=(self.gt_jacobian_encoder.abs() > threshold).bool().cpu().reshape(-1, 1))
 
-                jacobian_metrics = self._dep_mat_metrics(inv_abs_dep_mat, threshold)
+                jacobian_metrics = self._dep_mat_metrics(abs_dep_mat, threshold)
 
                 # if self.hparams.use_flows:
                 #     dep_mat = self.model.encoder.confidence.mask()
@@ -216,23 +224,23 @@ class Runner(object):
 
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
 
-    def _dep_mat_metrics(self, inv_abs_dep_mat: torch.Tensor, threshold: float = 3e-5) -> JacobianMetrics:
+    def _dep_mat_metrics(self, abs_dep_mat: torch.Tensor, threshold: float = 3e-5) -> JacobianMetrics:
         # calculate the optimal threshold for 1 accuracy
         # calculate the indices where the GT is 0 (in the lower triangular part)
-        sparsity_mask = (torch.tril(self.gt_jacobian_decoder.abs() < 1e-6)).bool()
+        sparsity_mask = (torch.tril(self.gt_jacobian_encoder.abs() < 1e-6)).bool()
 
         if sparsity_mask.sum() > 0:
-            optimal_threshold = inv_abs_dep_mat[sparsity_mask].max()
+            optimal_threshold = abs_dep_mat[sparsity_mask].max()
         else:
             optimal_threshold = None
 
         # calculate the distance between ground truth and predicted jacobian
-        norm_diff: float = torch.norm(inv_abs_dep_mat - self.gt_jacobian_decoder.abs()).sum()
+        norm_diff: float = torch.norm(abs_dep_mat - self.gt_jacobian_encoder.abs()).sum()
         thresholded_norm_diff: float = torch.norm(
-            inv_abs_dep_mat * (inv_abs_dep_mat > threshold) - self.gt_jacobian_decoder.abs()).sum()
+            abs_dep_mat * (abs_dep_mat > threshold) - self.gt_jacobian_encoder.abs()).sum()
 
         # calculate the fraction of correctly identified zeroes
-        incorrect_edges: float = ((inv_abs_dep_mat * self.indirect_causes) > threshold).sum()
+        incorrect_edges: float = ((abs_dep_mat * self.indirect_causes) > threshold).sum()
         sparsity_accuracy: float = 1. - incorrect_edges / self.indirect_causes.sum()
 
         metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy)
