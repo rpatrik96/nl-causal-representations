@@ -8,27 +8,6 @@ import care_nl_ica.cl_ica.layers as ls
 
 FeatureList = List[int]
 
-from pdb import set_trace
-
-
-class DoublyStochasticMatrix(nn.Module):
-    def __init__(self, num_vars: int, temperature: float = 1.):
-        super().__init__()
-
-        self.temperature = temperature
-        self.num_vars = num_vars
-        self.weight = nn.Parameter(nn.Linear(num_vars - 1, num_vars - 1).weight)
-
-    @property
-    def matrix(self):
-        beta = torch.sigmoid(self.weight / self.temperature)
-
-        l = ...
-        u = ...
-        x = l + beta * (u - l)
-
-        return x
-
 
 class LinearSEM(nn.Module):
     def __init__(self, num_vars: int):
