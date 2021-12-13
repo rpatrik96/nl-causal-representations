@@ -237,9 +237,9 @@ class Runner(object):
             optimal_threshold = None
 
         # calculate the distance between ground truth and predicted jacobian
-        norm_diff: float = torch.norm(abs_dep_mat - self.gt_jacobian_encoder.abs()).sum()
+        norm_diff: float = torch.norm(abs_dep_mat - self.gt_jacobian_encoder.abs()).mean()
         thresholded_norm_diff: float = torch.norm(
-            abs_dep_mat * (abs_dep_mat > threshold) - self.gt_jacobian_encoder.abs()).sum()
+            abs_dep_mat * (abs_dep_mat > threshold) - self.gt_jacobian_encoder.abs()).mean()
 
         # calculate the fraction of correctly identified zeroes
         incorrect_edges: float = ((abs_dep_mat * self.indirect_causes) > threshold).sum()

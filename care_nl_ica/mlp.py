@@ -43,6 +43,7 @@ class LinearSEM(nn.Module):
 
            if i != 0:
                z[:, i] = z[:, i]+ z[:, :i]@w[i,:i]
+
         return z if self.permute is False else self.permutation(z)
 
     def to(self, device):
@@ -79,10 +80,11 @@ class NonLinearSEM(LinearSEM):
         w = torch.tril(self.weight * self.mask)
 
         for i, nonlin_idx in enumerate(self.nonlin_selector):
-           z[:, i] = w[i, i]*self.nonlin[nonlin_idx](x[:, i])
+            if i != 0:
+                z[:, i] = self.nonlin[nonlin_idx](w[i,i]*x[:, i]+ z[:, :i]@w[i,:i])
+            else:
+                z[:, i] = w[i, i]*self.nonlin[nonlin_idx](x[:, i])
 
-           if i != 0:
-               z[:, i] = z[:, i]+ z[:, :i]@w[i,:i]
 
         return z if self.permute is False else self.permutation(z)
 
@@ -258,4 +260,4 @@ class ARBottleneckNet(nn.Module):
 
     @property
     def bottleneck_l1_norm(self):
-        return self.ar_bottleneck.weight.abs().sum()
+        return self.ar_bottleneck.weight.abs().mean()
