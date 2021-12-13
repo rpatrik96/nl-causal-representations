@@ -19,7 +19,7 @@ class LinearSEM(nn.Module):
 
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
-        self.mask = torch.tril(torch.bernoulli(0.5 * torch.ones_like(self.weight)), 1) + torch.eye(num_vars)
+        self.mask = (torch.tril(torch.bernoulli(0.5 * torch.ones_like(self.weight)), 1) + torch.eye(num_vars)).bool().float()
         self.mask.requires_grad = False
         
         print(f"{self.mask=}")
@@ -28,7 +28,7 @@ class LinearSEM(nn.Module):
 
     def _setup_permutation(self, permute):
         self.permute_indices = torch.randperm(self.num_vars)
-        self.permutation = lambda x: x if permute is True else lambda x: x[:, self.permute_indices]
+        self.permutation = (lambda x: x) if permute is True else (lambda x: x[:, self.permute_indices])
 
         print(f'Using permutation with indices {self.permute_indices}')
 
@@ -91,7 +91,7 @@ class NonLinearSEM(LinearSEM):
 class ARMLP(nn.Module):
     def __init__(self, num_vars: int, transform: callable = None, residual: bool = False):
         super().__init__()
-        # set_trace()
+
 
         self.num_vars = num_vars
         self.residual = residual
@@ -107,11 +107,9 @@ class ARMLP(nn.Module):
 
     @property
     def assembled_weight(self):
-        # set_trace()
         return self.weight if self.residual is False else self.weight + torch.diag(self.scaling)
 
     def forward(self, x):
-        # set_trace()
         return self.transform(torch.tril(self.assembled_weight)) @ x
 
     def to(self, device):
@@ -184,7 +182,9 @@ class ARBottleneckNet(nn.Module):
 
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
-        self.permutation = lambda x : x if permute is False else SinkhornNet(self.num_vars, 20, 1e-2)(x)
+        self.sinkhorn = SinkhornNet(self.num_vars, 20, 1e-2)
+
+        self.permutation = (lambda x : x) if permute is False else (lambda x: self.sinkhorn(x))
 
     def _layer_generator(self, features: FeatureList):
         return nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias) for idx in
@@ -235,7 +235,6 @@ class ARBottleneckNet(nn.Module):
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
-        # set_trace()
         return self.scaling(torch.squeeze(self.post_layers(self.ar_bottleneck(self.permutation(self.pre_layers(x))))))
 
     def to(self, device):
