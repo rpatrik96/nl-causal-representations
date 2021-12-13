@@ -15,7 +15,6 @@ class LinearSEM(nn.Module):
     def __init__(self, num_vars: int, permute:bool=False):
         super().__init__()
 
-        self.permute = permute
         self.num_vars = num_vars
 
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
@@ -25,16 +24,13 @@ class LinearSEM(nn.Module):
         
         print(f"{self.mask=}")
 
-        self._setup_permutation()
+        self._setup_permutation(permute)
 
-    def _setup_permutation(self):
-        if self.permute is True:
-            from pdb import set_trace
-            set_trace()
-            self.permute_indices = torch.randperm(self.num_vars)
-            self.permutation = lambda x: x[:, self.permute_indices]
+    def _setup_permutation(self, permute):
+        self.permute_indices = torch.randperm(self.num_vars)
+        self.permutation = lambda x: x if permute is True else lambda x: x[:, self.permute_indices]
 
-            print(f'Using permutation with indices {self.permute_indices}')
+        print(f'Using permutation with indices {self.permute_indices}')
 
     def forward(self, x):
         z = torch.zeros_like(x)
@@ -46,7 +42,7 @@ class LinearSEM(nn.Module):
            if i != 0:
                z[:, i] = z[:, i]+ z[:, :i]@w[i,:i]
 
-        return z if self.permute is False else self.permutation(z)
+        return self.permutation(z)
 
     def to(self, device):
         """
@@ -88,7 +84,7 @@ class NonLinearSEM(LinearSEM):
                 z[:, i] = w[i, i]*self.nonlin[nonlin_idx](x[:, i])
 
 
-        return z if self.permute is False else self.permutation(z)
+        return self.permutation(z)
 
 
 
@@ -177,7 +173,6 @@ class ARBottleneckNet(nn.Module):
     def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
                  normalize: bool = False, residual: bool = False, permute=False):
         super().__init__()
-        self.permute = permute
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats
         self.post_layer_feats = post_layer_feats
@@ -189,9 +184,7 @@ class ARBottleneckNet(nn.Module):
 
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
-        if self.permute is True:
-            self.permutation_net:SinkhornNet = SinkhornNet(self.num_vars, 20, 1e-2)
-        self.permutation = lambda x : x if self.permute is False else x@self.permutation_net.doubly_stochastic_matrix.T
+        self.permutation = lambda x : x if permute is False else SinkhornNet(self.num_vars, 20, 1e-2)(x)
 
     def _layer_generator(self, features: FeatureList):
         return nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias) for idx in
