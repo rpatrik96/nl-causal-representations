@@ -45,6 +45,17 @@ class SinkhornNet(nn.Module):
     def doubly_stochastic_matrix(self) ->torch.Tensor:
         return self.sinkhorn_operator(self.weight/self.temperature)
 
+    def to(self, device):
+        """
+        Move the model to the specified device.
+
+        :param device: The device to move the model to.
+        """
+        super().to(device)
+        self.weight = self.weight.to(device)
+
+        return self
+
 
 class DoublyStochasticMatrix(nn.Module):
     def __init__(self, num_vars: int, temperature: float = 1.):

@@ -13,6 +13,7 @@ def parse_args():
     parser.add_argument('--log-latent-rec', action='store_true', help="Log the latents and their reconstructions")
     parser.add_argument('--use-l1', action='store_true', help="Use L1 on the MLP botleneck")
     parser.add_argument('--use-sem', action='store_true', help="Use SEM as decoder")
+    parser.add_argument('--permute', action='store_true', help="Learn the permutation")
     parser.add_argument('--normalize-latents', action='store_true', help="Normalizes the latent (marginal) distribution")
     parser.add_argument('--nonlin-sem', action='store_true', help="Use nonlinear SEM as decoder")
     parser.add_argument('--use-bias', action='store_true', help="Use bias in the network")
