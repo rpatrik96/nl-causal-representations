@@ -29,6 +29,8 @@ class LinearSEM(nn.Module):
 
     def _setup_permutation(self):
         if self.permute is True:
+            from pdb import set_trace
+            set_trace()
             self.permute_indices = torch.randperm(self.num_vars)
             self.permutation = lambda x: x[:, self.permute_indices]
 
@@ -60,8 +62,8 @@ class LinearSEM(nn.Module):
 
 
 class NonLinearSEM(LinearSEM):
-    def __init__(self, num_vars: int):
-        super().__init__(num_vars=num_vars)
+    def __init__(self, num_vars: int, permute:bool=False):
+        super().__init__(num_vars=num_vars, permute=permute)
 
         self.nonlin = [lambda x: x ** 3, lambda x: torch.tanh(x), lambda x: torch.sigmoid(x),
                        lambda x: torch.nn.functional.leaky_relu(x, .1), lambda x: x]
