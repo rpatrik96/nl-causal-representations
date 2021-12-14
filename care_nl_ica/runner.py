@@ -36,6 +36,9 @@ class Runner(object):
         dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.latent_space)
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
+            if self.hparams.permute is True:
+                dep_mat = self.model.decoder.permutation_matrix.T @ dep_mat
+
             self.gt_jacobian_decoder = dep_mat.detach()
             self.gt_jacobian_encoder = torch.tril(dep_mat.detach().inverse())
 

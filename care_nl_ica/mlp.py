@@ -28,9 +28,17 @@ class LinearSEM(nn.Module):
 
     def _setup_permutation(self, permute):
         self.permute_indices = torch.randperm(self.num_vars)
-        self.permutation = (lambda x: x) if permute is True else (lambda x: x[:, self.permute_indices])
+        self.permutation = (lambda x: x) if permute is False else (lambda x: x[:, self.permute_indices])
 
         print(f'Using permutation with indices {self.permute_indices}')
+
+    @property
+    def permutation_matrix(self)->torch.Tensor:
+        m = torch.zeros_like(self.weight)
+        m[list(range(self.num_vars)), self.permute_indices] = 1
+
+        return m
+
 
     def forward(self, x):
         z = torch.zeros_like(x)
