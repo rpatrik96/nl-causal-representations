@@ -155,6 +155,8 @@ def calc_jacobian_loss(model, latent_space, eps=1e-6, calc_numerical:bool=False)
     # 3. calculate the dependency matrix
     # x \times f(x)
     dep_mat = calc_jacobian(model.encoder, obs.clone(), normalize=args.normalize_latents).mean(0)
+    if args.permute is True:
+        dep_mat = model.decoder.permutation_matrix.T @ dep_mat
 
     jac_enc_dec = calc_jacobian(model, z_disentanglement.clone(), normalize=args.normalize_latents).mean(0)
                 

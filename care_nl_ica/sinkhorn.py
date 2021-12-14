@@ -1,5 +1,3 @@
-from typing import Final
-
 import torch
 from torch import nn as nn
 
@@ -12,23 +10,21 @@ class SinkhornOperator(object):
 
         self.num_steps = num_steps
 
-
     def __call__(self, matrix: torch.Tensor) -> torch.Tensor:
 
-        ones_column: Final = torch.ones(matrix.shape[0], 1)
 
         def _normalize_row(matrix: torch.Tensor) -> torch.Tensor:
-            return matrix / (matrix @ ones_column @ ones_column.T)
+            return matrix - torch.logsumexp(matrix, 1, keepdim=True)
 
         def _normalize_column(matrix: torch.Tensor) -> torch.Tensor:
-            return matrix / (ones_column @ ones_column.T @ matrix)
+            return matrix - torch.logsumexp(matrix, 1, keepdim=True)
 
-        S = torch.exp(matrix)
+        S = matrix
 
         for _ in range(self.num_steps):
             S = _normalize_column(_normalize_row(S))
 
-        return S
+        return torch.exp(S)
 
 
 class SinkhornNet(nn.Module):
@@ -37,16 +33,15 @@ class SinkhornNet(nn.Module):
 
         self.temperature = temperature
 
-
         self.sinkhorn_operator = SinkhornOperator(num_steps)
         self.weight = nn.Parameter(nn.Linear(num_dim, num_dim).weight, requires_grad=True)
 
     @property
-    def doubly_stochastic_matrix(self) ->torch.Tensor:
-        return self.sinkhorn_operator(self.weight/self.temperature)
+    def doubly_stochastic_matrix(self) -> torch.Tensor:
+        return self.sinkhorn_operator(self.weight / self.temperature)
 
-    def forward(self, x)->torch.Tensor:
-        return self.doubly_stochastic_matrix@x
+    def forward(self, x) -> torch.Tensor:
+        return self.doubly_stochastic_matrix @ x
 
     def to(self, device):
         """

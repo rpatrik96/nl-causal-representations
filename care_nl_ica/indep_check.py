@@ -60,6 +60,10 @@ class IndependenceChecker(object):
         if self.hparams.use_dep_mat:
             # x \times z
             dep_mat = calc_jacobian(decoder, z_disentanglement, normalize=self.hparams.normalize_latents).abs().mean(0)
+
+            if self.hparams.permute is True:
+                dep_mat = decoder.permutation_matrix.T@dep_mat@decoder.permutation_matrix
+
             print(dep_mat)
             null_list = [False] * torch.numel(dep_mat)
             null_list[torch.argmin(dep_mat).item()] = True
