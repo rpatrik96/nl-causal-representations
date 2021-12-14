@@ -249,6 +249,7 @@ class ARBottleneckNet(nn.Module):
         self.pre_layers.to(device)
         self.post_layers.to(device)
         self.ar_bottleneck.to(device)
+        self.sinkhorn.to(device)
 
         return self
 
