@@ -44,7 +44,6 @@ class Runner(object):
 
             print(f"{self.gt_jacobian_encoder=}")
 
-
             self.logger.log_jacobian(dep_mat)
 
             self._calc_indirect_causes()
@@ -63,8 +62,6 @@ class Runner(object):
         matrix_power = direct_causes = torch.tril((self.gt_jacobian_encoder.abs() > eps).float(), -1)
         indirect_causes = torch.zeros_like(self.gt_jacobian_encoder)
 
-        
-
         # add together the matrix powers of the adjacency matrix
         # this yields all indirect paths
         for i in range(self.gt_jacobian_encoder.shape[0]):
@@ -75,12 +72,11 @@ class Runner(object):
 
             indirect_causes += matrix_power
 
-        self.indirect_causes = indirect_causes.bool().float() # convert all non-1 value to 1 (for safety)
+        self.indirect_causes = indirect_causes.bool().float()  # convert all non-1 value to 1 (for safety)
         # correct for causes where both the direct and indirect paths are present
-        self.indirect_causes = self.indirect_causes * ((self.indirect_causes - direct_causes) >0).float()
+        self.indirect_causes = self.indirect_causes * ((self.indirect_causes - direct_causes) > 0).float()
 
         print(f"{self.indirect_causes=}")
-
 
     def _inject_encoder_structure(self) -> None:
         if self.hparams.inject_structure is True:
@@ -88,7 +84,8 @@ class Runner(object):
                 self.model.encoder.confidence.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
 
             elif self.hparams.use_ar_mlp:
-                self.model.encoder.ar_bottleneck.inject_structure(self.gt_jacobian_encoder, self.hparams.inject_structure)
+                self.model.encoder.ar_bottleneck.inject_structure(self.gt_jacobian_encoder,
+                                                                  self.hparams.inject_structure)
 
     def reset_encoder(self) -> None:
         self.model.reset_encoder()
@@ -177,9 +174,9 @@ class Runner(object):
                 total_loss_value += self.hparams.l1 * self.model.encoder.bottleneck_l1_norm
 
             if self.hparams.permute is True:
-                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.weight.data, -1).view(-1,)
+                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.weight.data, -1).view(-1, )
 
-                total_loss_value -= 1e-3*torch.distributions.Categorical(probs).entropy()
+                total_loss_value -= 1e-3 * torch.distributions.Categorical(probs).entropy()
 
             total_loss_value.backward()
 
@@ -228,7 +225,8 @@ class Runner(object):
                                 None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight,
                                 numerical_jacobian,
                                 None if self.hparams.learn_jacobian is False else self.model.jacob.weight,
-                                jacobian_metrics)
+                                jacobian_metrics, None if (
+                                self.hparams.permute is False or self.hparams.use_sem is False) else self.model.encoder.sinkhorn.doubly_stochastic_matrix)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()
@@ -254,7 +252,7 @@ class Runner(object):
 
         # calculate the fraction of correctly identified zeroes
         incorrect_edges: float = ((abs_dep_mat * self.indirect_causes) > threshold).sum()
-        sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum()+1e-8) 
+        sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum() + 1e-8)
 
         metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy)
 
