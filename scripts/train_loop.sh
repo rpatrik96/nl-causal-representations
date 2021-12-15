@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for seed in 7676
+for seed in 84645646
 do
     for n in 4
     do

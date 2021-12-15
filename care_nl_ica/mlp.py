@@ -97,25 +97,28 @@ class NonLinearSEM(LinearSEM):
 
 
 class ARMLP(nn.Module):
-    def __init__(self, num_vars: int, transform: callable = None, residual: bool = False):
+    def __init__(self, num_vars: int, transform: callable = None, residual: bool = False, num_weights:int = 5):
         super().__init__()
 
 
         self.num_vars = num_vars
         self.residual = residual
 
-        self.weight = nn.Parameter(
-            torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1))
+        self.weight = nn.ParameterList([nn.Parameter(
+            torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1)) for _ in range(num_weights)])
         if self.residual is True:
             self.scaling = nn.Parameter(torch.ones(self.num_vars), requires_grad=True)
 
         # structure injection
         self.transform = transform if transform is not None else lambda w: w
-        self.struct_mask = torch.ones_like(self.weight, requires_grad=False)
+        self.struct_mask = torch.ones_like(self.weight[0], requires_grad=False)
 
     @property
     def assembled_weight(self):
-        return self.weight if self.residual is False else self.weight + torch.diag(self.scaling)
+        w = torch.ones_like(self.weight[0])
+        for i in range(len(self.weight)):
+            w *= self.weight[i]
+        return w if self.residual is False else w + torch.diag(self.scaling)
 
     def forward(self, x):
         return self.transform(torch.tril(self.assembled_weight)) @ x

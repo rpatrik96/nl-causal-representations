@@ -37,7 +37,7 @@ class Runner(object):
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
             if self.hparams.permute is True:
-                dep_mat = dep_mat[:, torch.argsort(self.model.decoder.permute_indices)]
+                dep_mat = dep_mat[torch.argsort(self.model.decoder.permute_indices), :]
 
             self.gt_jacobian_decoder = dep_mat.detach()
             self.gt_jacobian_encoder = torch.tril(dep_mat.detach().inverse())
@@ -179,7 +179,7 @@ class Runner(object):
             if self.hparams.permute is True:
                 probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.weight.data, -1).view(-1,)
 
-                total_loss_value -= 1e-3*torch.distributions.Categorical(probs).entropy()
+                total_loss_value += 3e-3*torch.distributions.Categorical(probs).entropy()
 
             total_loss_value.backward()
 
@@ -225,7 +225,7 @@ class Runner(object):
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, enc_dec_jac, self.indep_checker,
                                 self.latent_space, losses, total_loss, dep_loss, self.model.encoder,
                                 self.metrics.compute(),
-                                None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.weight,
+                                None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.assembled_weight,
                                 numerical_jacobian,
                                 None if self.hparams.learn_jacobian is False else self.model.jacob.weight,
                                 jacobian_metrics)
