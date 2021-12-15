@@ -34,10 +34,11 @@ class SinkhornNet(nn.Module):
         self.temperature = temperature
 
         self.sinkhorn_operator = SinkhornOperator(num_steps)
-        self.weight = nn.Parameter(nn.Linear(num_dim, num_dim).weight, requires_grad=True)
+        self.weight = nn.Parameter(nn.Linear(num_dim, num_dim).weight+torch.eye(num_dim), requires_grad=True)
 
     @property
     def doubly_stochastic_matrix(self) -> torch.Tensor:
+
         return self.sinkhorn_operator(self.weight / self.temperature)
 
     def forward(self, x) -> torch.Tensor:
