@@ -37,7 +37,7 @@ class Runner(object):
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
             if self.hparams.permute is True:
-                dep_mat = self.model.decoder.permutation_matrix.T @ dep_mat
+                dep_mat = dep_mat[:, torch.argsort(self.model.decoder.permute_indices)]
 
             self.gt_jacobian_decoder = dep_mat.detach()
             self.gt_jacobian_encoder = torch.tril(dep_mat.detach().inverse())
@@ -48,6 +48,9 @@ class Runner(object):
             self.logger.log_jacobian(dep_mat)
 
             self._calc_indirect_causes()
+
+            if self.hparams.permute is True:
+                self.logger.log_summary(**{"permute_indices": self.model.decoder.permute_indices})
 
     def _calc_indirect_causes(self) -> None:
         """
@@ -171,9 +174,14 @@ class Runner(object):
 
             if self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
                 # add sparsity loss to the AR MLP bottleneck
-                (total_loss_value + self.hparams.l1 * self.model.encoder.bottleneck_l1_norm).backward()
-            else:
-                total_loss_value.backward()
+                total_loss_value += self.hparams.l1 * self.model.encoder.bottleneck_l1_norm
+
+            if self.hparams.permute is True:
+                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.weight.data, -1).view(-1,)
+
+                total_loss_value -= 1e-3*torch.distributions.Categorical(probs).entropy()
+
+            total_loss_value.backward()
 
             self.optimizer.step()
 
