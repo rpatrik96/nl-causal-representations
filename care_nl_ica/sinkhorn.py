@@ -17,7 +17,7 @@ class SinkhornOperator(object):
             return matrix - torch.logsumexp(matrix, 1, keepdim=True)
 
         def _normalize_column(matrix: torch.Tensor) -> torch.Tensor:
-            return matrix - torch.logsumexp(matrix, 1, keepdim=True)
+            return matrix - torch.logsumexp(matrix, 0, keepdim=True)
 
         S = matrix
 
@@ -34,13 +34,19 @@ class SinkhornNet(nn.Module):
         self.temperature = temperature
 
         self.sinkhorn_operator = SinkhornOperator(num_steps)
-        # self.weight = nn.Parameter(nn.Linear(num_dim, num_dim).weight+torch.eye(num_dim), requires_grad=True)
+        # self.weight = nn.Parameter(nn.Linear(num_dim, num_dim).weight+0.5*torch.ones(num_dim,num_dim), requires_grad=True)
         self.weight = nn.Parameter(torch.ones(num_dim, num_dim), requires_grad=True)
+
 
     @property
     def doubly_stochastic_matrix(self) -> torch.Tensor:
 
-        return self.sinkhorn_operator(self.weight / self.temperature)
+        eps = 1e-10
+        u = torch.empty_like(self.weight).uniform_(0,1)
+        gumbel = -torch.log(-torch.log(u+eps)+eps)
+        
+
+        return self.sinkhorn_operator((self.weight+0.001*gumbel) / self.temperature)
 
     def forward(self, x) -> torch.Tensor:
         return self.doubly_stochastic_matrix @ x

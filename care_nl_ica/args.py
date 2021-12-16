@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('--use-bias', action='store_true', help="Use bias in the network")
     parser.add_argument("--l1", type=float, default=0.0, help="L1 regularization")
     parser.add_argument("--l2", type=float, default=0.0, help="L2 regularization")
+    parser.add_argument("--entropy-coeff", default=0.0, type=float, help="Entropy coefficient on the Sinkhorn weights")
     parser.add_argument('--variant', type=int, default=0)
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
     parser.add_argument('--inject-structure', action='store_true',

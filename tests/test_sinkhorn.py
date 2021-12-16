@@ -4,8 +4,8 @@ from care_nl_ica.utils import setup_seed
 
 def test_sinkhorn_net():
     num_vars = 3
-    num_steps = 30
-    temperature = 1e-3
+    num_steps = 5
+    temperature = 3e-2
     threshold = .95
 
     setup_seed(1)

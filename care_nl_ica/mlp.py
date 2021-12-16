@@ -19,7 +19,7 @@ class LinearSEM(nn.Module):
 
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
 
-        self.mask = (torch.tril(torch.bernoulli(0.5 * torch.ones_like(self.weight)), 1) + torch.eye(num_vars)).bool().float()
+        self.mask = (torch.tril(torch.bernoulli(0.65 * torch.ones_like(self.weight)), 1) + torch.eye(num_vars)).bool().float()
         self.mask.requires_grad = False
         
         print(f"{self.mask=}")
@@ -193,7 +193,7 @@ class ARBottleneckNet(nn.Module):
 
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
-        self.sinkhorn = SinkhornNet(self.num_vars, 5, 3e-2)
+        self.sinkhorn = SinkhornNet(self.num_vars, 15, 1e-3)
 
         self.permutation = (lambda x : x) if permute is False else (lambda x: self.sinkhorn(x))
 
