@@ -48,6 +48,16 @@ class SinkhornNet(nn.Module):
 
         return self.sinkhorn_operator((self.weight+0.001*gumbel) / self.temperature)
 
+
+    def sigmoid_sinkhorn(self, matrix) -> torch.Tensor:
+        from pdb import set_trace
+        sinkhorn_sig = self.sinkhorn_operator(matrix.abs()/self.temperature).max(0)[1]
+        dim = self.weight.size(0)
+        inv_permutation = sinkhorn_sig if set(sinkhorn_sig.tolist()) == set(torch.arange(dim).tolist()) else None
+        # set_trace()
+
+        return inv_permutation
+
     def forward(self, x) -> torch.Tensor:
         return self.doubly_stochastic_matrix @ x
 

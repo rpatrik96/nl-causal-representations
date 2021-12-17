@@ -180,12 +180,13 @@ class FeatureMLP(nn.Module):
 
 class ARBottleneckNet(nn.Module):
     def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
-                 normalize: bool = False, residual: bool = False, permute=False):
+                 normalize: bool = False, residual: bool = False, permute=False, jacobian_sinkhorn=False):
         super().__init__()
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats
         self.post_layer_feats = post_layer_feats
         self.bias = bias
+        self.jacobian_sinkhorn = jacobian_sinkhorn
 
         self._init_feature_layers()
 
@@ -195,7 +196,12 @@ class ARBottleneckNet(nn.Module):
 
         self.sinkhorn = SinkhornNet(self.num_vars, 15, 1e-3)
 
-        self.permutation = (lambda x : x) if permute is False else (lambda x: self.sinkhorn(x))
+        self.inv_permutation = torch.arange(self.num_vars)
+        
+        if self.jacobian_sinkhorn is True:
+            self.permutation = lambda x : x[:, self.inv_permutation]
+        else:
+            self.permutation = (lambda x : x) if permute is False else (lambda x: self.sinkhorn(x))
 
     def _layer_generator(self, features: FeatureList):
         return nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias) for idx in
@@ -261,9 +267,10 @@ class ARBottleneckNet(nn.Module):
         self.post_layers.to(device)
         self.ar_bottleneck.to(device)
         self.sinkhorn.to(device)
+        self.inv_permutation.to(device)
 
         return self
 
     @property
     def bottleneck_l1_norm(self):
-        return self.ar_bottleneck.weight.abs().mean()
+        return self.ar_bottleneck.assembled_weight.abs().mean()
