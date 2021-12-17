@@ -182,7 +182,7 @@ class Logger(object):
 
                 # log the bottleneck weights
                 if ar_bottleneck is not None:
-                    log_matrix("w", ar_bottleneck, "AR Bottleneck Weights", triangular=True)
+                    log_matrix("w", ar_bottleneck, "AR Bottleneck Weights", triangular=False)
 
                 # log the learnable jacobian
                 if learnable_jacobian is not None:
@@ -223,3 +223,19 @@ class Logger(object):
         gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
         self.log_summary(**{"gt_decoder_jacobian": gt_jacobian_dec})
         self.log_summary(**{"gt_encoder_jacobian": gt_jacobian_enc})
+
+    def log_inv_perm(self, inv_perm):
+
+        def log_matrix(name, matrix, panel_name=None, triangular=False):
+            if triangular is False:
+                labels = [f"{name}_{i}{j}" if panel_name is None else f"{panel_name}/{name}_{i}{j}" for i in
+                        range(matrix.shape[0]) for j in range(matrix.shape[1])]
+            else:
+                labels = [f"{name}_{i}{j}" if panel_name is None else f"{panel_name}/{name}_{i}{j}" for i in
+                        range(matrix.shape[0]) for j in range(i+1)]
+            data = matrix.detach().cpu().reshape(-1, ).tolist()
+            wandb.log({key: val for key, val in zip(labels, data)}, step=self.global_step)
+
+        if self.global_step % self.hparams.n_log_steps == 1 or self.global_step == self.hparams.n_steps:
+            log_matrix("inv_perm", inv_perm, "Inverse Permutation")
+

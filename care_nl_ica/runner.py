@@ -32,12 +32,17 @@ class Runner(object):
         self._calc_dep_mat()
         self._inject_encoder_structure()
 
+        self.dep_loss = None
+
     def _calc_dep_mat(self) -> None:
         dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.latent_space)
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
 
             if self.hparams.permute is True:
+                # print(f"{dep_mat=}")
+                from pdb import set_trace
+                # set_trace()
                 dep_mat = dep_mat[torch.argsort(self.model.decoder.permute_indices), :]
 
             self.gt_jacobian_decoder = dep_mat.detach()
@@ -179,6 +184,9 @@ class Runner(object):
 
                 total_loss_value += self.hparams.entropy_coeff*torch.distributions.Categorical(probs).entropy()
 
+            if self.dep_loss is not None:
+                total_loss_value += self.dep_loss
+
 
             total_loss_value.backward()
 
@@ -207,6 +215,17 @@ class Runner(object):
                                                        device=self.hparams.device)
 
                 dep_loss, dep_mat, numerical_jacobian, enc_dec_jac = calc_jacobian_loss(self.model, self.latent_space)
+
+                self.dep_loss = dep_loss
+
+                # calculate the inverse permutation
+                # print("inv_permutation: {}".format(self.model.encoder.inv_permutation))
+                inv_permutation = self.model.encoder.sinkhorn.sigmoid_sinkhorn(dep_mat)
+                if inv_permutation is not None:
+                    self.model.encoder.inv_permutation = self.model.encoder.inv_permutation[inv_permutation]
+
+                self.logger.log_inv_perm(self.model.encoder.inv_permutation.view(-1,1) )
+                
 
                 # Update the metrics
                 threshold = 3e-5

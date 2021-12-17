@@ -166,4 +166,4 @@ def calc_jacobian_loss(model, latent_space, eps=1e-6, calc_numerical:bool=False)
     numerical_jacobian = None if calc_numerical is False else calc_jacobian_numerical(model.encoder, obs,dep_mat.shape[0], args.device, eps)
     # 4. calculate the loss for the dependency matrix
     dep_loss = dependency_loss(dep_mat)
-    return dep_loss, dep_mat, numerical_jacobian, jac_enc_dec
+    return  triangularity_loss(dep_mat), dep_mat, numerical_jacobian, jac_enc_dec
