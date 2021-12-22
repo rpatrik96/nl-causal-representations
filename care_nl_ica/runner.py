@@ -41,7 +41,6 @@ class Runner(object):
 
             if self.hparams.permute is True:
                 # print(f"{dep_mat=}")
-                from pdb import set_trace
                 # set_trace()
                 dep_mat = dep_mat[torch.argsort(self.model.decoder.permute_indices), :]
 
@@ -180,13 +179,13 @@ class Runner(object):
                 total_loss_value += self.hparams.l1 * self.model.encoder.bottleneck_l1_norm
 
             if self.hparams.permute is True:
-                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.weight.data, -1).view(-1, )
+                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.doubly_stochastic_matrix.data, -1).view(
+                    -1, )
 
-                total_loss_value += self.hparams.entropy_coeff*torch.distributions.Categorical(probs).entropy()
+                total_loss_value += self.hparams.entropy_coeff * torch.distributions.Categorical(probs).entropy()
 
             if self.dep_loss is not None:
                 total_loss_value += self.dep_loss
-
 
             total_loss_value.backward()
 
@@ -218,15 +217,6 @@ class Runner(object):
 
                 self.dep_loss = dep_loss
 
-                # calculate the inverse permutation
-                # print("inv_permutation: {}".format(self.model.encoder.inv_permutation))
-                inv_permutation = self.model.encoder.sinkhorn.sigmoid_sinkhorn(dep_mat)
-                if inv_permutation is not None:
-                    self.model.encoder.inv_permutation = self.model.encoder.inv_permutation[inv_permutation]
-
-                self.logger.log_inv_perm(self.model.encoder.inv_permutation.view(-1,1) )
-                
-
                 # Update the metrics
                 threshold = 3e-5
                 abs_dep_mat = dep_mat.detach().abs()
@@ -247,7 +237,7 @@ class Runner(object):
                                 numerical_jacobian,
                                 None if self.hparams.learn_jacobian is False else self.model.jacob.weight,
                                 jacobian_metrics, None if (
-                                self.hparams.permute is False or self.hparams.use_sem is False) else self.model.encoder.sinkhorn.doubly_stochastic_matrix)
+                            self.hparams.permute is False or self.hparams.use_sem is False) else self.model.encoder.sinkhorn.doubly_stochastic_matrix)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()
