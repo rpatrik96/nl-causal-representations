@@ -9,7 +9,6 @@ from .masked_flows import MaskMAF
 from care_nl_ica.mlp import ARBottleneckNet, ARMLP, LinearSEM, NonLinearSEM
 
 
-
 class ContrastiveLearningModel(nn.Module):
 
     def __init__(self, hparams):
@@ -40,7 +39,6 @@ class ContrastiveLearningModel(nn.Module):
             self.jacob = self.jacob.to(self.hparams.device)
             self.jacob.weight.requires_grad = True
 
-
     def _setup_encoder(self):
         hparams = self.hparams
 
@@ -49,16 +47,17 @@ class ContrastiveLearningModel(nn.Module):
         if self.hparams.use_flows is True:
             encoder = MaskMAF(hparams.n, hparams.n * 40, 5, F.relu, use_reverse=hparams.use_reverse,
                               use_batch_norm=hparams.use_batch_norm, learnable=hparams.learnable_mask)
-            
+
             encoder.confidence.to(hparams.device)
 
         elif self.hparams.use_ar_mlp is True:
 
             encoder = ARBottleneckNet(hparams.n, [1, hparams.n * 5, hparams.n * 8, hparams.n * 12],
                                       [hparams.n * 12, hparams.n * 8, hparams.n * 5, 1], hparams.use_bias,
-                                      hparams.normalization == "fixed_box", residual=False, permute=hparams.permute, sinkhorn=hparams.sinkhorn)
+                                      hparams.normalization == "fixed_box", residual=False, permute=hparams.permute,
+                                      sinkhorn=hparams.sinkhorn)
 
-        else: 
+        else:
             encoder = encoders.get_mlp(
                 n_in=hparams.n,
                 n_out=hparams.n,
@@ -110,15 +109,14 @@ class ContrastiveLearningModel(nn.Module):
                 weight_matrix_init=hparams.data_gen_mode,
                 sparsity=True,
                 variant=torch.from_numpy(np.array([hparams.variant]))
-        )
+            )
         else:
             print("Using SEM as decoder")
             if self.hparams.nonlin_sem is False:
-                decoder = LinearSEM(hparams.n, hparams.permute)
+                decoder = LinearSEM(hparams.n, hparams.permute, hparams.variant)
             else:
-                decoder = NonLinearSEM(hparams.n, hparams.permute)
+                decoder = NonLinearSEM(hparams.n, hparams.permute, hparams.variant)
 
-                
             print(f"{decoder.weight=}")
 
         # allocate to device
