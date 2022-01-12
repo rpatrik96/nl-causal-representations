@@ -1,3 +1,5 @@
+import itertools
+
 import torch
 from torch.nn import functional as F
 
@@ -34,6 +36,8 @@ class Runner(object):
 
         self.dep_loss = None
 
+        self._calc_possible_causal_orderings()
+
     def _calc_dep_mat(self) -> None:
         dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.latent_space)
         # save the ground truth jacobian of the decoder
@@ -55,6 +59,49 @@ class Runner(object):
 
             if self.hparams.permute is True:
                 self.logger.log_summary(**{"permute_indices": self.model.decoder.permute_indices})
+
+    def _calc_possible_causal_orderings(self):
+        """
+        The function calculates the possible causal orderings based on the adjacency matrix
+
+        :return:
+        """
+        dim = self.gt_jacobian_encoder.shape[0]
+
+        # get all indices for nonzero elements
+        nonzero_indices = (self.gt_jacobian_encoder.abs() > 0).nonzero()
+
+        smallest_idx = []
+        biggest_idx = []
+        idx_range = []
+
+        for i in range(dim):
+            # select nonzero indices for the current row
+            # and take the column index of the first element
+            # this gives the smallest index of variable "i" in the causal ordering
+            nonzero_in_row = nonzero_indices[nonzero_indices[:, 0] == i, :]
+
+            smallest_idx.append(0 if (tmp := nonzero_in_row[0][1]) == i else smallest_idx[tmp] + 1)
+
+            # select nonzero indices for the current columns
+            # and take the row index of the first element
+            # this gives the biggest index of variable "i" in the causal ordering
+            nonzero_in_col = nonzero_indices[nonzero_indices[:, 1] == i, :]
+
+            biggest_idx.append(nonzero_in_col[0][0])
+
+            # this means that there is only 1 appearance of variable i,
+            # so it can be everywhere in the causal ordering
+            if len(nonzero_in_row) == 1 and len(nonzero_in_col) == 1 and smallest_idx[i] == i and biggest_idx[i] == i:
+
+                idx_range.append(list(range(dim)))
+            else:
+
+                idx_range.append(list(range(smallest_idx[i], biggest_idx[i] + 1)))
+
+        self.orderings = [x for x in list(itertools.product(*idx_range)) if len(set(x)) == dim]
+
+        print(f'{self.orderings=}')
 
     def _calc_indirect_causes(self) -> None:
         """
