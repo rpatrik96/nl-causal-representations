@@ -216,13 +216,16 @@ class Logger(object):
                     wandb.log({f"latent_rec_{name}_dim_{i}": wandb.plot.scatter(table, "latent", "rec",
                                                                                 title=f"Latents vs reconstruction of {name} in dimension {i}")})
 
-    def log_jacobian(self, dep_mat):
+    def log_jacobian(self, dep_mat, name="gt_decoder", inv_name="gt_encoder", log_inverse=True):
         jac = dep_mat.detach().cpu()
         cols = [f"a_{i}" for i in range(dep_mat.shape[1])]
+        
         gt_jacobian_dec = wandb.Table(columns=cols, data=jac.tolist())
-        gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
-        self.log_summary(**{"gt_decoder_jacobian": gt_jacobian_dec})
-        self.log_summary(**{"gt_encoder_jacobian": gt_jacobian_enc})
+        self.log_summary(**{f"{name}_jacobian": gt_jacobian_dec})
+
+        if log_inverse is True:
+            gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
+            self.log_summary(**{f"{inv_name}_jacobian": gt_jacobian_enc})
 
     def log_inv_perm(self, inv_perm):
 

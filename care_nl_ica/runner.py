@@ -244,6 +244,7 @@ class Runner(object):
 
             self.reset_encoder()
 
+        self.logger.log_jacobian(dep_mat, "learned_last", log_inverse=False)
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
 
     def _dep_mat_metrics(self, abs_dep_mat: torch.Tensor, threshold: float = 1e-3) -> JacobianMetrics:
