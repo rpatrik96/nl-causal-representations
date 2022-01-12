@@ -103,6 +103,10 @@ class Runner(object):
 
         print(f'{self.orderings=}')
 
+        if self.hparams.use_wandb is True:
+            self.logger.log_summary(**{"causal_orderings": self.orderings})
+
+
     def _calc_indirect_causes(self) -> None:
         """
         Calculates all indirect paths in the encoder (SEM/SCM)
