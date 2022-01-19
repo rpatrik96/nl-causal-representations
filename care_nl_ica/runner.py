@@ -9,7 +9,7 @@ from care_nl_ica.utils import unpack_item_list, save_state_dict
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian_loss
 from indep_check import IndependenceChecker
-from metric_logger import Metrics
+from metric_logger import Metrics, amari_distance
 from prob_utils import setup_marginal, setup_conditional
 
 
@@ -219,11 +219,11 @@ class Runner(object):
 
                 # Update the metrics
                 threshold = 3e-5
-                abs_dep_mat = dep_mat.detach().abs()
-                self.metrics.update(y_pred=(abs_dep_mat > threshold).bool().cpu().reshape(-1, 1),
+                dep_mat = dep_mat.detach()
+                self.metrics.update(y_pred=(dep_mat.abs() > threshold).bool().cpu().reshape(-1, 1),
                                     y_true=(self.gt_jacobian_encoder.abs() > threshold).bool().cpu().reshape(-1, 1))
 
-                jacobian_metrics = self._dep_mat_metrics(abs_dep_mat, threshold)
+                jacobian_metrics = self._dep_mat_metrics(dep_mat, threshold)
 
                 # if self.hparams.use_flows:
                 #     dep_mat = self.model.encoder.confidence.mask()
@@ -247,25 +247,25 @@ class Runner(object):
         self.logger.log_jacobian(dep_mat, "learned_last", log_inverse=False)
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
 
-    def _dep_mat_metrics(self, abs_dep_mat: torch.Tensor, threshold: float = 1e-3) -> JacobianMetrics:
+    def _dep_mat_metrics(self, dep_mat: torch.Tensor, threshold: float = 1e-3) -> JacobianMetrics:
         # calculate the optimal threshold for 1 accuracy
         # calculate the indices where the GT is 0 (in the lower triangular part)
         sparsity_mask = (torch.tril(self.gt_jacobian_encoder.abs() < 1e-6)).bool()
 
         if sparsity_mask.sum() > 0:
-            optimal_threshold = abs_dep_mat[sparsity_mask].max()
+            optimal_threshold = dep_mat[sparsity_mask].abs().max()
         else:
             optimal_threshold = None
 
         # calculate the distance between ground truth and predicted jacobian
-        norm_diff: float = torch.norm(abs_dep_mat - self.gt_jacobian_encoder.abs()).mean()
+        norm_diff: float = torch.norm(dep_mat.abs() - self.gt_jacobian_encoder.abs()).mean()
         thresholded_norm_diff: float = torch.norm(
-            abs_dep_mat * (abs_dep_mat > threshold) - self.gt_jacobian_encoder.abs()).mean()
+            dep_mat.abs() * (dep_mat.abs() > threshold) - self.gt_jacobian_encoder.abs()).mean()
 
         # calculate the fraction of correctly identified zeroes
-        incorrect_edges: float = ((abs_dep_mat * self.indirect_causes) > threshold).sum()
+        incorrect_edges: float = ((dep_mat.abs() * self.indirect_causes) > threshold).sum()
         sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum() + 1e-8)
 
-        metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy)
+        metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy, amari_distance(dep_mat, self.gt_jacobian_decoder))
 
         return metrics

@@ -154,6 +154,7 @@ class Logger(object):
                        f"{panel_name}/jacobian_thresholded_norm_diff": jacobian_metrics.thresholded_norm_diff,
                        f"{panel_name}/optimal_threshold": jacobian_metrics.optimal_threshold,
                        f"{panel_name}/sparsity_accuracy": jacobian_metrics.sparsity_accuracy,
+                       f"{panel_name}/amari_distance": jacobian_metrics.amari_distance
                        }, step=global_step)
 
             if self.hparams.verbose is True:
