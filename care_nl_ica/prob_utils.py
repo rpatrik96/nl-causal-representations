@@ -86,7 +86,7 @@ def laplace_log_cdf(x: torch.Tensor, signal_model: torch.distributions.laplace.L
 
 def calc_disentanglement_scores(z, hz):
     (linear_disentanglement_score, _), _ = disentanglement_utils.linear_disentanglement(z, hz, mode="r2")
-    (permutation_disentanglement_score, _,), _ = disentanglement_utils.permutation_disentanglement(
+    (permutation_disentanglement_score, perm_corr_mat,), _ = disentanglement_utils.permutation_disentanglement(
         z,
         hz,
         mode="pearson",
@@ -94,4 +94,4 @@ def calc_disentanglement_scores(z, hz):
         rescaling=True,
     )
 
-    return linear_disentanglement_score, permutation_disentanglement_score
+    return linear_disentanglement_score, permutation_disentanglement_score, perm_corr_mat

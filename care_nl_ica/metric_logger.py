@@ -87,3 +87,48 @@ def amari_distance(W:torch.Tensor, A:torch.Tensor)->float:
         return ((r ** 2).sum(axis=1) / (r ** 2).max(axis=1)[0] - 1).sum()
 
     return ((s(P.abs()) + s(P.T.abs())) / (2 * P.shape[1])).item()
+
+
+def cima_kl_diagonality(matrix:torch.Tensor)->float:
+    """
+    Calculates the IMA constrast (the lefy KL measure of diagonality).
+
+    :param matrix: matrix as a torch.Tensor
+    :return:
+    """
+    # return (torch.diag(matrix).norm('fro') / matrix.norm('fro')).item()
+
+    return 0.5 * (torch.linalg.slogdet(torch.diag(torch.diag(matrix)))[1] -
+                  torch.linalg.slogdet(matrix)[1]).item()
+
+
+
+def ksi_correlation(hz:torch.Tensor, z:torch.Tensor)->list:
+    """
+    Calculates the correlation between the latent variables and the observed variables.
+    :param hz: latent variables
+    :param z: observed variables
+    """
+    num_samples = z.shape[0]
+    
+    # from http://arxiv.org/abs/1909.10140
+    # 1. take the (zi, hzi) pairs (for each dimension),
+    # sort zi and
+    # use the indices that sort zi to sort hzi in ascending order
+    sorted_representations = [hzi[torch.sort(zi, axis=-1)[1]] for (zi, hzi) in zip(z.T, hz.T)]
+    # 2. rank the sorted sorted_representations dimensionwise (i.e.,s_repr),
+    # where the rank of each item is the number of hzi_sorted s.t.
+    # it counts the smaller elements that item
+    representation_ranks = [torch.tensor([(s_repr <= item).sum() for item in s_repr]) for s_repr in
+                            sorted_representations]
+    # 3. use eq. 11  (assumes no ties - ties can be ignored for large num_samples)
+    ksi = [1 - 3 * (r[1:] - r[:-1]).abs().sum() / (num_samples ** 2 - 1) for r in representation_ranks]
+    
+    # +1: normalize by the possible min and max values
+    ksi_max = (num_samples - 2) / (num_samples + 1)
+    ksi_min = -.5 + 1 / num_samples
+    
+    return ksi
+
+
+
