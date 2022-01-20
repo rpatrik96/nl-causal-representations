@@ -57,6 +57,7 @@ class Logger(object):
             self.ksi_correlation = ksi_correlation(z_disentanglement, hz_disentanglement)
 
             lin_dis_score, perm_dis_score, self.perm_corr_mat = calc_disentanglement_scores(z_disentanglement, hz_disentanglement)
+            print(f"{self.perm_corr_mat=}")
             self.lin_dis_scores.append(lin_dis_score)
             self.perm_dis_scores.append(perm_dis_score)
 
@@ -135,7 +136,7 @@ class Logger(object):
                 z2_con_z1_rec = h(z2_con_z1)
                 z3_rec = h(z3)
 
-                linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(z1,
+                linear_disentanglement_score, permutation_disentanglement_score, perm_corr_mat = calc_disentanglement_scores(z1,
                                                                                                               z1_rec)
                 final_linear_scores.append(linear_disentanglement_score)
                 final_perm_scores.append(permutation_disentanglement_score)
@@ -158,6 +159,7 @@ class Logger(object):
                        f"{panel_name}/sparsity_accuracy": jacobian_metrics.sparsity_accuracy,
                        f"{panel_name}/amari_distance": jacobian_metrics.amari_distance,
                        f"{panel_name}/cima_kl_diagonality": cima_kl_diagonality(torch.tensor(perm_corr_mat)),
+                       f"{panel_name}/ksi_correlation": torch.Tensor(self.ksi_correlation).mean().item(),
                        **{f"{panel_name}/ksi_correlation_{i}": ksi for (i, ksi) in enumerate(self.ksi_correlation)},
                        }, step=global_step)
 

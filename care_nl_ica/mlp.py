@@ -171,7 +171,9 @@ class FeatureMLP(nn.Module):
         self.mlps = nn.ModuleList(
             [nn.Linear(self.in_features, self.out_feature, self.bias) for _ in range(self.num_vars)])
 
-        self.act = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_vars)])
+        # self.act = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_vars)])
+        # self.act = nn.ModuleList([nn.Identity() for _ in range(self.num_vars)])
+        # print("-----------------using identity activation-----------------")
 
     def forward(self, x):
         """
@@ -259,6 +261,7 @@ class ARBottleneckNet(nn.Module):
 
     def forward(self, x):
         return self.scaling(torch.squeeze(self.post_layers(self.ar_bottleneck(self.permutation(self.pre_layers(x))))))
+        # return self.ar_bottleneck(x.T).T
 
     def to(self, device):
         """
