@@ -28,8 +28,8 @@ def args(request):
                               project='experiment', resume_training=False, save_dir='', seed=0, space_type='box',
                               sphere_r=1.0, tau=1.0, use_batch_norm=True, use_dep_mat=True,
                               use_flows=not request.param.use_ar_mlp, use_reverse=False, use_wandb=False, variant=1,
-                              verbose=False, use_ar_mlp=request.param.use_ar_mlp, use_sem=True, nonlin_sem=True,
-                              use_bias=False, l1=0.0, l2=0.0, data_gen_mode='rvs', learn_jacobian=False, permute=False)
+                              verbose=False, use_ar_mlp=request.param.use_ar_mlp, use_sem=True, nonlin_sem=False,
+                              use_bias=False, l1=0.0, l2=0.0, data_gen_mode='rvs', learn_jacobian=False, permute=False, sinkhorn=False)
 
     set_device(args)
     setup_seed(args.seed)
@@ -55,6 +55,10 @@ def test_triangularity_jacobian(model: ContrastiveLearningModel, network, numeri
     :return:
     """
 
+    print("\n------------------------")
+    print(f"{network=}")
+    print("------------------------")
+
     # draw a sample from the latent space
     latent_space = latent_spaces.LatentSpace(space=model.space, sample_marginal=(setup_marginal(model.hparams)),
                                              sample_conditional=(setup_conditional(model.hparams)), )
@@ -74,6 +78,8 @@ def test_triangularity_jacobian(model: ContrastiveLearningModel, network, numeri
         def _func_sum(x):
             return model._modules[network].forward(x).sum(dim=0)
 
+        print("---------------")
+
         print(jacobian(_func_sum, z).permute(1, 0, 2).abs().mean(0))
 
     assert (torch.tril(dep_mat) != dep_mat).sum() == 0
@@ -88,6 +94,10 @@ def test_triangularity_naive(model: ContrastiveLearningModel, network):
     :param network: model components
     :return:
     """
+
+    print("------------------------")
+    print(f"{network=}")
+    print("------------------------")
 
     # constants
     batch_size = 1
