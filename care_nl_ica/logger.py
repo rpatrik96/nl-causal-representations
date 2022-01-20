@@ -8,7 +8,7 @@ from .cl_ica import latent_spaces
 from .indep_check import IndependenceChecker
 from .prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional
 
-from .metric_logger import JacobianMetrics
+from .metric_logger import JacobianMetrics, cima_kl_diagonality, ksi_correlation
 
 class Logger(object):
 
@@ -54,7 +54,10 @@ class Logger(object):
             z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
             hz_disentanglement = h(z_disentanglement)
 
-            lin_dis_score, perm_dis_score = calc_disentanglement_scores(z_disentanglement, hz_disentanglement)
+            self.ksi_correlation = ksi_correlation(z_disentanglement, hz_disentanglement)
+
+            lin_dis_score, perm_dis_score, self.perm_corr_mat = calc_disentanglement_scores(z_disentanglement, hz_disentanglement)
+            print(f"{self.perm_corr_mat=}")
             self.lin_dis_scores.append(lin_dis_score)
             self.perm_dis_scores.append(perm_dis_score)
 
@@ -93,7 +96,7 @@ class Logger(object):
             self.causal_check.append(self.causal_check[-1])
 
         self._log_to_wandb(dep_mat, enc_dec_jac, self.global_step, total_loss, dep_loss, causality_metrics,
-                           ar_bottleneck, numerical_jacobian, learnable_jacobian, jacobian_metrics, sinkhorn_matrix)
+                           ar_bottleneck, numerical_jacobian, learnable_jacobian, jacobian_metrics, sinkhorn_matrix, self.perm_corr_mat)
 
         self.print_statistics(f, dep_mat, dep_loss)
 
@@ -133,7 +136,7 @@ class Logger(object):
                 z2_con_z1_rec = h(z2_con_z1)
                 z3_rec = h(z3)
 
-                linear_disentanglement_score, permutation_disentanglement_score = calc_disentanglement_scores(z1,
+                linear_disentanglement_score, permutation_disentanglement_score, perm_corr_mat = calc_disentanglement_scores(z1,
                                                                                                               z1_rec)
                 final_linear_scores.append(linear_disentanglement_score)
                 final_perm_scores.append(permutation_disentanglement_score)
@@ -143,7 +146,7 @@ class Logger(object):
 
     def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics,
                       ar_bottleneck=None, numerical_jacobian=None, learnable_jacobian=None,
-                      jacobian_metrics: JacobianMetrics = None, sinkhorn_mat=None):
+                      jacobian_metrics: JacobianMetrics = None, sinkhorn_mat=None, perm_corr_mat=None):
         if self.hparams.use_wandb:
 
             panel_name = "Metrics"
@@ -154,6 +157,10 @@ class Logger(object):
                        f"{panel_name}/jacobian_thresholded_norm_diff": jacobian_metrics.thresholded_norm_diff,
                        f"{panel_name}/optimal_threshold": jacobian_metrics.optimal_threshold,
                        f"{panel_name}/sparsity_accuracy": jacobian_metrics.sparsity_accuracy,
+                       f"{panel_name}/amari_distance": jacobian_metrics.amari_distance,
+                       f"{panel_name}/cima_kl_diagonality": cima_kl_diagonality(torch.tensor(perm_corr_mat)),
+                       f"{panel_name}/ksi_correlation": torch.Tensor(self.ksi_correlation).mean().item(),
+                       **{f"{panel_name}/ksi_correlation_{i}": ksi for (i, ksi) in enumerate(self.ksi_correlation)},
                        }, step=global_step)
 
             if self.hparams.verbose is True:
@@ -216,13 +223,16 @@ class Logger(object):
                     wandb.log({f"latent_rec_{name}_dim_{i}": wandb.plot.scatter(table, "latent", "rec",
                                                                                 title=f"Latents vs reconstruction of {name} in dimension {i}")})
 
-    def log_jacobian(self, dep_mat):
+    def log_jacobian(self, dep_mat, name="gt_decoder", inv_name="gt_encoder", log_inverse=True):
         jac = dep_mat.detach().cpu()
         cols = [f"a_{i}" for i in range(dep_mat.shape[1])]
+        
         gt_jacobian_dec = wandb.Table(columns=cols, data=jac.tolist())
-        gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
-        self.log_summary(**{"gt_decoder_jacobian": gt_jacobian_dec})
-        self.log_summary(**{"gt_encoder_jacobian": gt_jacobian_enc})
+        self.log_summary(**{f"{name}_jacobian": gt_jacobian_dec})
+
+        if log_inverse is True:
+            gt_jacobian_enc = wandb.Table(columns=cols, data=jac.inverse().tolist())
+            self.log_summary(**{f"{inv_name}_jacobian": gt_jacobian_enc})
 
     def log_inv_perm(self, inv_perm):
 

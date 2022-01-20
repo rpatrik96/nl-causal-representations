@@ -18,6 +18,10 @@ def main():
     # install the package
     install_package()
 
+    import torch.backends.cudnn
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     # setup
     from args import parse_args
     args = parse_args()
