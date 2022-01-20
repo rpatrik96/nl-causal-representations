@@ -1,5 +1,6 @@
 import itertools
 import math
+from tkinter.tix import Tree
 from typing import List
 
 import torch
@@ -13,18 +14,33 @@ FeatureList = List[int]
 
 
 class LinearSEM(nn.Module):
-    def __init__(self, num_vars: int, permute: bool = False, variant: int = -1):
+    def __init__(self, num_vars: int, permute: bool = False, variant: int = -1, force_chain: bool = False, force_uniform: bool = False):
         super().__init__()
 
         self.variant = variant
         self.num_vars = num_vars
 
+        # weight init
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
+        if force_uniform is True:
+            print('---------Forcing uniform weights---------')
+            self.weight = nn.Parameter(torch.tril(torch.ones(num_vars, num_vars)))
+        print(f'{self.weight=}')
 
         self.mask = (torch.tril(torch.bernoulli(0.65 * torch.ones_like(self.weight)), 1) + torch.eye(
             num_vars)).bool().float()
-        self.mask.requires_grad = False
 
+
+        # construct a chain
+        if force_chain is True:
+            print("-------Overrinding mask-------")
+            self.mask = torch.tril(torch.ones_like(self.weight))
+
+            zeros_in_chain = torch.tril(torch.ones_like(self.weight), -2)
+            self.mask[zeros_in_chain==1] = 0
+
+
+        self.mask.requires_grad = False
         print(f"{self.mask=}")
 
         self._setup_permutation(permute)
@@ -160,7 +176,7 @@ class ARMLP(nn.Module):
 
 
 class FeatureMLP(nn.Module):
-    def __init__(self, num_vars: int, in_features: int, out_feature: int, bias: bool = True):
+    def __init__(self, num_vars: int, in_features: int, out_feature: int, bias: bool = True, force_identity: bool = False):
         super().__init__()
         self.num_vars = num_vars
         self.in_features = in_features
@@ -171,9 +187,10 @@ class FeatureMLP(nn.Module):
         self.mlps = nn.ModuleList(
             [nn.Linear(self.in_features, self.out_feature, self.bias) for _ in range(self.num_vars)])
 
-        # self.act = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_vars)])
-        # self.act = nn.ModuleList([nn.Identity() for _ in range(self.num_vars)])
-        # print("-----------------using identity activation-----------------")
+        self.act = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_vars)])
+        if force_identity is True:
+            self.act = nn.ModuleList([nn.Identity() for _ in range(self.num_vars)])
+            print("-----------------using identity activation-----------------")
 
     def forward(self, x):
         """
