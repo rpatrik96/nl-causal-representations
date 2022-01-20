@@ -39,6 +39,8 @@ class Runner(object):
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
 
+            # save the decoder jacobian including the permutation
+            self.gt_jacobian_decoder_permuted = dep_mat.detach()
             if self.hparams.permute is True:
                 # print(f"{dep_mat=}")
                 # set_trace()
@@ -266,6 +268,6 @@ class Runner(object):
         incorrect_edges: float = ((dep_mat.abs() * self.indirect_causes) > threshold).sum()
         sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum() + 1e-8)
 
-        metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy, amari_distance(dep_mat, self.gt_jacobian_decoder))
+        metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy, amari_distance(dep_mat, self.gt_jacobian_decoder_permuted))
 
         return metrics

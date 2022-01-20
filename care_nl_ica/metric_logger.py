@@ -96,7 +96,8 @@ def cima_kl_diagonality(matrix:torch.Tensor)->float:
     :param matrix: matrix as a torch.Tensor
     :return:
     """
-    # return (torch.diag(matrix).norm('fro') / matrix.norm('fro')).item()
+    # matrix is here a correlatio matrix (to yield the modified Frobenius measure of https://www.sciencedirect.com/science/article/pii/S0024379516303834#se0180)
+    return .5* ( (matrix - torch.eye(matrix.shape[0])).norm('fro').pow(2)).item()
 
     return 0.5 * (torch.linalg.slogdet(torch.diag(torch.diag(matrix)))[1] -
                   torch.linalg.slogdet(matrix)[1]).item()
