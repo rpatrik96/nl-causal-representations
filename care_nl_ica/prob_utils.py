@@ -154,7 +154,7 @@ class DisentanglementMetrics:
 def _mig_from_correlation(corr: torch.Tensor):
     off_diag_abs = (corr - corr.diag().diag()).abs()
 
-    return (corr.abs().diag() - off_diag_abs.max(0)[0]).mean()
+    return (corr.abs().diag() - off_diag_abs.max(0)[0]).abs().mean()
 
 
 def amari_distance(W: torch.Tensor, A: torch.Tensor) -> float:
