@@ -212,7 +212,7 @@ def corr_matrix(x:torch.Tensor,y:torch.Tensor) -> torch.Tensor:
     for i in range(dim):
         for j in range(dim):
 
-            corr_mat[i,j] = torch.corrcoef(torch.stack((x[i,:], y[j,:])))
+            corr_mat[i,j] = torch.corrcoef(torch.stack((x[i,:], y[j,:])))[1,0]
 
     return corr_mat
 
