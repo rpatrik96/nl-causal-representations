@@ -119,9 +119,9 @@ def calc_disentanglement_scores(z, hz):
                                   non_perm_corr_mat=torch.tensor(non_perm_corr_mat),
                                   ksi_corr_mat=ksi_corr_mat,
 
-                                  perm_corr_diag=frobenius_diagonality(torch.tensor(perm_corr_mat)),
-                                  non_perm_corr_diag=frobenius_diagonality(torch.tensor(non_perm_corr_mat)),
-                                  ksi_corr_diag=frobenius_diagonality(ksi_corr_mat),
+                                  perm_corr_diag=frobenius_diagonality(torch.tensor(perm_corr_mat)).item(),
+                                  non_perm_corr_diag=frobenius_diagonality(torch.tensor(non_perm_corr_mat)).item(),
+                                  ksi_corr_diag=frobenius_diagonality(ksi_corr_mat).item(),
 
                                   perm_corr_mig=_mig_from_correlation(torch.tensor(perm_corr_mat)),
                                   non_perm_corr_mig=_mig_from_correlation(torch.tensor(non_perm_corr_mat)),
@@ -134,21 +134,21 @@ from dataclasses import dataclass
 
 @dataclass
 class DisentanglementMetrics:
-    lin_score: float
-    perm_score: float
-    non_perm_score: float
+    lin_score: float = 0
+    perm_score: float = 0
+    non_perm_score: float = 0
 
-    perm_corr_mat: torch.Tensor
-    non_perm_corr_mat: torch.Tensor
-    ksi_corr_mat: torch.Tensor
+    perm_corr_mat: torch.Tensor = None
+    non_perm_corr_mat: torch.Tensor = None
+    ksi_corr_mat: torch.Tensor = None
 
-    perm_corr_diag: float
-    non_perm_corr_diag: float
-    ksi_corr_diag: float
+    perm_corr_diag: float = 0
+    non_perm_corr_diag: float = 0
+    ksi_corr_diag: float = 0
 
-    perm_corr_mig: float
-    non_perm_corr_mig: float
-    ksi_corr_mig: float
+    perm_corr_mig: float = 0
+    non_perm_corr_mig: float = 0
+    ksi_corr_mig: float = 0
 
 
 def _mig_from_correlation(corr: torch.Tensor):
@@ -185,22 +185,36 @@ def amari_distance(W: torch.Tensor, A: torch.Tensor) -> float:
     return ((s(P.abs()) + s(P.T.abs())) / (2 * P.shape[1])).item()
 
 
-def frobenius_diagonality(matrix: torch.Tensor) -> float:
+def frobenius_diagonality(matrix: torch.Tensor) -> torch.Tensor:
     """
-    Calculates the IMA constrast (the lefy KL measure of diagonality).
+    Calculates the Frobenius measure of diagonality for correlation matrices.
+    Source: https://www.sciencedirect.com/science/article/pii/S0024379516303834#se0180
 
     :param matrix: matrix as a torch.Tensor
     :return:
     """
 
-    # this is NOT IMA CONTRAST, BUT A DIAGONALITY MEASURE
+    return .5 * ((matrix - torch.eye(matrix.shape[0], device=matrix.device)).norm('fro').pow(2))
 
-    # matrix is here a correlation matrix (to yield the modified Frobenius diagonality measure of https://www.sciencedirect.com/science/article/pii/S0024379516303834#se0180)
-    return .5 * ((matrix - torch.eye(matrix.shape[0], device=matrix.device)).norm('fro').pow(2)).log().item()
 
-    return 0.5 * (torch.linalg.slogdet(torch.diag(torch.diag(matrix)))[1] -
-                  torch.linalg.slogdet(matrix)[1]).item()
+def corr_matrix(x:torch.Tensor,y:torch.Tensor) -> torch.Tensor:
+    """
 
+    :param x: torch.Tensor of size (dim, num_samples)
+    :param y: torch.Tensor of size (dim, num_samples)
+    :return:
+    """
+
+    dim = x.shape[0]
+
+    corr_mat = torch.zeros(dim, dim, device=x.device)
+
+    for i in range(dim):
+        for j in range(dim):
+
+            corr_mat[i,j] = torch.corrcoef(torch.stack((x[i,:], y[j,:])))
+
+    return corr_mat
 
 def ksi_correlation(hz: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     """

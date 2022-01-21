@@ -12,7 +12,7 @@ from cl_ica import latent_spaces
 from dep_mat import calc_jacobian_loss
 from indep_check import IndependenceChecker
 from metric_logger import Metrics
-from prob_utils import setup_marginal, setup_conditional
+from prob_utils import setup_marginal, setup_conditional, frobenius_diagonality
 
 
 class Runner(object):
@@ -239,6 +239,20 @@ class Runner(object):
 
             if self.dep_loss is not None:
                 total_loss_value += self.dep_loss
+
+            if self.hparams.diagonality_loss != 0.:
+                from prob_utils import corr_matrix
+                pearson_n1 = corr_matrix(n1.T, n1_rec.T)
+                pearson_n2_con_n1 = corr_matrix(n2_con_n1.T, n2_con_n1_rec.T)
+                pearson_n3 = corr_matrix(n3.T, n3_rec.T)
+                # cos_sim = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+                # pearson_n1 = cos_sim(n1 - n1.mean(dim=1, keepdim=True), n1_rec - n1_rec.mean(dim=1, keepdim=True))
+                # pearson_n2_con_n1 = cos_sim(n2_con_n1 - n2_con_n1.mean(dim=1, keepdim=True), n2_con_n1_rec - n2_con_n1_rec.mean(dim=1, keepdim=True))
+                # pearson_n3 = cos_sim(n3 - n3.mean(dim=1, keepdim=True), n3_rec - n3_rec.mean(dim=1, keepdim=True))
+
+
+                total_loss_value += self.hparams.diagonality_loss*(frobenius_diagonality(pearson_n1) + frobenius_diagonality(
+                    pearson_n2_con_n1) + frobenius_diagonality(pearson_n3))
 
             total_loss_value.backward()
 
