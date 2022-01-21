@@ -6,9 +6,11 @@ import wandb
 
 from .cl_ica import latent_spaces
 from .indep_check import IndependenceChecker
-from .prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional
+from .prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional, DisentanglementMetrics, \
+    frobenius_diagonality, ksi_correlation
 
-from .metric_logger import JacobianMetrics, cima_kl_diagonality, ksi_correlation
+from .metric_logger import JacobianMetrics
+
 
 class Logger(object):
 
@@ -54,12 +56,11 @@ class Logger(object):
             z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
             hz_disentanglement = h(z_disentanglement)
 
-            self.ksi_correlation = ksi_correlation(z_disentanglement, hz_disentanglement)
 
-            lin_dis_score, perm_dis_score, self.perm_corr_mat = calc_disentanglement_scores(z_disentanglement, hz_disentanglement)
-            print(f"{self.perm_corr_mat=}")
-            self.lin_dis_scores.append(lin_dis_score)
-            self.perm_dis_scores.append(perm_dis_score)
+            self.disent_metrics = calc_disentanglement_scores(z_disentanglement, hz_disentanglement)
+            print(f"{self.disent_metrics.perm_corr_mat=}")
+            self.lin_dis_scores.append(self.disent_metrics.lin_score)
+            self.perm_dis_scores.append(self.disent_metrics.perm_score)
 
             if self.hparams.use_dep_mat:
                 null_list = [False] * torch.numel(dep_mat)
@@ -96,7 +97,8 @@ class Logger(object):
             self.causal_check.append(self.causal_check[-1])
 
         self._log_to_wandb(dep_mat, enc_dec_jac, self.global_step, total_loss, dep_loss, causality_metrics,
-                           ar_bottleneck, numerical_jacobian, learnable_jacobian, jacobian_metrics, sinkhorn_matrix, self.perm_corr_mat)
+                           ar_bottleneck, numerical_jacobian, learnable_jacobian, jacobian_metrics, sinkhorn_matrix,
+                           self.disent_metrics)
 
         self.print_statistics(f, dep_mat, dep_loss)
 
@@ -136,31 +138,41 @@ class Logger(object):
                 z2_con_z1_rec = h(z2_con_z1)
                 z3_rec = h(z3)
 
-                linear_disentanglement_score, permutation_disentanglement_score, perm_corr_mat = calc_disentanglement_scores(z1,
+                disent_metrics = calc_disentanglement_scores(z1,
                                                                                                               z1_rec)
-                final_linear_scores.append(linear_disentanglement_score)
-                final_perm_scores.append(permutation_disentanglement_score)
+                final_linear_scores.append(disent_metrics.lin_score)
+                final_perm_scores.append(disent_metrics.perm_score)
 
         print("linear mean: {} std: {}".format(np.mean(final_linear_scores), np.std(final_linear_scores)))
         print("perm mean: {} std: {}".format(np.mean(final_perm_scores), np.std(final_perm_scores)))
 
     def _log_to_wandb(self, dep_mat, enc_dec_jac, global_step, total_loss, dep_loss, causality_metrics,
                       ar_bottleneck=None, numerical_jacobian=None, learnable_jacobian=None,
-                      jacobian_metrics: JacobianMetrics = None, sinkhorn_mat=None, perm_corr_mat=None):
+                      jacobian_metrics: JacobianMetrics = None, sinkhorn_mat=None, disent_metrics:DisentanglementMetrics=None):
         if self.hparams.use_wandb:
 
             panel_name = "Metrics"
             wandb.log({f"{panel_name}/total_loss": total_loss, f"{panel_name}/dep_loss": dep_loss,
-                       f"{panel_name}/lin_dis_score": self.lin_dis_scores[-1],
-                       f"{panel_name}/perm_dis_score": self.perm_dis_scores[-1],
+
+                       f"{panel_name}/corr/lin_dis_score": self.lin_dis_scores[-1],
+                       f"{panel_name}/corr/perm_dis_score": self.perm_dis_scores[-1],
+                       f"{panel_name}/corr/non_perm_dis_score": disent_metrics.non_perm_score,
+                       f"{panel_name}/corr/ksi_correlation": disent_metrics.ksi_corr_mat.diag().mean().item(),
+
                        f"{panel_name}/jacobian_norm_diff": jacobian_metrics.norm_diff,
                        f"{panel_name}/jacobian_thresholded_norm_diff": jacobian_metrics.thresholded_norm_diff,
                        f"{panel_name}/optimal_threshold": jacobian_metrics.optimal_threshold,
                        f"{panel_name}/sparsity_accuracy": jacobian_metrics.sparsity_accuracy,
+
                        f"{panel_name}/amari_distance": jacobian_metrics.amari_distance,
-                       f"{panel_name}/cima_kl_diagonality": cima_kl_diagonality(torch.tensor(perm_corr_mat)),
-                       f"{panel_name}/ksi_correlation": torch.Tensor(self.ksi_correlation).mean().item(),
-                       **{f"{panel_name}/ksi_correlation_{i}": ksi for (i, ksi) in enumerate(self.ksi_correlation)},
+
+                       f"{panel_name}/diag/perm_mat_diagonality": disent_metrics.perm_corr_diag,
+                       f"{panel_name}/diag/non_perm_mat_diagonality": disent_metrics.non_perm_corr_diag,
+                       f"{panel_name}/diag/ksi_correlation_diagonality": disent_metrics.ksi_corr_diag,
+
+                       f"{panel_name}/MIG/perm_correlation_mig": disent_metrics.perm_corr_mig,
+                       f"{panel_name}/MIG/non_perm_correlation_mig": disent_metrics.non_perm_corr_mig,
+                       f"{panel_name}/MIG/ksi_correlation_mig": disent_metrics.ksi_corr_mig,
                        }, step=global_step)
 
             if self.hparams.verbose is True:

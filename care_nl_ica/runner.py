@@ -6,12 +6,12 @@ from torch.nn import functional as F
 from care_nl_ica.logger import Logger
 from care_nl_ica.metric_logger import JacobianMetrics
 from care_nl_ica.model import ContrastiveLearningModel
-from care_nl_ica.prob_utils import sample_marginal_and_conditional
+from care_nl_ica.prob_utils import sample_marginal_and_conditional, amari_distance
 from care_nl_ica.utils import unpack_item_list, save_state_dict
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian_loss
 from indep_check import IndependenceChecker
-from metric_logger import Metrics, amari_distance
+from metric_logger import Metrics
 from prob_utils import setup_marginal, setup_conditional
 
 

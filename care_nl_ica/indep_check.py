@@ -50,11 +50,11 @@ class IndependenceChecker(object):
 
     def check_independence_z_gz(self, decoder, latent_space)->torch.Tensor:
         z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
-        lin_dis_score, perm_dis_score, perm_corr_mat = calc_disentanglement_scores(z_disentanglement, decoder(z_disentanglement))
+        disent_metrics = calc_disentanglement_scores(z_disentanglement, decoder(z_disentanglement))
 
-        print(f"Id. Lin. Disentanglement: {lin_dis_score:.4f}")
-        print(f"Id. Perm. Disentanglement: {perm_dis_score:.4f}")
-        print(f"Id. MCC matrix: {perm_corr_mat=}")
+        print(f"Id. Lin. Disentanglement: {disent_metrics.lin_score:.4f}")
+        print(f"Id. Perm. Disentanglement: {disent_metrics.perm_score:.4f}")
+        print(f"Id. MCC matrix: {disent_metrics.perm_corr_mat=}")
         print('Run test with ground truth sources')
 
         dep_mat = None
