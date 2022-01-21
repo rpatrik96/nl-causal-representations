@@ -8,7 +8,7 @@ for seed in 84645646; do
     done
 
     for ((variant = 0; variant < ${fact}; variant++)); do
-      ./scripts/start_preemptable_job.sh --use-ar-mlp --seed ${seed} --n ${n} --variant ${variant} --note "Loss comparison with permuted data and sinkhorn NON-UNIFORM MIXING frobenius diag measure LOG" --tags normalization linear sem residual permute sinkhorn --use-sem --normalize-latents --verbose --permute --sinkhorn &
+      ./scripts/start_preemptable_job.sh --use-ar-mlp --seed ${seed} --n ${n} --variant ${variant} --note "Loss comparison with permuted data and sinkhorn NON-UNIFORM MIXING frobenius diag measure LOG NL" --tags normalization nonlinear sem residual permute sinkhorn --use-sem --nonlin-sem --normalize-latents --verbose --permute --sinkhorn &
       sleep 20
     done
   done

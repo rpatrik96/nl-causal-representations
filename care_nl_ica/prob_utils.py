@@ -196,7 +196,7 @@ def frobenius_diagonality(matrix: torch.Tensor) -> float:
     # this is NOT IMA CONTRAST, BUT A DIAGONALITY MEASURE
 
     # matrix is here a correlation matrix (to yield the modified Frobenius diagonality measure of https://www.sciencedirect.com/science/article/pii/S0024379516303834#se0180)
-    return .5 * ((matrix - torch.eye(matrix.shape[0])).norm('fro').pow(2)).log().item()
+    return .5 * ((matrix - torch.eye(matrix.shape[0], device=matrix.device)).norm('fro').pow(2)).log().item()
 
     return 0.5 * (torch.linalg.slogdet(torch.diag(torch.diag(matrix)))[1] -
                   torch.linalg.slogdet(matrix)[1]).item()
