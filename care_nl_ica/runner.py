@@ -108,7 +108,6 @@ class Runner(object):
         if self.hparams.use_wandb is True:
             self.logger.log_summary(**{"causal_orderings": self.orderings})
 
-
     def _calc_indirect_causes(self) -> None:
         """
         Calculates all indirect paths in the encoder (SEM/SCM)
@@ -242,9 +241,26 @@ class Runner(object):
 
             if self.hparams.diagonality_loss != 0.:
                 from prob_utils import corr_matrix
-                pearson_n1 = corr_matrix(n1.T, n1_rec.T)
-                pearson_n2_con_n1 = corr_matrix(n2_con_n1.T, n2_con_n1_rec.T)
-                pearson_n3 = corr_matrix(n3.T, n3_rec.T)
+                from dep_mat import triangularity_loss
+
+                # todo: these use the ground truth
+                # still, they can be used to show that some supervision helps
+                # pearson_n1 = corr_matrix(n1.T, n1_rec.T)
+                # pearson_n2_con_n1 = corr_matrix(n2_con_n1.T, n2_con_n1_rec.T)
+                # pearson_n3 = corr_matrix(n3.T, n3_rec.T)
+                # total_loss_value += self.hparams.diagonality_loss*(frobenius_diagonality(pearson_n1.abs()) + frobenius_diagonality(
+                #     pearson_n2_con_n1.abs()) + frobenius_diagonality(pearson_n3.abs()))
+
+                # correlation between observation and reconstructed latents
+                # exploits the assumption that the SEM has a lower-triangular Jacobian
+                # order is important due to the triangularity loss
+                pearson_n1 = corr_matrix( self.model.decoder(n1).T, n1_rec.T)
+                pearson_n2_con_n1 = corr_matrix(self.model.decoder(n2_con_n1).T, n2_con_n1_rec.T)
+                pearson_n3 = corr_matrix(self.model.decoder(n3).T, n3_rec.T)
+                total_loss_value += self.hparams.diagonality_loss * (
+                            triangularity_loss(pearson_n1) + triangularity_loss(
+                        pearson_n2_con_n1) + triangularity_loss(pearson_n3))
+
                 # cos_sim = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
                 # pearson_n1 = cos_sim(n1 - n1.mean(dim=1, keepdim=True), n1_rec - n1_rec.mean(dim=1, keepdim=True))
                 # pearson_n2_con_n1 = cos_sim(n2_con_n1 - n2_con_n1.mean(dim=1, keepdim=True), n2_con_n1_rec - n2_con_n1_rec.mean(dim=1, keepdim=True))
