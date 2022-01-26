@@ -266,10 +266,6 @@ class Runner(object):
                 # pearson_n2_con_n1 = cos_sim(n2_con_n1 - n2_con_n1.mean(dim=1, keepdim=True), n2_con_n1_rec - n2_con_n1_rec.mean(dim=1, keepdim=True))
                 # pearson_n3 = cos_sim(n3 - n3.mean(dim=1, keepdim=True), n3_rec - n3_rec.mean(dim=1, keepdim=True))
 
-
-                total_loss_value += self.hparams.diagonality_loss*(frobenius_diagonality(pearson_n1.abs()) + frobenius_diagonality(
-                    pearson_n2_con_n1.abs()) + frobenius_diagonality(pearson_n3.abs()))
-
             total_loss_value.backward()
 
             self.optimizer.step()
