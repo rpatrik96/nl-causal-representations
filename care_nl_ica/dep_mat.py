@@ -123,7 +123,7 @@ def triangularity_loss(dep_mat: torch.Tensor) -> torch.Tensor:
     :return: the triangularity loss as a torch.Tensor (scalar)
     """
 
-    return torch.triu(dep_mat, 1).abs().sum()
+    return torch.triu(dep_mat, 1).abs().mean()
 
 
 def dependency_loss(dep_mat: torch.Tensor, weight_sparse: float = 1., weight_triangular: float = 1.) -> torch.Tensor:
