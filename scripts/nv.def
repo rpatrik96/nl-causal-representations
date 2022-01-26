@@ -8,10 +8,10 @@ From: nvidia/cuda:11.3.0-cudnn8-runtime-ubuntu20.04
 
 %files
     # copy the dropbear keys into the container
-    ~/dropbear /etc/dropbear
+    /mnt/qb/work/bethge/preizinger/dropbear /etc/dropbear
 
     # project requirement file
-    ./requirements.txt 
+    ../requirements.txt 
 
 %post
     # required to indicate that no interaction is required for installing packages with apt
@@ -21,12 +21,9 @@ From: nvidia/cuda:11.3.0-cudnn8-runtime-ubuntu20.04
 
     apt-get -qq -y update
     
-    apt-get install -y \
-        build-essential cmake git rsync
+    # apt-get install -y build-essential cmake git rsync
 
-    apt-get install -y \
-        python3 python3-pip python3-wheel python3-yaml \
-        intel-mkl-full
+    apt-get install -y python3 python3-pip python3-wheel python3-yaml intel-mkl-full
     
     # ssh client for the vs code setup
     apt-get install -y dropbear
@@ -37,11 +34,7 @@ From: nvidia/cuda:11.3.0-cudnn8-runtime-ubuntu20.04
     # project requirements install
     pip3 install -r requirements.txt
 
-    # python packages
-    pip3 install \
-        numpy scipy scikit-learn seaborn matplotlib wandb
 
-    pip3 install torch torchvision torchaudio torchmetrics
 
  
 
