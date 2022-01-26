@@ -116,14 +116,14 @@ def sparsity_loss(dep_mat: torch.Tensor) -> torch.Tensor:
 def triangularity_loss(dep_mat: torch.Tensor) -> torch.Tensor:
     """
     Calculates the loss term for inducing a **lower** triangular structure for the dependency matrix.
-    This is calculated as the L2 squared norm of the upper triangular part of the dependency matrix
+    This is calculated as the L1 norm of the upper triangular part of the dependency matrix
     (except the main diagonal).
 
     :param dep_mat: dependency matrix as a torch.Tensor
     :return: the triangularity loss as a torch.Tensor (scalar)
     """
 
-    return torch.triu(dep_mat, 1).pow(2).sum()
+    return torch.triu(dep_mat, 1).abs().sum()
 
 
 def dependency_loss(dep_mat: torch.Tensor, weight_sparse: float = 1., weight_triangular: float = 1.) -> torch.Tensor:

@@ -29,7 +29,8 @@ def args(request):
                               sphere_r=1.0, tau=1.0, use_batch_norm=True, use_dep_mat=True,
                               use_flows=not request.param.use_ar_mlp, use_reverse=False, use_wandb=False, variant=1,
                               verbose=False, use_ar_mlp=request.param.use_ar_mlp, use_sem=True, nonlin_sem=False,
-                              use_bias=False, l1=0.0, l2=0.0, data_gen_mode='rvs', learn_jacobian=False, permute=False, sinkhorn=False)
+                              use_bias=False, l1=0.0, l2=0.0, data_gen_mode='rvs', learn_jacobian=False, permute=False,
+                              sinkhorn=False, triangularity_loss=0.0)
 
     set_device(args)
     setup_seed(args.seed)

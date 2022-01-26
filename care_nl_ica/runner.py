@@ -239,7 +239,7 @@ class Runner(object):
             if self.dep_loss is not None:
                 total_loss_value += self.dep_loss
 
-            if self.hparams.diagonality_loss != 0.:
+            if self.hparams.triangularity_loss != 0.:
                 from prob_utils import corr_matrix
                 from dep_mat import triangularity_loss
 
@@ -257,7 +257,7 @@ class Runner(object):
                 pearson_n1 = corr_matrix( self.model.decoder(n1).T, n1_rec.T)
                 pearson_n2_con_n1 = corr_matrix(self.model.decoder(n2_con_n1).T, n2_con_n1_rec.T)
                 pearson_n3 = corr_matrix(self.model.decoder(n3).T, n3_rec.T)
-                total_loss_value += self.hparams.diagonality_loss * (
+                total_loss_value += self.hparams.triangularity_loss * (
                             triangularity_loss(pearson_n1) + triangularity_loss(
                         pearson_n2_con_n1) + triangularity_loss(pearson_n3))
 
