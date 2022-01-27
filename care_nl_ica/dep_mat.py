@@ -3,12 +3,13 @@ import torch.nn as nn
 from torch.autograd.functional import jacobian
 
 
-def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = False) -> torch.Tensor:
+def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = False, eps:float=1e-8) -> torch.Tensor:
     """
     Calculate the Jacobian more efficiently than ` torch.autograd.functional.jacobian`
     :param model: the model to calculate the Jacobian of
     :param latents: the inputs for evaluating the model
     :param normalize: flag to rescale the Jacobian to have unit norm
+    :param eps: the epsilon to use for numerical stability
     :return: B x n_out x n_in
     """
 
@@ -40,9 +41,9 @@ def calc_jacobian(model: nn.Module, latents: torch.Tensor, normalize: bool = Fal
         # jacobian /= norm_factor.reshape(1, 1, -1)
 
         # normalize range to [0;1]
-        dim_range = output_vars.max(dim=0)[0] - output_vars.min(dim=0)[0]
+        dim_range = (output_vars.max(dim=0)[0] - output_vars.min(dim=0)[0]).abs()
 
-        jacobian/= dim_range
+        jacobian/= (dim_range + eps)
 
 
 
