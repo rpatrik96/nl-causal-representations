@@ -151,6 +151,10 @@ def parse_args():
 
 
 def add_tags(args):
+    if args.tags is None:
+        args.tags = []
+
+
     if args.use_sem is True:
         args.tags.append("sem")
     
