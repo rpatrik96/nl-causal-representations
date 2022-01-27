@@ -32,7 +32,7 @@ class LinearSEM(nn.Module):
 
         # construct a chain
         if force_chain is True:
-            print("-------Overrinding mask-------")
+            print("-------Forcing chain-------")
             self.mask = torch.tril(torch.ones_like(self.weight))
 
             zeros_in_chain = torch.tril(torch.ones_like(self.weight), -2)
@@ -93,8 +93,8 @@ class LinearSEM(nn.Module):
 
 
 class NonLinearSEM(LinearSEM):
-    def __init__(self, num_vars: int, permute: bool = False, variant=-1):
-        super().__init__(num_vars=num_vars, permute=permute, variant=variant)
+    def __init__(self, num_vars: int, permute: bool = False, variant=-1, force_chain: bool = False, force_uniform: bool = False):
+        super().__init__(num_vars=num_vars, permute=permute, variant=variant, force_chain=force_chain, force_uniform=force_uniform)
 
         self.nonlin = [lambda x: x ** 3, lambda x: torch.tanh(x), lambda x: torch.sigmoid(x),
                        lambda x: torch.nn.functional.leaky_relu(x, .1), lambda x: x]

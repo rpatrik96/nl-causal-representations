@@ -248,7 +248,7 @@ class Runner(object):
                 # pearson_n1 = corr_matrix(n1.T, n1_rec.T)
                 # pearson_n2_con_n1 = corr_matrix(n2_con_n1.T, n2_con_n1_rec.T)
                 # pearson_n3 = corr_matrix(n3.T, n3_rec.T)
-                # total_loss_value += self.hparams.diagonality_loss*(frobenius_diagonality(pearson_n1.abs()) + frobenius_diagonality(
+                # total_loss_value += self.hparams.triangularity_loss*(frobenius_diagonality(pearson_n1.abs()) + frobenius_diagonality(
                 #     pearson_n2_con_n1.abs()) + frobenius_diagonality(pearson_n3.abs()))
 
                 # correlation between observation and reconstructed latents
