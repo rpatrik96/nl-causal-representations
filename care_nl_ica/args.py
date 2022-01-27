@@ -141,8 +141,51 @@ def parse_args():
 
     args = parser.parse_args()
 
+    add_tags(args)
+
     print("Arguments:")
     for k, v in vars(args).items():
         print(f"\t{k}: {v}")
 
     return args
+
+
+def add_tags(args):
+    if args.use_sem is True:
+        args.tags.append("sem")
+    
+    if args.nonlin_sem is True:
+        args.tags.append("nonlinear")
+    else:
+        args.tags.append("linear")
+
+
+    if args.sinkhorn is True:
+        args.tags.append("sinkhorn")
+
+    if args.permute is True:
+        args.tags.append("permute")
+
+    if args.use_ar_mlp is True:
+        args.tags.append("mlp")
+
+    if args.use_flows is True:
+        args.tags.append("flows")
+
+    if args.normalize_latents is True:
+        args.tags.append("normalization")
+
+
+    if args.l1 != 0.0:
+        args.tags.append(f"L1")
+
+    if args.l2 != 0.0:
+        args.tags.append(f"L2")
+
+    if args.triangularity_loss != 0.0:
+        args.tags.append(f"triangularity")
+
+    if args.entropy_coeff != 0.0:
+        args.tags.append(f"entropy")
+
+    args.tags = list(set(args.tags))
