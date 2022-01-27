@@ -231,10 +231,10 @@ class Runner(object):
                 total_loss_value += self.hparams.l1 * self.model.encoder.bottleneck_l1_norm
 
             if self.hparams.permute is True:
-                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.doubly_stochastic_matrix.data, -1).view(
+                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.doubly_stochastic_matrix, -1).view(
                     -1, )
 
-                total_loss_value += self.hparams.entropy_coeff * torch.distributions.Categorical(probs).entropy()
+                total_loss_value -= self.hparams.entropy_coeff * torch.distributions.Categorical(probs).entropy()
 
             if self.dep_loss is not None:
                 total_loss_value += self.dep_loss
