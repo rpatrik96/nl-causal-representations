@@ -3,6 +3,9 @@ from torch import nn as nn
 
 
 class SinkhornOperator(object):
+    """
+    From http://arxiv.org/abs/1802.08665
+    """
     def __init__(self, num_steps: int):
 
         if num_steps < 1:
@@ -30,6 +33,7 @@ class SinkhornNet(nn.Module):
     def __init__(self, num_dim: int, num_steps: int, temperature: float = 1):
         super().__init__()
 
+        self.num_dim = num_dim
         self.temperature = temperature
 
         self.sinkhorn_operator = SinkhornOperator(num_steps)
@@ -41,7 +45,10 @@ class SinkhornNet(nn.Module):
         return self.sinkhorn_operator(self.weight / self.temperature)
 
     def forward(self, x) -> torch.Tensor:
-        return self.doubly_stochastic_matrix @ x
+        if (dim_idx:=x.shape.index(self.num_dim)) == 0:
+            return self.doubly_stochastic_matrix @ x
+        elif dim_idx == 1:
+            return
 
     def to(self, device):
         """
