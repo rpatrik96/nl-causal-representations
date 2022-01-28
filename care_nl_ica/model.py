@@ -7,6 +7,7 @@ from .cl_ica import encoders, invertible_network_utils, losses, spaces
 from .masked_flows import MaskMAF
 
 from care_nl_ica.mlp import ARBottleneckNet, ARMLP, LinearSEM, NonLinearSEM
+from care_nl_ica.sinkhorn import SinkhornNet
 
 
 class ContrastiveLearningModel(nn.Module):
@@ -23,6 +24,10 @@ class ContrastiveLearningModel(nn.Module):
 
         self._setup_learnable_jacobian()
 
+        print("Using model-level sinkhorn")
+        self.sinkhorn_net = SinkhornNet(hparams.n, 15, 1e-3)
+        self.use_sinkhorn = False
+
     def parameters(self):
         parameters = list(self.encoder.parameters())
 
@@ -33,7 +38,9 @@ class ContrastiveLearningModel(nn.Module):
 
     @property
     def sinkhorn(self):
-        if self.hparams.use_ar_mlp is True:
+        if self.sinkhorn_net is not None:
+            sinkhorn = self.sinkhorn_net
+        elif self.hparams.use_ar_mlp is True:
             sinkhorn = self.encoder.sinkhorn
         else:
             sinkhorn = self.encoder[0]
@@ -79,7 +86,7 @@ class ContrastiveLearningModel(nn.Module):
                 ],
                 output_normalization=output_normalization,
                 output_normalization_kwargs=output_normalization_kwargs,
-                sinkhorn=hparams.sinkhorn
+                sinkhorn=False#hparams.sinkhorn
             )
         encoder = encoder.to(hparams.device)
         if hparams.load_f is not None:
@@ -92,7 +99,7 @@ class ContrastiveLearningModel(nn.Module):
 
     @property
     def h(self):
-        return ((lambda z: self.encoder(self.decoder(z))) if not self.hparams.identity_mixing_and_solution else (
+        return (((lambda z: self.encoder(self.decoder(z))) if self.use_sinkhorn is False else (lambda z: self.encoder(self.sinkhorn_net(self.decoder(z))))) if not self.hparams.identity_mixing_and_solution else (
             lambda z: z))
 
     @property
