@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument("--l2", type=float, default=0.0, help="L2 regularization")
     parser.add_argument("--entropy-coeff", default=0.0, type=float, help="Entropy coefficient on the Sinkhorn weights")
     parser.add_argument('--variant', type=int, default=0)
+    parser.add_argument('--start-step', type=int, default=None, help="Starting step index to activate functions")
     parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
     parser.add_argument('--inject-structure', action='store_true',
                         help="Injects a fixed structure into the flow to see the effect when the GT cannot be recovered")
@@ -192,5 +193,8 @@ def add_tags(args):
 
     if args.entropy_coeff != 0.0:
         args.tags.append(f"entropy")
+
+    if args.qr_loss != 0.0:
+        args.tags.append(f"QR")
 
     args.tags = list(set(args.tags))
