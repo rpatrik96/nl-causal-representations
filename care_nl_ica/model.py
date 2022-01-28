@@ -113,9 +113,9 @@ class ContrastiveLearningModel(nn.Module):
         else:
             print("Using SEM as decoder")
             if self.hparams.nonlin_sem is False:
-                decoder = LinearSEM(hparams.n, hparams.permute, hparams.variant, force_chain=True)
+                decoder = LinearSEM(hparams.n, hparams.permute, hparams.variant, force_chain=True, force_uniform=True)
             else:
-                decoder = NonLinearSEM(hparams.n, hparams.permute, hparams.variant, force_chain=True)
+                decoder = NonLinearSEM(hparams.n, hparams.permute, hparams.variant, force_chain=True, force_uniform=True)
 
             print(f"{decoder.weight=}")
 
