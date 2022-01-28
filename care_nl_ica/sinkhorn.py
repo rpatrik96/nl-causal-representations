@@ -48,7 +48,7 @@ class SinkhornNet(nn.Module):
         if (dim_idx:=x.shape.index(self.num_dim)) == 0:
             return self.doubly_stochastic_matrix @ x
         elif dim_idx == 1:
-            return
+            return x @ self.doubly_stochastic_matrix
 
     def to(self, device):
         """

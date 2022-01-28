@@ -31,6 +31,14 @@ class ContrastiveLearningModel(nn.Module):
 
         return parameters
 
+    @property
+    def sinkhorn(self):
+        if self.hparams.use_ar_mlp is True:
+            sinkhorn = self.encoder.sinkhorn
+        else:
+            sinkhorn = self.encoder[0]
+
+        return sinkhorn
     def _setup_learnable_jacobian(self):
 
         if self.hparams.learn_jacobian is True:

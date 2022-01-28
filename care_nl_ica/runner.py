@@ -231,7 +231,8 @@ class Runner(object):
                 total_loss_value += self.hparams.l1 * self.model.encoder.bottleneck_l1_norm
 
             if self.hparams.permute is True:
-                probs = torch.nn.functional.softmax(self.model.encoder.sinkhorn.doubly_stochastic_matrix, -1).view(
+
+                probs = torch.nn.functional.softmax(self.model.sinkhorn.doubly_stochastic_matrix, -1).view(
                     -1, )
 
                 total_loss_value += self.hparams.entropy_coeff * torch.distributions.Categorical(probs).entropy()
@@ -316,7 +317,7 @@ class Runner(object):
                                 numerical_jacobian,
                                 None if self.hparams.learn_jacobian is False else self.model.jacob.weight,
                                 jacobian_metrics, None if (
-                            self.hparams.permute is False or self.hparams.use_sem is False) else self.model.encoder.sinkhorn.doubly_stochastic_matrix)
+                            self.hparams.permute is False or self.hparams.use_sem is False) else self.model.sinkhorn.doubly_stochastic_matrix)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()

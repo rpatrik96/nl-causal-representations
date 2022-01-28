@@ -196,7 +196,7 @@ def frobenius_diagonality(matrix: torch.Tensor) -> torch.Tensor:
     return .5 * ((matrix - torch.eye(matrix.shape[0], device=matrix.device)).norm('fro').pow(2))
 
 
-def corr_matrix(x:torch.Tensor,y:torch.Tensor) -> torch.Tensor:
+def corr_matrix(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
 
     :param x: torch.Tensor of size (dim, num_samples)
@@ -210,10 +210,10 @@ def corr_matrix(x:torch.Tensor,y:torch.Tensor) -> torch.Tensor:
 
     for i in range(dim):
         for j in range(dim):
-
-            corr_mat[i,j] = torch.corrcoef(torch.stack((x[i,:], y[j,:])))[1,0]
+            corr_mat[i, j] = torch.corrcoef(torch.stack((x[i, :], y[j, :])))[1, 0]
 
     return corr_mat
+
 
 def ksi_correlation(hz: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     """
