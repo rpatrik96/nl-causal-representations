@@ -45,7 +45,7 @@ class SinkhornNet(nn.Module):
         return self.sinkhorn_operator(self.weight / self.temperature)
 
     def forward(self, x) -> torch.Tensor:
-        if (dim_idx:=x.shape.index(self.num_dim)) == 0:
+        if (dim_idx:=x.shape.index(self.num_dim)) == 0 or len(x.shape)==3:
             return self.doubly_stochastic_matrix @ x
         elif dim_idx == 1:
             return x @ self.doubly_stochastic_matrix

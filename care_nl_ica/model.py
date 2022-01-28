@@ -78,7 +78,7 @@ class ContrastiveLearningModel(nn.Module):
             encoder = ARBottleneckNet(hparams.n, [1, hparams.n * 5, hparams.n * 8, hparams.n * 12],
                                       [hparams.n * 12, hparams.n * 8, hparams.n * 5, 1], hparams.use_bias,
                                       hparams.normalization == "fixed_box", residual=False, permute=hparams.permute,
-                                      sinkhorn=hparams.sinkhorn)
+                                      sinkhorn=hparams.sinkhorn, triangular=self.hparams.triangular)
 
         else:
             encoder = encoders.get_mlp(

@@ -122,16 +122,23 @@ class NonLinearSEM(LinearSEM):
 
 
 class ARMLP(nn.Module):
-    def __init__(self, num_vars: int, transform: callable = None, residual: bool = False, num_weights: int = 5):
+    def __init__(self, num_vars: int, transform: callable = None, residual: bool = False, num_weights: int = 5,
+                 triangular=True):
         super().__init__()
 
         self.num_vars = num_vars
         self.residual = residual
+        self.triangular = triangular
 
-        self.weight = nn.ParameterList([nn.Parameter(
-            torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1)) for _ in
-            range(num_weights)])
-        if self.residual is True:
+        self.weight = nn.ParameterList([
+                                        nn.Parameter(
+                                                        torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1)
+                                                        if self.triangular is True else nn.Linear(num_vars, num_vars, bias=False).weight
+                                                     )
+
+                                        for _ in range(num_weights)
+        ])
+        if self.residual is True and self.triangular is True:
             self.scaling = nn.Parameter(torch.ones(self.num_vars), requires_grad=True)
 
         # structure injection
@@ -143,7 +150,7 @@ class ARMLP(nn.Module):
         w = torch.ones_like(self.weight[0])
         for i in range(len(self.weight)):
             w *= self.weight[i]
-        return w if self.residual is False else w + torch.diag(self.scaling)
+        return w if (self.residual is False or self.triangular is False) else w + torch.diag(self.scaling)
 
     def forward(self, x):
         return self.transform(torch.tril(self.assembled_weight)) @ x
@@ -208,7 +215,8 @@ class FeatureMLP(nn.Module):
 
 class ARBottleneckNet(nn.Module):
     def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
-                 normalize: bool = False, residual: bool = False, permute=False, sinkhorn=False):
+                 normalize: bool = False, residual: bool = False, permute=False, sinkhorn=False,
+                 triangular=True):
         super().__init__()
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats

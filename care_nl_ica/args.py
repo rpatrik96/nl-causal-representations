@@ -12,6 +12,7 @@ def parse_args():
     parser.add_argument('--use-batch-norm', action='store_true', help="Use batchnorm layers in the Flow encoder")
     parser.add_argument('--log-latent-rec', action='store_true', help="Log the latents and their reconstructions")
     parser.add_argument('--use-l1', action='store_true', help="Use L1 on the MLP botleneck")
+    parser.add_argument('--triangular', action='store_true', help="Force the AR MLP bottleneck to be triangular")
     parser.add_argument("--triangularity-loss", type=float, default=0.0, help="triangularity loss on the correlation matrix")
     parser.add_argument('--use-sem', action='store_true', help="Use SEM as decoder")
     parser.add_argument('--sinkhorn', action='store_true', help="Use the Sinkhorn network")
