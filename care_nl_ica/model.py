@@ -28,6 +28,9 @@ class ContrastiveLearningModel(nn.Module):
         if self.sinkhorn_net is not None:
             print("Using model-level sinkhorn")
             self.sinkhorn_net.to(hparams.device)
+            self.sinkhorn_net.weight.requires_grad = False
+
+        if self.hparams.sinkhorn is False:
             self.sinkhorn.weight.requires_grad = False
 
         

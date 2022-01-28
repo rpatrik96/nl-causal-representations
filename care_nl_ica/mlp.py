@@ -153,7 +153,7 @@ class ARMLP(nn.Module):
         return w if (self.residual is False or self.triangular is False) else w + torch.diag(self.scaling)
 
     def forward(self, x):
-        return self.transform(torch.tril(self.assembled_weight)) @ x
+        return self.transform(torch.tril(self.assembled_weight) if self.triangular is True else self.assembled_weight) @ x
 
     def to(self, device):
         """
@@ -225,7 +225,7 @@ class ARBottleneckNet(nn.Module):
 
         self._init_feature_layers()
 
-        self.ar_bottleneck = ARMLP(self.num_vars, residual=residual)
+        self.ar_bottleneck = ARMLP(self.num_vars, residual=residual, triangular=triangular)
 
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
