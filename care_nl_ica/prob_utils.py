@@ -109,7 +109,7 @@ def calc_disentanglement_scores(z, hz):
 
     # the metrics is not symmetric
     # and we don't need the diagonal twice
-    ksi_corr_mat = ksi_correlation(hz, z) + torch.tril(ksi_correlation(z, hz), -1)
+    ksi_corr_mat = ksi_correlation(hz.detach(), z.detach()) + torch.tril(ksi_correlation(z.detach(), hz.detach()), -1)
 
     return DisentanglementMetrics(lin_score=lin_dis_score,
                                   perm_score=permutation_disentanglement_score,
@@ -152,9 +152,8 @@ class DisentanglementMetrics:
 
 
 def _mig_from_correlation(corr: torch.Tensor):
-    off_diag_abs = (corr - corr.diag().diag()).abs()
-
-    return (corr.abs().diag() - off_diag_abs.max(0)[0]).abs().mean()
+    sorted_corr = torch.sort(corr.abs(), dim=1, descending=True)[0]
+    return (sorted_corr[:, 0] - sorted_corr[:, 1]).abs().mean()
 
 
 def amari_distance(W: torch.Tensor, A: torch.Tensor) -> float:
