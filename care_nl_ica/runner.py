@@ -267,6 +267,35 @@ class Runner(object):
                 # pearson_n2_con_n1 = cos_sim(n2_con_n1 - n2_con_n1.mean(dim=1, keepdim=True), n2_con_n1_rec - n2_con_n1_rec.mean(dim=1, keepdim=True))
                 # pearson_n3 = cos_sim(n3 - n3.mean(dim=1, keepdim=True), n3_rec - n3_rec.mean(dim=1, keepdim=True))
 
+            self.hparams.qr_loss = 1
+            if self.hparams.qr_loss != 0. and self.hparams.use_ar_mlp is True:
+
+
+                if self.hparams.start_step is None or (self.hparams.start_step is not None and self.logger.global_step >= self.hparams.start_step):
+
+                    Q = self.model.encoder.ar_bottleneck.assembled_weight.T.qr()[0]
+
+                    """
+                    The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
+                    **a permutation** matrix.
+                    
+                    The second step is to ensure that the permutation matrix is the identity. If we got a permutation matrix
+                    in the first step, then we could use Q.T to multiply the observations. 
+                    """
+
+                    # loss options
+
+                    # 1. diagonality (as Q^n = I for permutation matrices)
+                    total_loss_value+=frobenius_diagonality(Q.matrix_power(Q.shape[0]).abs())
+
+                    # 2. rows and cols sum up to 1
+                    # col_sum = Q.sum(0)
+                    # row_sum = Q.sum(1)
+
+                    # (col_sum - torch.ones_like(col_sum)).norm(p=2)
+                    # (row_sum - torch.ones_like(row_sum)).norm(p=2)
+
+
             total_loss_value.backward()
 
             self.optimizer.step()
