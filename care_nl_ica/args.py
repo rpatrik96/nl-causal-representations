@@ -14,6 +14,7 @@ def parse_args():
     parser.add_argument('--use-l1', action='store_true', help="Use L1 on the MLP botleneck")
     parser.add_argument('--triangular', action='store_true', help="Force the AR MLP bottleneck to be triangular")
     parser.add_argument("--triangularity-loss", type=float, default=0.0, help="triangularity loss on the correlation matrix")
+    parser.add_argument("--qr-loss", type=float, default=0.0, help="QR loss on the bottleneck matrix")
     parser.add_argument('--use-sem', action='store_true', help="Use SEM as decoder")
     parser.add_argument('--sinkhorn', action='store_true', help="Use the Sinkhorn network")
     parser.add_argument('--permute', action='store_true', help="Learn the permutation")
