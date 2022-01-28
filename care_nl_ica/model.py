@@ -24,15 +24,23 @@ class ContrastiveLearningModel(nn.Module):
 
         self._setup_learnable_jacobian()
 
-        print("Using model-level sinkhorn")
         self.sinkhorn_net = SinkhornNet(hparams.n, 15, 1e-3)
-        self.use_sinkhorn = False
+        self.sinkhorn_net.to(hparams.device)
+        self.sinkhorn.weight.requires_grad = False
+        
+        if self.sinkhorn_net is not None:
+            print("Using model-level sinkhorn")
+        
+        
 
     def parameters(self):
         parameters = list(self.encoder.parameters())
 
         if self.hparams.learn_jacobian is True:
             parameters += list(self.jacob.parameters())
+
+        if self.sinkhorn_net is not None:
+            parameters += list(self.sinkhorn_net.parameters())
 
         return parameters
 
@@ -99,7 +107,7 @@ class ContrastiveLearningModel(nn.Module):
 
     @property
     def h(self):
-        return (((lambda z: self.encoder(self.decoder(z))) if self.use_sinkhorn is False else (lambda z: self.encoder(self.sinkhorn_net(self.decoder(z))))) if not self.hparams.identity_mixing_and_solution else (
+        return (((lambda z: self.encoder(self.decoder(z))) if self.sinkhorn.weight.requires_grad is False else (lambda z: self.encoder(self.sinkhorn_net(self.decoder(z))))) if not self.hparams.identity_mixing_and_solution else (
             lambda z: z))
 
     @property

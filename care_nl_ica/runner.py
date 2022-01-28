@@ -292,7 +292,12 @@ class Runner(object):
                     self.hparams.n_steps * self.hparams.more_unsupervised)):
 
                 if self.logger.global_step > 7000:
-                    self.model.use_sinkhorn = True
+
+                    for p in self.model.parameters():
+                        p.requires_grad = False
+
+                    self.model.sinkhorn.weight.requires_grad = True
+
 
                 data = sample_marginal_and_conditional(self.latent_space, size=self.hparams.batch_size,
                                                        device=self.hparams.device)
