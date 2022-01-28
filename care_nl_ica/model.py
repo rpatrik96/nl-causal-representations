@@ -70,7 +70,8 @@ class ContrastiveLearningModel(nn.Module):
                     hparams.n * 10,
                 ],
                 output_normalization=output_normalization,
-                output_normalization_kwargs=output_normalization_kwargs
+                output_normalization_kwargs=output_normalization_kwargs,
+                sinkhorn=hparams.sinkhorn
             )
         encoder = encoder.to(hparams.device)
         if hparams.load_f is not None:
