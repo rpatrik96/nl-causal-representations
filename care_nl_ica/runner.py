@@ -293,10 +293,10 @@ class Runner(object):
             # order is important due to the triangularity loss
             m = self.model.sinkhorn.doubly_stochastic_matrix
             
-            pearson_n1 = corr_matrix(self.model.decoder(n1).T, n1_rec.T).detach()
-            pearson_n2_con_n1 = corr_matrix(self.model.decoder(n2_con_n1).T, n2_con_n1_rec.T).detach()
-            pearson_n3 = corr_matrix(self.model.decoder(n3).T, n3_rec.T).detach()
-            total_loss_value += self.hparams.triangularity_loss * (triangularity_loss(m.T @ pearson_n1) + triangularity_loss(m.T @ pearson_n2_con_n1) + triangularity_loss(m.T @ pearson_n3)) 
+            pearson_n1 = corr_matrix(self.model.decoder(n1).T, m.T @ n1_rec.T).detach()
+            pearson_n2_con_n1 = corr_matrix(self.model.decoder(n2_con_n1).T, m.T @ n2_con_n1_rec.T).detach()
+            pearson_n3 = corr_matrix(self.model.decoder(n3).T, m.T @ n3_rec.T).detach()
+            total_loss_value += self.hparams.triangularity_loss * (triangularity_loss(pearson_n1) + triangularity_loss(pearson_n2_con_n1) + triangularity_loss(pearson_n3)) 
 
             """
             Problems: both Sinkhorn and QR degenerates to the identity
