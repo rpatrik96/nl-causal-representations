@@ -284,16 +284,17 @@ class Runner(object):
                     """
 
                     # loss options
+                    if self.logger.global_step % 250 == 0:
+                        print(f"{Q=}")
 
                     # 1. diagonality (as Q^n = I for permutation matrices)
-                    total_loss_value+=frobenius_diagonality(Q.matrix_power(Q.shape[0]).abs())
+                    # total_loss_value+=self.hparams.qr_loss*frobenius_diagonality(Q.matrix_power(Q.shape[0]).abs())
 
                     # 2. rows and cols sum up to 1
-                    # col_sum = Q.sum(0)
-                    # row_sum = Q.sum(1)
+                    col_sum = Q.abs().sum(0)
+                    row_sum = Q.abs().sum(1)
 
-                    # (col_sum - torch.ones_like(col_sum)).norm(p=2)
-                    # (row_sum - torch.ones_like(row_sum)).norm(p=2)
+                    total_loss_value+= self.hparams.qr_loss * ((col_sum - torch.ones_like(col_sum)).abs().mean() + (row_sum - torch.ones_like(row_sum)).abs().mean())
 
 
             total_loss_value.backward()
