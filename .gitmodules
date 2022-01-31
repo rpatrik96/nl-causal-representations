@@ -1,9 +1,6 @@
 [submodule "icebeem"]
 	path = icebeem
 	url = https://github.com/ilkhem/icebeem
-[submodule "disentanglement_lib"]
-	path = disentanglement_lib
-	url = https://github.com/google-research/disentanglement_lib.git
 [submodule "pytorch-flows"]
 	path = pytorch-flows
 	url = https://github.com/ikostrikov/pytorch-flows.git
