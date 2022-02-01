@@ -35,6 +35,7 @@ class Runner(object):
         self._inject_encoder_structure()
 
         self.dep_loss = None
+        self.dep_mat = None
 
         self._calc_possible_causal_orderings()
 
@@ -223,29 +224,31 @@ class Runner(object):
         if self.hparams.qr_loss != 0.0 and (self.hparams.start_step is None or (
                 self.hparams.start_step is not None and self.logger.global_step >= self.hparams.start_step)):
 
-            Q = self.model.encoder.ar_bottleneck.assembled_weight.T.qr()[0]
+            if self.dep_mat is not None:
 
-            """
-            The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
-            **a permutation** matrix.
+                Q = self.dep_mat.T.qr()[0].T
 
-            The second step is to ensure that the permutation matrix is the identity. If we got a permutation matrix
-            in the first step, then we could use Q.T to multiply the observations. 
-            """
+                """
+                The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
+                **a permutation** matrix.
+    
+                The second step is to ensure that the permutation matrix is the identity. If we got a permutation matrix
+                in the first step, then we could use Q.T to multiply the observations. 
+                """
 
-            # loss options
-            if self.logger.global_step % 250 == 0:
-                print(f"{Q=}")
+                # loss options
+                if self.logger.global_step % 250 == 0:
+                    print(f"{Q=}")
 
-            # 1. diagonality (as Q^n = I for permutation matrices)
-            # total_loss_value+=self.hparams.qr_loss*frobenius_diagonality(Q.matrix_power(Q.shape[0]).abs())
+                # 1. diagonality (as Q^n = I for permutation matrices)
+                # total_loss_value+=self.hparams.qr_loss*frobenius_diagonality(Q.matrix_power(Q.shape[0]).abs())
 
-            # 2. rows and cols sum up to 1
-            col_sum = Q.abs().sum(0)
-            row_sum = Q.abs().sum(1)
+                # 2. rows and cols sum up to 1
+                col_sum = Q.abs().sum(0)
+                row_sum = Q.abs().sum(1)
 
-            total_loss_value += self.hparams.qr_loss * ((col_sum - torch.ones_like(col_sum)).abs().mean() + (
-                    row_sum - torch.ones_like(row_sum)).abs().mean())
+                total_loss_value += self.hparams.qr_loss * ((col_sum - torch.ones_like(col_sum)).abs().mean() + (
+                        row_sum - torch.ones_like(row_sum)).abs().mean())
 
         return total_loss_value
 
@@ -377,6 +380,7 @@ class Runner(object):
 
                 # Update the metrics
                 threshold = 3e-5
+                self.dep_mat = dep_mat
                 dep_mat = dep_mat.detach()
                 self.metrics.update(y_pred=(dep_mat.abs() > threshold).bool().cpu().reshape(-1, 1),
                                     y_true=(self.gt_jacobian_encoder.abs() > threshold).bool().cpu().reshape(-1, 1))
