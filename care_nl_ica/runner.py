@@ -12,7 +12,7 @@ from cl_ica import latent_spaces
 from dep_mat import calc_jacobian_loss
 from indep_check import IndependenceChecker
 from metric_logger import Metrics
-from prob_utils import setup_marginal, setup_conditional
+from prob_utils import setup_marginal, setup_conditional, frobenius_diagonality
 
 
 class Runner(object):
@@ -276,7 +276,8 @@ class Runner(object):
         return total_loss_value
 
     def _triangularity_loss(self, n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec, total_loss_value):
-        if self.hparams.triangularity_loss != 0.:
+        if self.hparams.triangularity_loss != 0. and (self.hparams.start_step is None or (
+                self.hparams.start_step is not None and self.logger.global_step >= self.hparams.start_step)):
             from prob_utils import corr_matrix
             from dep_mat import triangularity_loss
 
@@ -293,10 +294,13 @@ class Runner(object):
             # order is important due to the triangularity loss
             m = self.model.sinkhorn.doubly_stochastic_matrix
             
-            pearson_n1 = corr_matrix(self.model.decoder(n1).T, m.T @ n1_rec.T).detach()
-            pearson_n2_con_n1 = corr_matrix(self.model.decoder(n2_con_n1).T, m.T @ n2_con_n1_rec.T).detach()
-            pearson_n3 = corr_matrix(self.model.decoder(n3).T, m.T @ n3_rec.T).detach()
-            total_loss_value += self.hparams.triangularity_loss * (triangularity_loss(pearson_n1) + triangularity_loss(pearson_n2_con_n1) + triangularity_loss(pearson_n3)) 
+            pearson_n1 = corr_matrix(self.model.decoder(n1).T, n1_rec.T)
+            pearson_n2_con_n1 = corr_matrix(self.model.decoder(n2_con_n1).T, n2_con_n1_rec.T)
+            pearson_n3 = corr_matrix(self.model.decoder(n3).T, n3_rec.T)
+            # total_loss_value += self.hparams.triangularity_loss * (triangularity_loss(pearson_n1) + triangularity_loss(pearson_n2_con_n1) + triangularity_loss(pearson_n3)) 
+
+            total_loss_value += self.hparams.triangularity_loss*(frobenius_diagonality(pearson_n1.abs()) + frobenius_diagonality(
+                pearson_n2_con_n1.abs()) + frobenius_diagonality(pearson_n3.abs()))
 
             """
             Problems: both Sinkhorn and QR degenerates to the identity
