@@ -405,7 +405,7 @@ class Runner(object):
                                 numerical_jacobian,
                                 None if self.hparams.learn_jacobian is False else self.model.jacob.weight,
                                 jacobian_metrics, None if (
-                            self.hparams.permute is False or self.hparams.use_sem is False) else self.model.sinkhorn.doubly_stochastic_matrix)
+                            self.hparams.permute is False or self.hparams.use_sem is False or self.hparams.sinkhorn is False) else self.model.sinkhorn.doubly_stochastic_matrix)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))
             torch.cuda.empty_cache()
