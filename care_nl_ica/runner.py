@@ -226,7 +226,13 @@ class Runner(object):
 
             if self.dep_mat is not None:
 
-                Q = self.dep_mat.T.qr()[0].T
+                if self.hparams.use_ar_mlp is False:
+                    J = self.dep_mat
+                else:
+                    J = self.model.encoder.ar_bottleneck.assembled_weight
+
+                # Q is incentivized to be the permutation for the causal ordering
+                Q = J.T.qr()[0]
 
                 """
                 The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
