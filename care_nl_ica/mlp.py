@@ -229,7 +229,7 @@ class ARBottleneckNet(nn.Module):
 
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
-        self.sinkhorn = SinkhornNet(self.num_vars, 15, 1e-3)
+        self.sinkhorn = SinkhornNet(self.num_vars, 5, 1e-3)
 
         self.inv_permutation = torch.arange(self.num_vars)
 

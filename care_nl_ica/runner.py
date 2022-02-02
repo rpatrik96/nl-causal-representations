@@ -229,7 +229,10 @@ class Runner(object):
                 if self.hparams.use_ar_mlp is False:
                     J = self.dep_mat
                 else:
-                    J = self.model.encoder.ar_bottleneck.assembled_weight
+                    if self.hparams.sinkhorn is False:
+                        J = self.model.encoder.ar_bottleneck.assembled_weight
+                    else:
+                        J = self.model.encoder.ar_bottleneck.assembled_weight @ self.model.sinkhorn.doubly_stochastic_matrix
 
                 # Q is incentivized to be the permutation for the causal ordering
                 Q = J.T.qr()[0]
