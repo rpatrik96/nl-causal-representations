@@ -129,7 +129,7 @@ def parse_args():
 
     parser.add_argument("--batch-size", type=int, default=6144)
     parser.add_argument("--n-log-steps", type=int, default=250)
-    parser.add_argument("--n-steps", type=int, default=100001)
+    parser.add_argument("--n-steps", type=int, default=1001)
     parser.add_argument("--resume-training", action="store_true")
 
     # W and B
