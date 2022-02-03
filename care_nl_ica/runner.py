@@ -235,7 +235,11 @@ class Runner(object):
                         J = self.model.encoder.ar_bottleneck.assembled_weight @ self.model.sinkhorn.doubly_stochastic_matrix
 
                 # Q is incentivized to be the permutation for the causal ordering
-                Q = J.T.qr()[0]
+                if self.hparams.cholesky_permutation is False or self.hparams.sinkhorn is True:
+                    Q = J.T.qr()[0]
+                else:
+                    Q = self._extract_permutation_from_jacobian(J)
+
 
                 """
                 The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
@@ -387,6 +391,8 @@ class Runner(object):
 
                 self.dep_loss = dep_loss
 
+                self._extract_permutation_from_jacobian(dep_mat)
+
                 # Update the metrics
                 threshold = 3e-5
                 self.dep_mat = dep_mat
@@ -417,6 +423,25 @@ class Runner(object):
 
         self.logger.log_jacobian(dep_mat, "learned_last", log_inverse=False)
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
+
+    def _extract_permutation_from_jacobian(self, dep_mat):
+        """
+        The Jacobian of the learned network J should be W@P to invert the causal data generation process (SEM),
+        where W is the inverse of the mixing matrix, and P is a permutation matrix
+        (inverting the ordering back to its correct ordering).
+
+        In this case, J:=WP (the data generation process has P^T@inv(W) ), and it should be (lower) triangular.
+        Thus, we can proceed as follows:
+        1. Calculate the Cholesky decomposition of JJ^T = WPP^TW^T = WW^T -> resulting in W
+        2. Left-multiply J with W^-1 to get P
+
+        :param dep_mat:
+        :return:
+        """
+        unmixing_tril = (dep_mat @ dep_mat.T).cholesky()
+        permutation_estimate = unmixing_tril.inverse() @ dep_mat
+
+        return permutation_estimate
 
     def _dep_mat_metrics(self, dep_mat: torch.Tensor, threshold: float = 1e-3) -> JacobianMetrics:
         # calculate the optimal threshold for 1 accuracy
