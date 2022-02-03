@@ -256,8 +256,8 @@ class Runner(object):
                 col_sum = Q.abs().sum(0)
                 row_sum = Q.abs().sum(1)
 
-                total_loss_value += self.hparams.qr_loss * ((col_sum - torch.ones_like(col_sum)).abs().mean() + (
-                        row_sum - torch.ones_like(row_sum)).abs().mean())
+                total_loss_value += self.hparams.qr_loss * ((col_sum - torch.ones_like(col_sum)).norm() + (
+                        row_sum - torch.ones_like(row_sum)).norm())
 
         return total_loss_value
 
