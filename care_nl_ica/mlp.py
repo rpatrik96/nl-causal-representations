@@ -217,16 +217,34 @@ class PermutationNet(nn.Module):
     def __init__(self, num_vars):
         super().__init__()
         self.num_vars = num_vars
-        self.weight = nn.Parameter(torch.ones(num_vars,))
+        self.weight = nn.Parameter(torch.randn(num_vars,))
         self.softmax = nn.Softmax(0)
 
+        self.i = 0
+
     def forward(self,x):
-        sorted, indices = self.softmax(self.weight).sort()
-        perm = torch.zeros(self.num_vars, self.num_vars)
+
+        self.i += 1
+        if self.i % 250 == 0:
+            print(f"{self.weight=}")
+
+        sorted, indices = self.weight.sort()
+        perm = torch.zeros(self.num_vars, self.num_vars, device=self.weight.device)
         perm[list(range(self.num_vars)), indices] =sorted
         perm/=perm.sum(0)
 
         return perm@x
+
+    def to(self, device):
+        """
+        Move the model to the specified device.
+
+        :param device: The device to move the model to.
+        """
+        super().to(device)
+        self.weight = self.weight.to(device)
+
+        return self
 
 class ARBottleneckNet(nn.Module):
     def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
@@ -249,7 +267,7 @@ class ARBottleneckNet(nn.Module):
 
         self.inv_permutation = torch.arange(self.num_vars)
 
-        self.permutation = (lambda x: self.perm_net(x)) if (permute is False or sinkhorn is False) else (lambda x: self.sinkhorn(x))
+        self.permutation = (lambda x: x) if (permute is False or sinkhorn is False) else (lambda x: self.sinkhorn(x))
 
     def _layer_generator(self, features: FeatureList):
         return nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias) for idx in
@@ -317,6 +335,7 @@ class ARBottleneckNet(nn.Module):
         self.ar_bottleneck.to(device)
         self.sinkhorn.to(device)
         self.inv_permutation.to(device)
+        self.perm_net.to(device)
 
         return self
 
