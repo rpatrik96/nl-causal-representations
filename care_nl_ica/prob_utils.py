@@ -249,3 +249,37 @@ def ksi_correlation(hz: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     ksi_min = -.5 + 1 / num_samples
 
     return ksi_matrix
+
+
+def extract_permutation_from_jacobian(dep_mat):
+    """
+    The Jacobian of the learned network J should be W@P to invert the causal data generation process (SEM),
+    where W is the inverse of the mixing matrix, and P is a permutation matrix
+    (inverting the ordering back to its correct ordering).
+
+    In this case, J:=WP (the data generation process has P^T@inv(W) ), and it should be (lower) triangular.
+    Thus, we can proceed as follows:
+    1. Calculate the Cholesky decomposition of JJ^T = WPP^TW^T = WW^T -> resulting in W
+    2. Left-multiply J with W^-1 to get P
+
+    :param dep_mat:
+    :return:
+    """
+    unmixing_tril = (dep_mat @ dep_mat.T).cholesky()
+    permutation_estimate = unmixing_tril.inverse() @ dep_mat
+
+    return permutation_estimate
+
+
+def permutation_loss(matrix: torch.Tensor, matrix_exp: bool = False):
+    if matrix_exp is False:
+        # rows and cols sum up to 1
+        col_sum = matrix.abs().sum(0)
+        row_sum = matrix.abs().sum(1)
+        loss = ((col_sum - torch.ones_like(col_sum)).norm() + (
+                row_sum - torch.ones_like(row_sum)).norm())
+    else:
+        # diagonality (as Q^n = I for permutation matrices)
+        loss = frobenius_diagonality(matrix.matrix_power(matrix.shape[0]).abs())
+
+    return loss

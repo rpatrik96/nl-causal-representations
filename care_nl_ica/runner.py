@@ -6,13 +6,13 @@ from torch.nn import functional as F
 from care_nl_ica.logger import Logger
 from care_nl_ica.metric_logger import JacobianMetrics
 from care_nl_ica.model import ContrastiveLearningModel
-from care_nl_ica.prob_utils import sample_marginal_and_conditional, amari_distance
+from care_nl_ica.prob_utils import sample_marginal_and_conditional, amari_distance, permutation_loss
 from care_nl_ica.utils import unpack_item_list, save_state_dict
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian_loss
 from indep_check import IndependenceChecker
 from metric_logger import Metrics
-from prob_utils import setup_marginal, setup_conditional, frobenius_diagonality
+from prob_utils import setup_marginal, setup_conditional, frobenius_diagonality, extract_permutation_from_jacobian
 
 
 class Runner(object):
@@ -220,7 +220,7 @@ class Runner(object):
         # n3 = n3.to(device)
         return n1, n2_con_n1, n3
 
-    def _qr_loss(self, total_loss_value):
+    def _qr_loss(self, total_loss_value, matrix_exp=False):
         if self.hparams.qr_loss != 0.0 and (self.hparams.start_step is None or (
                 self.hparams.start_step is not None and self.logger.global_step >= self.hparams.start_step)):
 
@@ -238,8 +238,7 @@ class Runner(object):
                 if self.hparams.cholesky_permutation is False or self.hparams.sinkhorn is True:
                     Q = J.T.qr()[0]
                 else:
-                    Q = self._extract_permutation_from_jacobian(J)
-
+                    Q = extract_permutation_from_jacobian(J)
 
                 """
                 The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
@@ -253,15 +252,7 @@ class Runner(object):
                 if self.logger.global_step % 250 == 0:
                     print(f"{Q=}")
 
-                # 1. diagonality (as Q^n = I for permutation matrices)
-                # total_loss_value+=self.hparams.qr_loss*frobenius_diagonality(Q.matrix_power(Q.shape[0]).abs())
-
-                # 2. rows and cols sum up to 1
-                col_sum = Q.abs().sum(0)
-                row_sum = Q.abs().sum(1)
-
-                total_loss_value += self.hparams.qr_loss * ((col_sum - torch.ones_like(col_sum)).norm() + (
-                        row_sum - torch.ones_like(row_sum)).norm())
+                total_loss_value += self.hparams.qr_loss * permutation_loss(Q, matrix_exp)
 
         return total_loss_value
 
@@ -295,7 +286,6 @@ class Runner(object):
         if self.hparams.triangularity_loss != 0. and (self.hparams.start_step is None or (
                 self.hparams.start_step is not None and self.logger.global_step >= self.hparams.start_step)):
             from prob_utils import corr_matrix
-            from dep_mat import triangularity_loss
 
             # todo: these use the ground truth
             # still, they can be used to show that some supervision helps
@@ -309,13 +299,14 @@ class Runner(object):
             # exploits the assumption that the SEM has a lower-triangular Jacobian
             # order is important due to the triangularity loss
             m = self.model.sinkhorn.doubly_stochastic_matrix
-            
+
             pearson_n1 = corr_matrix(self.model.decoder(n1).T, n1_rec.T)
             pearson_n2_con_n1 = corr_matrix(self.model.decoder(n2_con_n1).T, n2_con_n1_rec.T)
             pearson_n3 = corr_matrix(self.model.decoder(n3).T, n3_rec.T)
             # total_loss_value += self.hparams.triangularity_loss * (triangularity_loss(pearson_n1) + triangularity_loss(pearson_n2_con_n1) + triangularity_loss(pearson_n3)) 
 
-            total_loss_value += self.hparams.triangularity_loss*(frobenius_diagonality(pearson_n1.abs()) + frobenius_diagonality(
+            total_loss_value += self.hparams.triangularity_loss * (
+                    frobenius_diagonality(pearson_n1.abs()) + frobenius_diagonality(
                 pearson_n2_con_n1.abs()) + frobenius_diagonality(pearson_n3.abs()))
 
             """
@@ -391,7 +382,6 @@ class Runner(object):
 
                 self.dep_loss = dep_loss
 
-
                 # Update the metrics
                 threshold = 3e-5
                 self.dep_mat = dep_mat
@@ -422,25 +412,6 @@ class Runner(object):
 
         self.logger.log_jacobian(dep_mat, "learned_last", log_inverse=False)
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
-
-    def _extract_permutation_from_jacobian(self, dep_mat):
-        """
-        The Jacobian of the learned network J should be W@P to invert the causal data generation process (SEM),
-        where W is the inverse of the mixing matrix, and P is a permutation matrix
-        (inverting the ordering back to its correct ordering).
-
-        In this case, J:=WP (the data generation process has P^T@inv(W) ), and it should be (lower) triangular.
-        Thus, we can proceed as follows:
-        1. Calculate the Cholesky decomposition of JJ^T = WPP^TW^T = WW^T -> resulting in W
-        2. Left-multiply J with W^-1 to get P
-
-        :param dep_mat:
-        :return:
-        """
-        unmixing_tril = (dep_mat @ dep_mat.T).cholesky()
-        permutation_estimate = unmixing_tril.inverse() @ dep_mat
-
-        return permutation_estimate
 
     def _dep_mat_metrics(self, dep_mat: torch.Tensor, threshold: float = 1e-3) -> JacobianMetrics:
         # calculate the optimal threshold for 1 accuracy
