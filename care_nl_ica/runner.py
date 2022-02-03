@@ -235,10 +235,7 @@ class Runner(object):
                         J = self.model.encoder.ar_bottleneck.assembled_weight @ self.model.sinkhorn.doubly_stochastic_matrix
 
                 # Q is incentivized to be the permutation for the causal ordering
-                if self.hparams.cholesky_permutation is False or self.hparams.sinkhorn is True:
-                    Q = J.T.qr()[0]
-                else:
-                    Q = extract_permutation_from_jacobian(J)
+                Q = extract_permutation_from_jacobian(J, self.hparams.cholesky_permutation is False)
 
                 """
                 The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
@@ -433,6 +430,6 @@ class Runner(object):
         sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum() + 1e-8)
 
         metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy,
-                                  amari_distance(dep_mat, self.gt_jacobian_decoder_permuted), permutation_loss(extract_permutation_from_jacobian(dep_mat), matrix_exp=True))
+                                  amari_distance(dep_mat, self.gt_jacobian_decoder_permuted), permutation_loss(extract_permutation_from_jacobian(dep_mat, qr=True), matrix_power=True))
 
         return metrics

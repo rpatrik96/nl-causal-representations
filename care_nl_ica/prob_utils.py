@@ -251,7 +251,7 @@ def ksi_correlation(hz: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     return ksi_matrix
 
 
-def extract_permutation_from_jacobian(dep_mat):
+def extract_permutation_from_jacobian(dep_mat, qr:bool=False):
     """
     The Jacobian of the learned network J should be W@P to invert the causal data generation process (SEM),
     where W is the inverse of the mixing matrix, and P is a permutation matrix
@@ -265,14 +265,17 @@ def extract_permutation_from_jacobian(dep_mat):
     :param dep_mat:
     :return:
     """
-    unmixing_tril = (dep_mat @ dep_mat.T).cholesky()
-    permutation_estimate = unmixing_tril.inverse() @ dep_mat
+    if qr is True:
+        permutation_estimate = dep_mat.T.qr()[0].T
+    else:
+        unmixing_tril = (dep_mat @ dep_mat.T).cholesky()
+        permutation_estimate = unmixing_tril.inverse() @ dep_mat
 
     return permutation_estimate
 
 
-def permutation_loss(matrix: torch.Tensor, matrix_exp: bool = False):
-    if matrix_exp is False:
+def permutation_loss(matrix: torch.Tensor, matrix_power: bool = False):
+    if matrix_power is False:
         # rows and cols sum up to 1
         col_sum = matrix.abs().sum(0)
         row_sum = matrix.abs().sum(1)
