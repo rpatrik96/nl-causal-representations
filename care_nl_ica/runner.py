@@ -391,7 +391,6 @@ class Runner(object):
 
                 self.dep_loss = dep_loss
 
-                self._extract_permutation_from_jacobian(dep_mat)
 
                 # Update the metrics
                 threshold = 3e-5
