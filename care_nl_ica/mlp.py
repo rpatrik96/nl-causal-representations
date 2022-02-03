@@ -213,6 +213,21 @@ class FeatureMLP(nn.Module):
         return torch.stack([self.act[i](mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1)
 
 
+class PermutationNet(nn.Module):
+    def __init__(self, num_vars):
+        super().__init__()
+        self.num_vars = num_vars
+        self.weight = nn.Parameter(torch.ones(num_vars,))
+        self.softmax = nn.Softmax(0)
+
+    def forward(self,x):
+        sorted, indices = self.softmax(self.weight).sort()
+        perm = torch.zeros(self.num_vars, self.num_vars)
+        perm[list(range(self.num_vars)), indices] =sorted
+        perm/=perm.sum(0)
+
+        return perm@x
+
 class ARBottleneckNet(nn.Module):
     def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
                  normalize: bool = False, residual: bool = False, permute=False, sinkhorn=False,
@@ -230,10 +245,11 @@ class ARBottleneckNet(nn.Module):
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 
         self.sinkhorn = SinkhornNet(self.num_vars, 5, 1e-3)
+        self.perm_net = PermutationNet(self.num_vars)
 
         self.inv_permutation = torch.arange(self.num_vars)
 
-        self.permutation = (lambda x: x) if (permute is False or sinkhorn is False) else (lambda x: self.sinkhorn(x))
+        self.permutation = (lambda x: self.perm_net(x)) if (permute is False or sinkhorn is False) else (lambda x: self.sinkhorn(x))
 
     def _layer_generator(self, features: FeatureList):
         return nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias) for idx in
