@@ -1,6 +1,6 @@
 #!/bin/bash
 
-N_STEPS=12001
+N_STEPS=25001
 START_STEP=5000
 
 QR_LOSS=3e-1
