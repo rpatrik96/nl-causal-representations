@@ -433,6 +433,6 @@ class Runner(object):
         sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum() + 1e-8)
 
         metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy,
-                                  amari_distance(dep_mat, self.gt_jacobian_decoder_permuted))
+                                  amari_distance(dep_mat, self.gt_jacobian_decoder_permuted), permutation_loss(extract_permutation_from_jacobian(dep_mat), matrix_exp=True))
 
         return metrics

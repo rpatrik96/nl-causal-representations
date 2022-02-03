@@ -60,6 +60,7 @@ class JacobianMetrics:
     optimal_threshold:float
     sparsity_accuracy:float
     amari_distance:float
+    permutation_quality:float
 
 
 
