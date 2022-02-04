@@ -60,3 +60,40 @@ class SinkhornNet(nn.Module):
         self.weight = self.weight.to(device)
 
         return self
+
+if __name__ == "__main__":
+    NUM_DIM = 3
+    s = SinkhornNet(NUM_DIM,15,3e-4)
+    optim = torch.optim.Adam(s.parameters(), lr=2e-3)
+    permute_indices = [1,2,0]
+
+    permute_mat = torch.zeros(NUM_DIM,NUM_DIM)
+    permute_mat[list(range(NUM_DIM)), permute_indices]=1
+
+    # generate chain
+    weight = torch.tril(torch.ones_like(permute_mat), -2)
+    mask = torch.tril(torch.ones_like(weight))
+    zeros_in_chain = torch.tril(torch.ones_like(weight), -2)
+    mask[zeros_in_chain == 1] = 0
+
+    # J
+    mixing = torch.tril(torch.randn(NUM_DIM, NUM_DIM)) * mask
+    J_permuted = mixing@permute_mat
+    print(f"{J_permuted=}")
+
+
+
+    for i in range(5000):
+
+        optim.zero_grad()
+        loss = torch.triu(J_permuted.bool().float()@s.doubly_stochastic_matrix,1).norm()
+
+        loss.backward()
+
+        if i%500==0:
+            print(s.doubly_stochastic_matrix.detach())
+
+        optim.step()
+
+    print(f"{permute_mat.T=}")
+    print(f"S={s.doubly_stochastic_matrix.detach()}")
