@@ -30,7 +30,7 @@ singularity exec -p --nv \
         --bind "$tmp_dir"/.pylint.d:/mnt/qb/work/$userName/.pylint.d \
         --bind "$tmp_dir"/.cache:/mnt/qb/work/$userName/.cache \
         --bind /scratch_local \
-        --bind /home/bethge/preizinger \
+        --bind /home/bethge/$userName \
         --bind /mnt/qb/work/bethge \
         "$LOCAL_IMAGE" "$@"
  
