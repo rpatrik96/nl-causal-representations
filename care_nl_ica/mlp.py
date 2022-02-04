@@ -150,10 +150,13 @@ class ARMLP(nn.Module):
         w = torch.ones_like(self.weight[0])
         for i in range(len(self.weight)):
             w *= self.weight[i]
-        return w if (self.residual is False or self.triangular is False) else w + torch.diag(self.scaling)
+
+        w = w if (self.residual is False or self.triangular is False) else w + torch.diag(self.scaling)
+
+        return w if self.triangular is False else torch.tril(w)
 
     def forward(self, x):
-        return self.transform(torch.tril(self.assembled_weight) if self.triangular is True else self.assembled_weight) @ x
+        return self.transform(self.assembled_weight) @ x
 
     def to(self, device):
         """
