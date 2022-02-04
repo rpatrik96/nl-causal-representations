@@ -174,8 +174,12 @@ def add_tags(args):
     if args.permute is True:
         args.tags.append("permute")
 
-    if args.use_ar_mlp is True:
+    if args.use_ar_mlp is False:
         args.tags.append("mlp")
+    else:
+        args.tags.append("bottleneck")
+        if args.triangular is True:
+            args.tags.append("triangular")
 
     if args.use_flows is True:
         args.tags.append("flows")
