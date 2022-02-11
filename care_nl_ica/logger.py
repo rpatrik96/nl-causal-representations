@@ -5,11 +5,11 @@ import torch
 import wandb
 
 from .cl_ica import latent_spaces
-from .indep_check import IndependenceChecker
-from .prob_utils import calc_disentanglement_scores, sample_marginal_and_conditional, DisentanglementMetrics, \
-    frobenius_diagonality, ksi_correlation
+from care_nl_ica.independence.indep_check import IndependenceChecker
+from .prob_utils import sample_marginal_and_conditional
+from care_nl_ica.metrics.metrics import DisentanglementMetrics, calc_disentanglement_scores
 
-from .metric_logger import JacobianMetrics
+from care_nl_ica.metrics.metrics import JacobianMetrics
 
 
 class Logger(object):

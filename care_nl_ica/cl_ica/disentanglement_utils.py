@@ -5,7 +5,7 @@ from sklearn import linear_model
 import torch
 import numpy as np
 import scipy as sp
-from .munkres import Munkres
+from munkres import Munkres
 from typing import Union
 from typing_extensions import Literal
 

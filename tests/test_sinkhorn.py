@@ -1,4 +1,4 @@
-from care_nl_ica.sinkhorn import SinkhornNet
+from sinkhorn import SinkhornNet
 import torch
 from care_nl_ica.utils import setup_seed
 

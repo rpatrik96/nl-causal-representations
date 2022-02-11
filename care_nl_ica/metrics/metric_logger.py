@@ -1,15 +1,14 @@
-from dataclasses import dataclass
-
 import torch
 import torchmetrics
 
-class Metrics(object):
+
+class MetricLogger(object):
     def __init__(self):
         """
         Initialize the metrics.
         """
         super().__init__()
-        
+
         self.accuracy = torchmetrics.Accuracy()
         self.roc_auc = torchmetrics.AUROC(num_classes=2)
         self.auc_score = torchmetrics.AUC()
@@ -52,15 +51,3 @@ class Metrics(object):
             f'{panel_name}/fn': fn,
             f'{panel_name}/support': sup
         }
-
-@dataclass
-class JacobianMetrics:
-    norm_diff:float
-    thresholded_norm_diff:float
-    optimal_threshold:float
-    sparsity_accuracy:float
-    amari_distance:float
-    permutation_quality:float
-
-
-

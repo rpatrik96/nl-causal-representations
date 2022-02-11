@@ -3,11 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .cl_ica import encoders, invertible_network_utils, losses, spaces
-from .masked_flows import MaskMAF
-
-from care_nl_ica.mlp import ARBottleneckNet, ARMLP, LinearSEM, NonLinearSEM
-from care_nl_ica.sinkhorn import SinkhornNet
+from care_nl_ica.cl_ica import encoders, invertible_network_utils, losses, spaces
+from masked_flows import MaskMAF
+from mlp import ARBottleneckNet, LinearSEM, NonLinearSEM
 
 
 class ContrastiveLearningModel(nn.Module):
@@ -22,18 +20,10 @@ class ContrastiveLearningModel(nn.Module):
         self._setup_loss()
         self._setup_space()
 
-        self._setup_learnable_jacobian()
-
-        self.sinkhorn_net = None #SinkhornNet(hparams.n, 15, 1e-3)
+        self.sinkhorn_net = None  # SinkhornNet(hparams.n, 15, 1e-3)
         if self.sinkhorn_net is not None:
             print("Using model-level sinkhorn")
             self.sinkhorn_net.to(hparams.device)
-            # self.sinkhorn_net.weight.requires_grad = False
-
-        # if self.hparams.sinkhorn is False:
-        #     self.sinkhorn.weight.requires_grad = False
-
-        
 
     def parameters(self):
         parameters = list(self.encoder.parameters())
@@ -56,13 +46,11 @@ class ContrastiveLearningModel(nn.Module):
             sinkhorn = self.encoder[0]
 
         return sinkhorn
-    def _setup_learnable_jacobian(self):
 
-        if self.hparams.learn_jacobian is True:
-            self.jacob = LinearSEM(self.hparams.n)
-
-            self.jacob = self.jacob.to(self.hparams.device)
-            self.jacob.weight.requires_grad = True
+    @property
+    def sinkhorn_entropy(self):
+        probs = torch.nn.functional.softmax(self.sinkhorn.doubly_stochastic_matrix, -1).view(-1, )
+        return torch.distributions.Categorical(probs).entropy()
 
     def _setup_encoder(self):
         hparams = self.hparams
@@ -109,7 +97,7 @@ class ContrastiveLearningModel(nn.Module):
 
     @property
     def h(self):
-        return ( (lambda z: self.encoder(self.decoder(z)))  if not self.hparams.identity_mixing_and_solution else (
+        return ((lambda z: self.encoder(self.decoder(z))) if not self.hparams.identity_mixing_and_solution else (
             lambda z: z))
 
     @property
@@ -141,7 +129,8 @@ class ContrastiveLearningModel(nn.Module):
             if self.hparams.nonlin_sem is False:
                 decoder = LinearSEM(hparams.n, hparams.permute, hparams.variant, force_chain=True, force_uniform=True)
             else:
-                decoder = NonLinearSEM(hparams.n, hparams.permute, hparams.variant, force_chain=True, force_uniform=True)
+                decoder = NonLinearSEM(hparams.n, hparams.permute, hparams.variant, force_chain=True,
+                                       force_uniform=True)
 
             print(f"{decoder.weight=}")
 

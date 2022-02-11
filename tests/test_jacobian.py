@@ -7,7 +7,7 @@ from torch.autograd.functional import jacobian
 
 from care_nl_ica.cl_ica import latent_spaces
 from care_nl_ica.dep_mat import calc_jacobian, calc_jacobian_numerical
-from care_nl_ica.model import ContrastiveLearningModel
+from model import ContrastiveLearningModel
 from care_nl_ica.prob_utils import setup_marginal, setup_conditional
 from care_nl_ica.utils import setup_seed, set_learning_mode, set_device
 
@@ -29,7 +29,7 @@ def args(request):
                               sphere_r=1.0, tau=1.0, use_batch_norm=True, use_dep_mat=True,
                               use_flows=not request.param.use_ar_mlp, use_reverse=False, use_wandb=False, variant=1,
                               verbose=False, use_ar_mlp=request.param.use_ar_mlp, use_sem=True, nonlin_sem=False,
-                              use_bias=False, l1=0.0, l2=0.0, data_gen_mode='rvs', learn_jacobian=False, permute=False,
+                              use_bias=False, l1=0.0, l2=0.0, data_gen_mode='rvs', permute=False,
                               sinkhorn=False, triangularity_loss=0.0)
 
     set_device(args)

@@ -11,7 +11,6 @@ def parse_args():
     parser.add_argument('--use-reverse', action='store_true', help="Use reverse layers in the Flow encoder")
     parser.add_argument('--use-batch-norm', action='store_true', help="Use batchnorm layers in the Flow encoder")
     parser.add_argument('--log-latent-rec', action='store_true', help="Log the latents and their reconstructions")
-    parser.add_argument('--use-l1', action='store_true', help="Use L1 on the MLP botleneck")
     parser.add_argument('--triangular', action='store_true', help="Force the AR MLP bottleneck to be triangular")
     parser.add_argument("--triangularity-loss", type=float, default=0.0, help="triangularity loss on the correlation matrix")
     parser.add_argument("--qr-loss", type=float, default=0.0, help="QR loss on the bottleneck matrix")
@@ -33,7 +32,6 @@ def parse_args():
     parser.add_argument('--preserve-vol', action='store_true',
                         help="Normalize the dependency matrix to have determinant=1")
     parser.add_argument('--learnable-mask', action='store_true', help="Makes the masks in the flow learnable")
-    parser.add_argument('--learn-jacobian', action='store_true', help="Approximates the jacobian in the learning loop with a matrix")
     parser.add_argument('--num-permutations', type=int, default=50)
     parser.add_argument('--n-eval-samples', type=int, default=512)
     #############################   

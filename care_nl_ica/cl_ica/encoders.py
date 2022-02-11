@@ -37,7 +37,7 @@ def get_mlp(
     modules: List[nn.Module] = []
 
     if sinkhorn is True:
-        from care_nl_ica.sinkhorn import SinkhornNet
+        from sinkhorn import SinkhornNet
         modules.append(SinkhornNet(n_in, 15, 1e-3))
 
     def add_module(n_layer_in: int, n_layer_out: int, last_layer: bool = False):

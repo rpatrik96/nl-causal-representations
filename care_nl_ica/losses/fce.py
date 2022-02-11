@@ -12,7 +12,7 @@ from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from care_nl_ica.data import ContrastiveConditionalDataset, SimpleDataset
+from care_nl_ica.data.imca import ContrastiveConditionalDataset, SimpleDataset
 from care_nl_ica.data import to_one_hot
 
 torch.set_default_tensor_type('torch.cuda.FloatTensor')

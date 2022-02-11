@@ -3,8 +3,8 @@ from collections import Counter
 import torch
 
 from care_nl_ica.dep_mat import calc_jacobian
-from care_nl_ica.hsic import HSIC
-from care_nl_ica.prob_utils import calc_disentanglement_scores
+from care_nl_ica.independence.hsic import HSIC
+from care_nl_ica.metrics.metrics import calc_disentanglement_scores
 
 
 class IndependenceChecker(object):

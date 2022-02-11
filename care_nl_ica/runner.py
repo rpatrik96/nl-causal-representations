@@ -1,18 +1,18 @@
-import itertools
-
 import torch
 from torch.nn import functional as F
 
+from care_nl_ica.dep_mat import dep_mat_metrics, calc_indirect_causes, calc_causal_orderings
+from care_nl_ica.independence.indep_check import IndependenceChecker
 from care_nl_ica.logger import Logger
-from care_nl_ica.metric_logger import JacobianMetrics
-from care_nl_ica.model import ContrastiveLearningModel
-from care_nl_ica.prob_utils import sample_marginal_and_conditional, amari_distance, permutation_loss
+from care_nl_ica.models.model import ContrastiveLearningModel
+from care_nl_ica.prob_utils import sample_marginal_and_conditional
 from care_nl_ica.utils import unpack_item_list, save_state_dict
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian_loss
-from indep_check import IndependenceChecker
-from metric_logger import Metrics
-from prob_utils import setup_marginal, setup_conditional, frobenius_diagonality, extract_permutation_from_jacobian
+from metric_logger import MetricLogger
+from metrics.metrics import frobenius_diagonality, corr_matrix, \
+    extract_permutation_from_jacobian, permutation_loss
+from prob_utils import setup_marginal, setup_conditional
 
 
 class Runner(object):
@@ -26,7 +26,7 @@ class Runner(object):
         self.model = ContrastiveLearningModel(self.hparams)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
         self.logger = Logger(self.hparams, self.model)
-        self.metrics = Metrics()
+        self.metrics = MetricLogger()
         self.latent_space = latent_spaces.LatentSpace(space=(self.model.space),
                                                       sample_marginal=(setup_marginal(self.hparams)),
                                                       sample_conditional=(setup_conditional(self.hparams)), )
@@ -37,7 +37,11 @@ class Runner(object):
         self.dep_loss = None
         self.dep_mat = None
 
-        self._calc_possible_causal_orderings()
+        self.orderings = calc_causal_orderings(self.gt_jacobian_encoder)
+        print(f'{self.orderings=}')
+
+        if self.hparams.use_wandb is True:
+            self.logger.log_summary(**{"causal_orderings": self.orderings})
 
     def _calc_dep_mat(self) -> None:
         dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.latent_space)
@@ -58,83 +62,10 @@ class Runner(object):
 
             self.logger.log_jacobian(dep_mat)
 
-            self._calc_indirect_causes()
+            self.indirect_causes = calc_indirect_causes(self.gt_jacobian_encoder)
 
             if self.hparams.permute is True:
                 self.logger.log_summary(**{"permute_indices": self.model.decoder.permute_indices})
-
-    def _calc_possible_causal_orderings(self):
-        """
-        The function calculates the possible causal orderings based on the adjacency matrix
-
-        :return:
-        """
-        dim = self.gt_jacobian_encoder.shape[0]
-
-        # get all indices for nonzero elements
-        nonzero_indices = (self.gt_jacobian_encoder.abs() > 0).nonzero()
-
-        smallest_idx = []
-        biggest_idx = []
-        idx_range = []
-
-        for i in range(dim):
-            # select nonzero indices for the current row
-            # and take the column index of the first element
-            # this gives the smallest index of variable "i" in the causal ordering
-            nonzero_in_row = nonzero_indices[nonzero_indices[:, 0] == i, :]
-
-            smallest_idx.append(0 if (tmp := nonzero_in_row[0][1]) == i else smallest_idx[tmp] + 1)
-
-            # select nonzero indices for the current columns
-            # and take the row index of the first element
-            # this gives the biggest index of variable "i" in the causal ordering
-            nonzero_in_col = nonzero_indices[nonzero_indices[:, 1] == i, :]
-
-            biggest_idx.append(nonzero_in_col[0][0])
-
-            # this means that there is only 1 appearance of variable i,
-            # so it can be everywhere in the causal ordering
-            if len(nonzero_in_row) == 1 and len(nonzero_in_col) == 1 and smallest_idx[i] == i and biggest_idx[i] == i:
-
-                idx_range.append(list(range(dim)))
-            else:
-
-                idx_range.append(list(range(smallest_idx[i], biggest_idx[i] + 1)))
-
-        self.orderings = [x for x in list(itertools.product(*idx_range)) if len(set(x)) == dim]
-
-        print(f'{self.orderings=}')
-
-        if self.hparams.use_wandb is True:
-            self.logger.log_summary(**{"causal_orderings": self.orderings})
-
-    def _calc_indirect_causes(self) -> None:
-        """
-        Calculates all indirect paths in the encoder (SEM/SCM)
-        :return:
-        """
-
-        # calculate the indirect cause mask
-        eps = 1e-6
-        matrix_power = direct_causes = torch.tril((self.gt_jacobian_encoder.abs() > eps).float(), -1)
-        indirect_causes = torch.zeros_like(self.gt_jacobian_encoder)
-
-        # add together the matrix powers of the adjacency matrix
-        # this yields all indirect paths
-        for i in range(self.gt_jacobian_encoder.shape[0]):
-            matrix_power = matrix_power @ direct_causes
-
-            if matrix_power.sum() == 0:
-                break
-
-            indirect_causes += matrix_power
-
-        self.indirect_causes = indirect_causes.bool().float()  # convert all non-1 value to 1 (for safety)
-        # correct for causes where both the direct and indirect paths are present
-        self.indirect_causes = self.indirect_causes * ((self.indirect_causes - direct_causes) > 0).float()
-
-        print(f"{self.indirect_causes=}")
 
     def _inject_encoder_structure(self) -> None:
         if self.hparams.inject_structure is True:
@@ -166,8 +97,7 @@ class Runner(object):
 
         if not self.hparams.identity_mixing_and_solution and self.hparams.lr != 0:
             # add the learnable jacobian
-            total_loss_value = self._learnable_jacobian_loss(n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec,
-                                                             total_loss_value)
+
             total_loss_value = self._l2_loss(total_loss_value)
             total_loss_value = self._l1_loss(total_loss_value)
             total_loss_value = self._sinkhorn_entropy_loss(total_loss_value)
@@ -253,37 +183,11 @@ class Runner(object):
 
         return total_loss_value
 
-    def _learnable_jacobian_loss(self, n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec, total_loss_value):
-        if self.hparams.learn_jacobian is True:
-            # get the data after mixing (decoding)
-            z1 = self.model.decoder(n1)
-            z2_con_z1 = self.model.decoder(n2_con_n1)
-            z3 = self.model.decoder(n3)
 
-            # reconstruct linearly
-            n1_tilde = self.model.jacob(z1)
-            n2_con_n1_tilde = self.model.jacob(z2_con_z1)
-            n3_tilde = self.model.jacob(z3)
-
-            eps = 1e-8
-
-            # standardize n
-            n1_rec_std = ((n1_rec - n1_rec.mean(dim=0)) / (n1_rec.std(dim=0) + eps) + n1_rec.mean(dim=0)).detach()
-            n2_con_n1_rec_std = ((n2_con_n1_rec - n2_con_n1_rec.mean(dim=0)) / (
-                    n2_con_n1_rec.std(dim=0) + eps) + n2_con_n1_rec.mean(dim=0)).detach()
-            n3_rec_std = ((n3_rec - n3_rec.mean(dim=0)) / (n3_rec.std(dim=0) + eps) + n3_rec.mean(dim=0)).detach()
-
-            lin_mse = (n1_tilde - n1_rec_std).pow(2).mean() + (n2_con_n1_tilde - n2_con_n1_rec_std).pow(
-                2).mean() + (n3_tilde - n3_rec_std).pow(2).mean()
-
-            total_loss_value += lin_mse
-        return total_loss_value
 
     def _triangularity_loss(self, n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec, total_loss_value):
         if self.hparams.triangularity_loss != 0. and (self.hparams.start_step is None or (
                 self.hparams.start_step is not None and self.logger.global_step >= self.hparams.start_step)):
-            from prob_utils import corr_matrix
-
             # todo: these use the ground truth
             # still, they can be used to show that some supervision helps
             # pearson_n1 = corr_matrix(n1.T, n1_rec.T)
@@ -327,10 +231,8 @@ class Runner(object):
 
     def _sinkhorn_entropy_loss(self, total_loss_value):
         if self.hparams.entropy_coeff != 0. and self.hparams.permute is True:
-            probs = torch.nn.functional.softmax(self.model.sinkhorn.doubly_stochastic_matrix, -1).view(
-                -1, )
+            total_loss_value += self.hparams.entropy_coeff * self.model.sinkhorn_entropy
 
-            total_loss_value += self.hparams.entropy_coeff * torch.distributions.Categorical(probs).entropy()
         return total_loss_value
 
     def _l1_loss(self, total_loss_value):
@@ -348,15 +250,6 @@ class Runner(object):
             total_loss_value += self.hparams.l2 * l2
         return total_loss_value
 
-    def train(self, data, h, test):
-        if self.hparams.lr != 0:
-            total_loss, losses = self.train_step(data, h=h, test=test)
-        else:
-            with torch.no_grad():
-                total_loss, losses = self.train_step(data, h=h, test=test)
-
-        return total_loss, losses
-
     def training_loop(self):
         for learning_mode in self.hparams.learning_modes:
             print("supervised test: {}".format(learning_mode))
@@ -365,12 +258,7 @@ class Runner(object):
 
             while (self.logger.global_step <= self.hparams.n_steps if learning_mode else self.logger.global_step <= (
                     self.hparams.n_steps * self.hparams.more_unsupervised)):
-                # if self.logger.global_step > 7000:
-                #
-                #     for p in self.model.parameters():
-                #         p.requires_grad = False
-                #
-                #     self.model.sinkhorn.weight.requires_grad = True
+
 
                 data = sample_marginal_and_conditional(self.latent_space, size=self.hparams.batch_size,
                                                        device=self.hparams.device)
@@ -386,12 +274,17 @@ class Runner(object):
                 self.metrics.update(y_pred=(dep_mat.abs() > threshold).bool().cpu().reshape(-1, 1),
                                     y_true=(self.gt_jacobian_encoder.abs() > threshold).bool().cpu().reshape(-1, 1))
 
-                jacobian_metrics = self._dep_mat_metrics(dep_mat, threshold)
+                jacobian_metrics = dep_mat_metrics(dep_mat, self.gt_jacobian_encoder, self.indirect_causes,
+                                                   self.gt_jacobian_decoder_permuted, threshold)
 
                 # if self.hparams.use_flows:
                 #     dep_mat = self.model.encoder.confidence.mask()
 
-                total_loss, losses = self.train(data, self.model.h, learning_mode)
+                if self.hparams.lr != 0:
+                    total_loss, losses = self.train_step(data, h=self.model.h, test=learning_mode)
+                else:
+                    with torch.no_grad():
+                        total_loss, losses = self.train_step(data, h=self.model.h, test=learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, enc_dec_jac, self.indep_checker,
                                 self.latent_space, losses, total_loss, dep_loss, self.model.encoder,
@@ -409,27 +302,3 @@ class Runner(object):
 
         self.logger.log_jacobian(dep_mat, "learned_last", log_inverse=False)
         self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
-
-    def _dep_mat_metrics(self, dep_mat: torch.Tensor, threshold: float = 1e-3) -> JacobianMetrics:
-        # calculate the optimal threshold for 1 accuracy
-        # calculate the indices where the GT is 0 (in the lower triangular part)
-        sparsity_mask = (torch.tril(self.gt_jacobian_encoder.abs() < 1e-6)).bool()
-
-        if sparsity_mask.sum() > 0:
-            optimal_threshold = dep_mat[sparsity_mask].abs().max()
-        else:
-            optimal_threshold = None
-
-        # calculate the distance between ground truth and predicted jacobian
-        norm_diff: float = torch.norm(dep_mat.abs() - self.gt_jacobian_encoder.abs()).mean()
-        thresholded_norm_diff: float = torch.norm(
-            dep_mat.abs() * (dep_mat.abs() > threshold) - self.gt_jacobian_encoder.abs()).mean()
-
-        # calculate the fraction of correctly identified zeroes
-        incorrect_edges: float = ((dep_mat.abs() * self.indirect_causes) > threshold).sum()
-        sparsity_accuracy: float = 1. - incorrect_edges / (self.indirect_causes.sum() + 1e-8)
-
-        metrics = JacobianMetrics(norm_diff, thresholded_norm_diff, optimal_threshold, sparsity_accuracy,
-                                  amari_distance(dep_mat, self.gt_jacobian_decoder_permuted), permutation_loss(extract_permutation_from_jacobian(dep_mat, qr=True), matrix_power=True))
-
-        return metrics
