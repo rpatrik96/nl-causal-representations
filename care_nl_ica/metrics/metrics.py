@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import torch
 
-import disentanglement_utils
+from care_nl_ica.cl_ica import disentanglement_utils
 
 
 @dataclass
