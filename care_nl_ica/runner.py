@@ -105,6 +105,7 @@ class Runner(object):
             total_loss_value = self._triangularity_loss(n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec,
                                                         total_loss_value)
             total_loss_value = self._qr_loss(total_loss_value)
+            total_loss_value = self._budget_loss(total_loss_value)
 
             total_loss_value.backward()
 
@@ -183,8 +184,6 @@ class Runner(object):
 
         return total_loss_value
 
-
-
     def _triangularity_loss(self, n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec, total_loss_value):
         if self.hparams.triangularity_loss != 0. and (self.hparams.start_step is None or (
                 self.hparams.start_step is not None and self.logger.global_step >= self.hparams.start_step)):
@@ -235,6 +234,15 @@ class Runner(object):
 
         return total_loss_value
 
+    def _budget_loss(self, total_loss_value):
+        if self.hparams.budget != 0.0 and self.hparams.use_ar_mlp is True:
+            total_loss_value += self.hparams.budget * self.model.encoder.ar_bottleneck.budget_net.budget_loss
+
+            if self.hparams.entropy_coeff != 0.:
+                total_loss_value += self.hparams.entropy_coeff * self.model.encoder.ar_bottleneck.budget_net.entropy
+
+        return total_loss_value
+
     def _l1_loss(self, total_loss_value):
         if self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
             # add sparsity loss to the AR MLP bottleneck
@@ -258,7 +266,6 @@ class Runner(object):
 
             while (self.logger.global_step <= self.hparams.n_steps if learning_mode else self.logger.global_step <= (
                     self.hparams.n_steps * self.hparams.more_unsupervised)):
-
 
                 data = sample_marginal_and_conditional(self.latent_space, size=self.hparams.batch_size,
                                                        device=self.hparams.device)
@@ -290,9 +297,7 @@ class Runner(object):
                                 self.latent_space, losses, total_loss, dep_loss, self.model.encoder,
                                 self.metrics.compute(),
                                 None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.assembled_weight,
-                                numerical_jacobian,
-                                None if self.hparams.learn_jacobian is False else self.model.jacob.weight,
-                                jacobian_metrics, None if (
+                                numerical_jacobian, jacobian_metrics, None if (
                             self.hparams.permute is False or self.hparams.use_sem is False or self.hparams.sinkhorn is False) else self.model.sinkhorn.doubly_stochastic_matrix)
 
             save_state_dict(self.hparams, self.model.encoder, "{}_f.pth".format("sup" if learning_mode else "unsup"))

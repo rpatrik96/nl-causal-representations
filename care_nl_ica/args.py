@@ -18,6 +18,7 @@ def parse_args():
     parser.add_argument('--use-sem', action='store_true', help="Use SEM as decoder")
     parser.add_argument('--sinkhorn', action='store_true', help="Use the Sinkhorn network")
     parser.add_argument('--permute', action='store_true', help="Learn the permutation")
+    parser.add_argument('--budget', type=float, default=0.0, help="Constrain the non-zero elements on the bottleneck")
     parser.add_argument('--normalize-latents', action='store_true', help="Normalizes the latent (marginal) distribution")
     parser.add_argument('--nonlin-sem', action='store_true', help="Use nonlinear SEM as decoder")
     parser.add_argument('--use-bias', action='store_true', help="Use bias in the network")

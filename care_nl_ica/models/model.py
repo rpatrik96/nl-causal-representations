@@ -28,8 +28,6 @@ class ContrastiveLearningModel(nn.Module):
     def parameters(self):
         parameters = list(self.encoder.parameters())
 
-        if self.hparams.learn_jacobian is True:
-            parameters += list(self.jacob.parameters())
 
         if self.sinkhorn_net is not None:
             parameters += list(self.sinkhorn_net.parameters())
@@ -68,7 +66,7 @@ class ContrastiveLearningModel(nn.Module):
             encoder = ARBottleneckNet(hparams.n, [1, hparams.n * 10, hparams.n * 20, hparams.n * 20],
                                       [hparams.n * 20, hparams.n * 20, hparams.n * 10, 1], hparams.use_bias,
                                       hparams.normalization == "fixed_box", residual=False, permute=hparams.permute,
-                                      sinkhorn=hparams.sinkhorn, triangular=self.hparams.triangular)
+                                      sinkhorn=hparams.sinkhorn, triangular=self.hparams.triangular, budget=(self.hparams.budget!=0.0))
 
         else:
             encoder = encoders.get_mlp(

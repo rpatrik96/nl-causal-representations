@@ -120,15 +120,20 @@ class NonLinearSEM(LinearSEM):
 
         return self.permutation(z)
 
+from sparsity import SparseBudgetNet
 
 class ARMLP(nn.Module):
     def __init__(self, num_vars: int, transform: callable = None, residual: bool = False, num_weights: int = 5,
-                 triangular=True):
+                 triangular=True, budget:bool=False):
         super().__init__()
 
         self.num_vars = num_vars
         self.residual = residual
         self.triangular = triangular
+        self.budget = budget
+
+        if self.budget is True:
+            self.budget_net = SparseBudgetNet(self.num_vars)
 
         self.weight = nn.ParameterList([
                                         nn.Parameter(
@@ -153,7 +158,11 @@ class ARMLP(nn.Module):
 
         w = w if (self.residual is False or self.triangular is False) else w + torch.diag(self.scaling)
 
-        return w if self.triangular is False else torch.tril(w)
+        assembled = w if self.triangular is False else torch.tril(w)
+
+        if self.budget is True:
+            assembled = assembled*self.budget_net.mask
+        return assembled
 
     def forward(self, x):
         return self.transform(self.assembled_weight) @ x
@@ -170,6 +179,8 @@ class ARMLP(nn.Module):
         if self.residual is True:
             self.scaling = self.scaling.to(device)
 
+        if self.budget is True:
+            self.budget_net = self.budget_net.to(device)
         return self
 
     def inject_structure(self, adj_mat, inject_structure=False):
@@ -251,17 +262,18 @@ class PermutationNet(nn.Module):
 
 class ARBottleneckNet(nn.Module):
     def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
-                 normalize: bool = False, residual: bool = False, permute=False, sinkhorn=False,
-                 triangular=True):
+                 normalize: bool = False, residual: bool = False, permute=False, sinkhorn=False, triangular=True,
+                 budget:bool=False):
         super().__init__()
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats
         self.post_layer_feats = post_layer_feats
         self.bias = bias
 
+
         self._init_feature_layers()
 
-        self.ar_bottleneck = ARMLP(self.num_vars, residual=residual, triangular=triangular)
+        self.ar_bottleneck = ARMLP(self.num_vars, residual=residual, triangular=triangular, budget=budget)
 
         self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
 

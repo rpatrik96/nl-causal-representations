@@ -32,5 +32,5 @@ class SparseBudgetNet(nn.Module):
         return torch.distributions.Categorical(probs).entropy()
 
     @property
-    def budget_dif(self):
-        return (self.mask.sum()-self.budget).pow(2)
+    def budget_loss(self):
+        return torch.relu(self.budget-self.mask.sum())
