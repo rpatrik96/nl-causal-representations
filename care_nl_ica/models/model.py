@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from care_nl_ica.cl_ica import encoders, invertible_network_utils, losses, spaces
-from masked_flows import MaskMAF
-from mlp import ARBottleneckNet, LinearSEM, NonLinearSEM
+from care_nl_ica.models.masked_flows import MaskMAF
+from care_nl_ica.models.mlp import ARBottleneckNet, LinearSEM, NonLinearSEM
 
 
 class ContrastiveLearningModel(nn.Module):

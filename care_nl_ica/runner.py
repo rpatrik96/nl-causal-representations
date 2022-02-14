@@ -9,8 +9,8 @@ from care_nl_ica.prob_utils import sample_marginal_and_conditional
 from care_nl_ica.utils import unpack_item_list, save_state_dict
 from cl_ica import latent_spaces
 from dep_mat import calc_jacobian_loss
-from metric_logger import MetricLogger
-from metrics.metrics import frobenius_diagonality, corr_matrix, \
+from care_nl_ica.metrics.metric_logger import MetricLogger
+from care_nl_ica.metrics.metrics import frobenius_diagonality, corr_matrix, \
     extract_permutation_from_jacobian, permutation_loss
 from prob_utils import setup_marginal, setup_conditional
 

@@ -7,7 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import care_nl_ica.cl_ica.layers as ls
-from sinkhorn import SinkhornNet
+from care_nl_ica.models.sinkhorn import SinkhornNet
+from care_nl_ica.models.sparsity import SparseBudgetNet
 
 FeatureList = List[int]
 
@@ -120,7 +121,7 @@ class NonLinearSEM(LinearSEM):
 
         return self.permutation(z)
 
-from sparsity import SparseBudgetNet
+
 
 class ARMLP(nn.Module):
     def __init__(self, num_vars: int, transform: callable = None, residual: bool = False, num_weights: int = 5,
