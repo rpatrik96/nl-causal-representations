@@ -1,7 +1,8 @@
 import torch
 from torch.nn import functional as F
 
-from care_nl_ica.dep_mat import dep_mat_metrics, calc_indirect_causes, calc_causal_orderings
+from care_nl_ica.dep_mat import dep_mat_metrics
+from care_nl_ica.graph_utils import indirect_causes, causal_orderings
 from care_nl_ica.independence.indep_check import IndependenceChecker
 from care_nl_ica.logger import Logger
 from care_nl_ica.models.model import ContrastiveLearningModel
@@ -37,7 +38,7 @@ class Runner(object):
         self.dep_loss = None
         self.dep_mat = None
 
-        self.orderings = calc_causal_orderings(self.gt_jacobian_encoder)
+        self.orderings = causal_orderings(self.gt_jacobian_encoder)
         print(f'{self.orderings=}')
 
         if self.hparams.use_wandb is True:
@@ -62,7 +63,7 @@ class Runner(object):
 
             self.logger.log_jacobian(dep_mat)
 
-            self.indirect_causes = calc_indirect_causes(self.gt_jacobian_encoder)
+            self.indirect_causes, self.paths = indirect_causes(self.gt_jacobian_encoder)
 
             if self.hparams.permute is True:
                 self.logger.log_summary(**{"permute_indices": self.model.decoder.permute_indices})
