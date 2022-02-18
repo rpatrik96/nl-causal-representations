@@ -48,7 +48,7 @@ class IndependenceChecker(object):
 
         return adjacency_matrix
 
-    def check_independence_z_gz(self, decoder, latent_space)->torch.Tensor:
+    def check_independence_z_gz(self, decoder, latent_space, dep_mat):
         z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
         disent_metrics = calc_disentanglement_scores(z_disentanglement, decoder(z_disentanglement))
 
@@ -57,10 +57,9 @@ class IndependenceChecker(object):
         print(f"Id. MCC matrix: {disent_metrics.perm_corr_mat=}")
         print('Run test with ground truth sources')
 
-        dep_mat = None
-        if self.hparams.use_dep_mat:
+
+        if dep_mat is not None:
             # x \times z
-            dep_mat = calc_jacobian(decoder, z_disentanglement, normalize=self.hparams.normalize_latents).abs().mean(0)
 
             print(dep_mat)
             null_list = [False] * torch.numel(dep_mat)
@@ -80,5 +79,3 @@ class IndependenceChecker(object):
         else:
             print('no causal effect...?')
             # sys.exit()
-
-        return dep_mat

@@ -1,21 +1,19 @@
 import torch
 from torch.nn import functional as F
+from torch.utils.data import DataLoader
 
+from care_nl_ica.dataset import ContrastiveDataset
+from care_nl_ica.dep_mat import calc_jacobian
 from care_nl_ica.dep_mat import dep_mat_metrics
 from care_nl_ica.graph_utils import indirect_causes, causal_orderings
 from care_nl_ica.independence.indep_check import IndependenceChecker
 from care_nl_ica.logger import Logger
-from care_nl_ica.models.model import ContrastiveLearningModel
-from care_nl_ica.prob_utils import sample_marginal_and_conditional
-from care_nl_ica.utils import unpack_item_list, save_state_dict
-from cl_ica import latent_spaces
-from dep_mat import calc_jacobian_loss
 from care_nl_ica.metrics.metric_logger import MetricLogger
 from care_nl_ica.metrics.metrics import frobenius_diagonality, corr_matrix, \
     extract_permutation_from_jacobian, permutation_loss
-from prob_utils import setup_marginal, setup_conditional
-from care_nl_ica.dataset import ContrastiveDataset
-from torch.utils.data import DataLoader
+from care_nl_ica.models.model import ContrastiveLearningModel
+from care_nl_ica.utils import unpack_item_list, save_state_dict
+from dep_mat import calc_jacobian_loss
 
 
 class Runner(object):
@@ -47,9 +45,10 @@ class Runner(object):
             self.logger.log_summary(**{"causal_orderings": self.orderings})
 
     def _calc_dep_mat(self) -> None:
-        dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.ds.latent_space)
-        # save the ground truth jacobian of the decoder
-        if dep_mat is not None:
+        if self.hparams.use_dep_mat:
+            # draw a sample from the latent space (marginal only)
+            z = next(iter(self.dl))[0, :]
+            dep_mat = calc_jacobian(self.model.decoder, z, normalize=self.hparams.normalize_latents).mean(0)
 
             # save the decoder jacobian including the permutation
             self.gt_jacobian_decoder_permuted = dep_mat.detach()
@@ -69,6 +68,11 @@ class Runner(object):
 
             if self.hparams.permute is True:
                 self.logger.log_summary(**{"permute_indices": self.model.decoder.permute_indices})
+
+        else:
+            dep_mat = None
+
+        self.indep_checker.check_independence_z_gz(self.model.decoder, self.ds.latent_space, dep_mat)
 
     def _inject_encoder_structure(self) -> None:
         if self.hparams.inject_structure is True:
@@ -90,11 +94,7 @@ class Runner(object):
 
         n1_rec, n2_con_n1_rec, n3_rec = self._forward(h, n1, n2_con_n1, n3)
 
-        self.logger.log_scatter_latent_rec(n1, n1_rec, "n1")
-
-        with torch.no_grad():
-            z1 = self.model.decoder(n1)
-            self.logger.log_scatter_latent_rec(z1, n1_rec, "z1_n1_rec")
+        self.log_latent_rec(n1, n1_rec)
 
         losses_value, total_loss_value = self._contrastive_loss(n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec, test)
 
@@ -115,6 +115,12 @@ class Runner(object):
             self.optimizer.step()
 
         return total_loss_value.item(), unpack_item_list(losses_value)
+
+    def log_latent_rec(self, n1, n1_rec):
+        self.logger.log_scatter_latent_rec(n1, n1_rec, "n1")
+        with torch.no_grad():
+            z1 = self.model.decoder(n1)
+            self.logger.log_scatter_latent_rec(z1, n1_rec, "z1_n1_rec")
 
     def _forward(self, h, n1, n2_con_n1, n3):
         n1_rec = h(n1)
@@ -272,8 +278,8 @@ class Runner(object):
 
                 data = next(iter(self.dl))
 
-
-                dep_loss, dep_mat, numerical_jacobian, enc_dec_jac = calc_jacobian_loss(self.model, self.ds.latent_space)
+                dep_loss, dep_mat, numerical_jacobian, enc_dec_jac = calc_jacobian_loss(self.model,
+                                                                                        self.ds.latent_space)
 
                 self.dep_loss = dep_loss
 
