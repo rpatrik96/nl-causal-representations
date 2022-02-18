@@ -18,7 +18,6 @@ class ContrastiveLearningModel(nn.Module):
         self._setup_decoder()
         self._setup_encoder()
         self._setup_loss()
-        self._setup_space()
 
         self.sinkhorn_net = None  # SinkhornNet(hparams.n, 15, 1e-3)
         if self.sinkhorn_net is not None:
@@ -165,14 +164,6 @@ class ContrastiveLearningModel(nn.Module):
         else:
             self.loss = losses.SimCLRLoss(normalize=False, tau=hparams.tau, alpha=hparams.alpha)
 
-    def _setup_space(self):
-        hparams = self.hparams
-        if hparams.space_type == "box":
-            self.space = spaces.NBoxSpace(hparams.n, hparams.box_min, hparams.box_max)
-        elif hparams.space_type == "sphere":
-            self.space = spaces.NSphereSpace(hparams.n, hparams.sphere_r)
-        else:
-            self.space = spaces.NRealSpace(hparams.n)
 
     def _configure_output_normalization(self):
         hparams = self.hparams

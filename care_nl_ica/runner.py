@@ -14,6 +14,8 @@ from care_nl_ica.metrics.metric_logger import MetricLogger
 from care_nl_ica.metrics.metrics import frobenius_diagonality, corr_matrix, \
     extract_permutation_from_jacobian, permutation_loss
 from prob_utils import setup_marginal, setup_conditional
+from care_nl_ica.dataset import ContrastiveDataset
+from torch.utils.data import DataLoader
 
 
 class Runner(object):
@@ -28,9 +30,9 @@ class Runner(object):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
         self.logger = Logger(self.hparams, self.model)
         self.metrics = MetricLogger()
-        self.latent_space = latent_spaces.LatentSpace(space=(self.model.space),
-                                                      sample_marginal=(setup_marginal(self.hparams)),
-                                                      sample_conditional=(setup_conditional(self.hparams)), )
+
+        self.ds = ContrastiveDataset(self.hparams)
+        self.dl = DataLoader(self.ds, self.hparams.batch_size)
 
         self._calc_dep_mat()
         self._inject_encoder_structure()
@@ -45,7 +47,7 @@ class Runner(object):
             self.logger.log_summary(**{"causal_orderings": self.orderings})
 
     def _calc_dep_mat(self) -> None:
-        dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.latent_space)
+        dep_mat = self.indep_checker.check_independence_z_gz(self.model.decoder, self.ds.latent_space)
         # save the ground truth jacobian of the decoder
         if dep_mat is not None:
 
@@ -268,10 +270,10 @@ class Runner(object):
             while (self.logger.global_step <= self.hparams.n_steps if learning_mode else self.logger.global_step <= (
                     self.hparams.n_steps * self.hparams.more_unsupervised)):
 
-                data = sample_marginal_and_conditional(self.latent_space, size=self.hparams.batch_size,
-                                                       device=self.hparams.device)
+                data = next(iter(self.dl))
 
-                dep_loss, dep_mat, numerical_jacobian, enc_dec_jac = calc_jacobian_loss(self.model, self.latent_space)
+
+                dep_loss, dep_mat, numerical_jacobian, enc_dec_jac = calc_jacobian_loss(self.model, self.ds.latent_space)
 
                 self.dep_loss = dep_loss
 
@@ -295,7 +297,7 @@ class Runner(object):
                         total_loss, losses = self.train_step(data, h=self.model.h, test=learning_mode)
 
                 self.logger.log(self.model.h, self.model.h_ind, dep_mat, enc_dec_jac, self.indep_checker,
-                                self.latent_space, losses, total_loss, dep_loss, self.model.encoder,
+                                self.ds.latent_space, losses, total_loss, dep_loss, self.model.encoder,
                                 self.metrics.compute(),
                                 None if self.hparams.use_ar_mlp is False else self.model.encoder.ar_bottleneck.assembled_weight,
                                 numerical_jacobian, jacobian_metrics, None if (
@@ -307,4 +309,4 @@ class Runner(object):
             self.reset_encoder()
 
         self.logger.log_jacobian(dep_mat, "learned_last", log_inverse=False)
-        self.logger.report_final_disentanglement_scores(self.model.h, self.latent_space)
+        self.logger.report_final_disentanglement_scores(self.model.h, self.ds.latent_space)

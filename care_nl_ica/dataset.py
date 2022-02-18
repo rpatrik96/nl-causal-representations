@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 from care_nl_ica.cl_ica import latent_spaces, spaces
 from care_nl_ica.prob_utils import setup_marginal, setup_conditional, sample_marginal_and_conditional
@@ -28,12 +28,3 @@ class ContrastiveDataset(torch.utils.data.IterableDataset):
         data = sample_marginal_and_conditional(self.latent_space, size=self.hparams.batch_size,
                                                device=self.hparams.device)
         return iter(data)
-
-
-if __name__ == "__main__":
-    ds = ContrastiveDataset()
-    batch_size = 5
-    dl = DataLoader(ds, batch_size)
-
-    for i in range(3):
-        print(next(dl))

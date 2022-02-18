@@ -24,7 +24,8 @@ def main():
 
     # setup
     from args import parse_args
-    args = parse_args()
+    import sys
+    args = parse_args(sys.argv[1:])
 
     from runner import Runner
     from utils import setup_seed, save_state_dict, set_learning_mode, set_device

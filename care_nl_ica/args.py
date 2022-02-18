@@ -1,7 +1,7 @@
 import argparse
 
 
-def parse_args():
+def parse_args(args):
     parser = argparse.ArgumentParser(
         description="Disentanglement with InfoNCE/Contrastive Learning - MLP Mixing"
     )
@@ -142,7 +142,7 @@ def parse_args():
                         default=None, help="Tags for the run on Weights and Biases")
 
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     add_tags(args)
 
