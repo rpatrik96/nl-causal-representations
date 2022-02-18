@@ -94,7 +94,11 @@ class Runner(object):
 
         n1_rec, n2_con_n1_rec, n3_rec = self._forward(h, n1, n2_con_n1, n3)
 
-        self.log_latent_rec(n1, n1_rec)
+        self.logger.log_scatter_latent_rec(n1, n1_rec, "n1")
+
+        with torch.no_grad():
+            z1 = self.model.decoder(n1)
+            self.logger.log_scatter_latent_rec(z1, n1_rec, "z1_n1_rec")
 
         losses_value, total_loss_value = self._contrastive_loss(n1, n1_rec, n2_con_n1, n2_con_n1_rec, n3, n3_rec, test)
 
@@ -115,12 +119,6 @@ class Runner(object):
             self.optimizer.step()
 
         return total_loss_value.item(), unpack_item_list(losses_value)
-
-    def log_latent_rec(self, n1, n1_rec):
-        self.logger.log_scatter_latent_rec(n1, n1_rec, "n1")
-        with torch.no_grad():
-            z1 = self.model.decoder(n1)
-            self.logger.log_scatter_latent_rec(z1, n1_rec, "z1_n1_rec")
 
     def _forward(self, h, n1, n2_con_n1, n3):
         n1_rec = h(n1)
