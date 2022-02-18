@@ -1,17 +1,11 @@
 import torch
-from torch.utils.data import DataLoader
-
-from care_nl_ica.dataset import ContrastiveDataset
 
 
-def test_contrastive_dataset(args):
-    ds = ContrastiveDataset(args)
-    dl = DataLoader(ds, args.batch_size)
-
+def test_contrastive_dataset(dataloader):
     batches = []
     num_batches = 3
     for i in range(num_batches):
-        batches.append(torch.stack(list(dl)))
+        batches.append(next(iter(dataloader)))
 
     # calculates the variance accross the batch and n dimensions
     # to check that we do not get the same data

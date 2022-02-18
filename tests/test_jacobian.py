@@ -2,10 +2,8 @@ import pytest
 import torch
 from torch.autograd.functional import jacobian
 
-from care_nl_ica.cl_ica import latent_spaces
 from care_nl_ica.dep_mat import calc_jacobian, calc_jacobian_numerical
 from model import ContrastiveLearningModel
-from care_nl_ica.prob_utils import setup_marginal, setup_conditional
 
 
 @pytest.fixture()
@@ -14,7 +12,7 @@ def model(args):
 
 
 @pytest.mark.parametrize("network", ["decoder", "encoder"])
-def test_triangularity_jacobian(model: ContrastiveLearningModel, network, numerical_check: bool = False,
+def test_triangularity_jacobian(model: ContrastiveLearningModel, dataloader, network, numerical_check: bool = False,
                                 built_in_jacobian_check: bool = False):
     """
 
@@ -29,10 +27,8 @@ def test_triangularity_jacobian(model: ContrastiveLearningModel, network, numeri
     print(f"{network=}")
     print("------------------------")
 
-    # draw a sample from the latent space
-    latent_space = latent_spaces.LatentSpace(space=model.space, sample_marginal=(setup_marginal(model.hparams)),
-                                             sample_conditional=(setup_conditional(model.hparams)), )
-    z = latent_space.sample_marginal(model.hparams.n_eval_samples)
+    # draw a sample from the latent space (marginal only)
+    z = next(iter(dataloader))[0, :]
 
     # calculate the Jacobian
     dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.normalize_latents).mean(0)
