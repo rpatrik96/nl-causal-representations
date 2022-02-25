@@ -245,49 +245,51 @@ def parse_args(args):
 
 
 def add_tags(args):
+    try:
+        args.tags
+    except:
+        args.tags = []
+
     if args.tags is None:
         args.tags = []
 
-    if args.use_sem is True:
+    if args.data.use_sem is True:
         args.tags.append("sem")
 
-    if args.nonlin_sem is True:
+    if args.data.nonlin_sem is True:
         args.tags.append("nonlinear")
     else:
         args.tags.append("linear")
 
-    if args.sinkhorn is True:
+    if args.model.sinkhorn is True:
         args.tags.append("sinkhorn")
 
-    if args.permute is True:
+    if args.data.permute is True:
         args.tags.append("permute")
 
-    if args.use_ar_mlp is False:
+    if args.model.use_ar_mlp is False:
         args.tags.append("mlp")
     else:
         args.tags.append("bottleneck")
-        if args.triangular is True:
+        if args.model.triangular is True:
             args.tags.append("triangular")
 
-    if args.use_flows is True:
+    if args.model.use_flows is True:
         args.tags.append("flows")
 
-    if args.normalize_latents is True:
+    if args.model.normalize_latents is True:
         args.tags.append("normalization")
 
-    if args.l1 != 0.0:
+    if args.model.l1 != 0.0:
         args.tags.append(f"L1")
 
-    if args.l2 != 0.0:
-        args.tags.append(f"L2")
-
-    if args.triangularity_loss != 0.0:
+    if args.model.triangularity_loss != 0.0:
         args.tags.append(f"triangularity")
 
-    if args.entropy_coeff != 0.0:
+    if args.model.entropy != 0.0:
         args.tags.append(f"entropy")
 
-    if args.qr_loss != 0.0:
+    if args.model.qr != 0.0:
         args.tags.append(f"QR")
 
-    args.tags = list(set(args.tags))
+    return list(set(args.tags))

@@ -118,7 +118,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
         self.mixing = mixing
 
     def _calc_dep_mat(self) -> None:
-        if self.hparams.use_dep_mat:
+        if self.hparams.use_dep_mat is True:
             # draw a sample from the latent space (marginal only)
             z = next(iter(self.train_dataloader()))[0][0, :]
             dep_mat = calc_jacobian(
@@ -145,13 +145,9 @@ class ContrastiveDataModule(pl.LightningDataModule):
         self._setup_mixing()
 
         # generate data
-        self.dataset = ContrastiveDataset(self.hparams, lambda x: self.mixing(x))
+        self.dataset = ContrastiveDataset(self.hparams, self.mixing)
 
         self._calc_dep_mat()
-
-    # @property
-    # def dataloader(self):
-    #     return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
 
     def train_dataloader(self):
         return DataLoader(self.dataset, batch_size=self.hparams.batch_size)

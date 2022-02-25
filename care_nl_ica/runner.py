@@ -1,4 +1,3 @@
-from pdb import set_trace
 import pytorch_lightning as pl
 import torch
 import wandb
@@ -6,9 +5,7 @@ import wandb
 from care_nl_ica.dep_mat import jacobians
 from care_nl_ica.losses.utils import Losses
 from care_nl_ica.metrics.dep_mat import (
-    calc_jacobian_metrics,
     extract_permutation_from_jacobian,
-    JacobianMetrics,
     permutation_loss,
 )
 from care_nl_ica.metrics.ica_dis import (
@@ -93,8 +90,6 @@ class ContrastiveICAModule(pl.LightningModule):
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.watch(self.model, log="all", log_freq=250)
 
-        self._log_mixing()
-
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
 
@@ -139,6 +134,10 @@ class ContrastiveICAModule(pl.LightningModule):
         dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
             self.model, sources[0], mixtures[0]
         )
+
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
+
         if self.hparams.verbose is True:
             # log the Jacobian
             matrix_to_dict(dep_mat, "a", "Encoder Jacobian")
@@ -282,6 +281,9 @@ class ContrastiveICAModule(pl.LightningModule):
                     }
                 )
 
-    def _log_mixing(self):
+    def on_fit_start(self) -> None:
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            self.log_summary(**self.trainer.datamodule.data_to_log)
+            self.logger.experiment.log(self.trainer.datamodule.data_to_log)
+
+    def on_fit_end(self) -> None:
+        pass

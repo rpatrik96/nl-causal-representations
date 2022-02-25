@@ -1,13 +1,13 @@
-from pytorch_lightning.utilities.cli import LightningCLI
 from pytorch_lightning.loggers.wandb import WandbLogger
+from pytorch_lightning.utilities.cli import LightningCLI
 
-from care_nl_ica.runner import ContrastiveICAModule
+from care_nl_ica.args import add_tags
 from care_nl_ica.datamodules import ContrastiveDataModule
+from care_nl_ica.runner import ContrastiveICAModule
 
 
 class MyLightningCLI(LightningCLI):
     def add_arguments_to_parser(self, parser):
-
         parser.add_argument(
             "--notes",
             type=str,
@@ -30,6 +30,11 @@ class MyLightningCLI(LightningCLI):
         parser.link_arguments("model.sphere_r", "data.sphere_r")
         parser.link_arguments("model.normalize_latents", "data.normalize_latents")
 
+    def before_instantiate_classes(self) -> None:
+        self.config[self.subcommand].trainer.logger.init_args.tags = add_tags(
+            self.config[self.subcommand]
+        )
+
     def before_fit(self):
         if isinstance(self.trainer.logger, WandbLogger) is True:
             # required as the parser cannot parse the "-" symbol
@@ -42,5 +47,9 @@ class MyLightningCLI(LightningCLI):
 
 
 cli = MyLightningCLI(
-    ContrastiveICAModule, ContrastiveDataModule, save_config_callback=None, run=True
+    ContrastiveICAModule,
+    ContrastiveDataModule,
+    save_config_callback=None,
+    run=True,
+    parser_kwargs={"parse_as_dict": False},
 )
