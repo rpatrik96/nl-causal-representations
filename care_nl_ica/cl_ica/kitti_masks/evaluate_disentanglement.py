@@ -81,7 +81,7 @@ def main(args, dataset):
                 if args.verbose:
                     print("Computing metric '{}' on '{}'...".format(metric_name, post))
                 eval_bindings = [
-                    "evaluation.random_seed = {}".format(random_state.randint(2 ** 32)),
+                    "evaluation.random_seed = {}".format(random_state.randint(2**32)),
                     "evaluation.name = '{}'".format(metric_name),
                 ]
                 gin.parse_config_files_and_bindings(

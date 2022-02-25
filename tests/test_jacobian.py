@@ -12,8 +12,13 @@ def model(args):
 
 
 @pytest.mark.parametrize("network", ["decoder", "encoder"])
-def test_triangularity_jacobian(model: ContrastiveLearningModel, dataloader, network, numerical_check: bool = False,
-                                built_in_jacobian_check: bool = False):
+def test_triangularity_jacobian(
+    model: ContrastiveLearningModel,
+    dataloader,
+    network,
+    numerical_check: bool = False,
+    built_in_jacobian_check: bool = False,
+):
     """
 
     Checks the AR nature of the model by calculating the Jacobian.
@@ -31,12 +36,16 @@ def test_triangularity_jacobian(model: ContrastiveLearningModel, dataloader, net
     z = next(iter(dataloader))[0, :]
 
     # calculate the Jacobian
-    dep_mat = calc_jacobian(model._modules[network], z, normalize=model.hparams.normalize_latents).mean(0)
+    dep_mat = calc_jacobian(
+        model._modules[network], z, normalize=model.hparams.normalize_latents
+    ).mean(0)
     print(f"{dep_mat=}")
 
     # numerical Jacobian
     if numerical_check is True:
-        print(f"{calc_jacobian_numerical(model._modules[network], z, model.hparams.n, model.hparams.device)=}")
+        print(
+            f"{calc_jacobian_numerical(model._modules[network], z, model.hparams.n, model.hparams.device)=}"
+        )
 
     # same as calc_jacobian, but using the torch jacobian function
     if built_in_jacobian_check is True:
@@ -75,7 +84,9 @@ def test_triangularity_naive(model: ContrastiveLearningModel, network):
 
     # calculate the baseline output - all inputs should be different from 0
     # this is to avoid degenerate cases making the test succeed
-    y0 = model._modules[network](torch.ones(batch_size, model.hparams.n).to(model.hparams.device))
+    y0 = model._modules[network](
+        torch.ones(batch_size, model.hparams.n).to(model.hparams.device)
+    )
     print(f"{y0=}")
 
     # unsqueeze for the AR MLP

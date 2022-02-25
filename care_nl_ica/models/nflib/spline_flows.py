@@ -20,17 +20,20 @@ DEFAULT_MIN_DERIVATIVE = 1e-3
 
 def searchsorted(bin_locations, inputs, eps=1e-6):
     bin_locations[..., -1] += eps
-    return torch.sum(
-        inputs[..., None] >= bin_locations,
-        dim=-1
-    ) - 1
+    return torch.sum(inputs[..., None] >= bin_locations, dim=-1) - 1
 
 
-def unconstrained_RQS(inputs, unnormalized_widths, unnormalized_heights,
-                      unnormalized_derivatives, inverse=False,
-                      tail_bound=1., min_bin_width=DEFAULT_MIN_BIN_WIDTH,
-                      min_bin_height=DEFAULT_MIN_BIN_HEIGHT,
-                      min_derivative=DEFAULT_MIN_DERIVATIVE):
+def unconstrained_RQS(
+    inputs,
+    unnormalized_widths,
+    unnormalized_heights,
+    unnormalized_derivatives,
+    inverse=False,
+    tail_bound=1.0,
+    min_bin_width=DEFAULT_MIN_BIN_WIDTH,
+    min_bin_height=DEFAULT_MIN_BIN_HEIGHT,
+    min_derivative=DEFAULT_MIN_DERIVATIVE,
+):
     inside_intvl_mask = (inputs >= -tail_bound) & (inputs <= tail_bound)
     outside_interval_mask = ~inside_intvl_mask
 
@@ -51,33 +54,45 @@ def unconstrained_RQS(inputs, unnormalized_widths, unnormalized_heights,
         unnormalized_heights=unnormalized_heights[inside_intvl_mask, :],
         unnormalized_derivatives=unnormalized_derivatives[inside_intvl_mask, :],
         inverse=inverse,
-        left=-tail_bound, right=tail_bound, bottom=-tail_bound, top=tail_bound,
+        left=-tail_bound,
+        right=tail_bound,
+        bottom=-tail_bound,
+        top=tail_bound,
         min_bin_width=min_bin_width,
         min_bin_height=min_bin_height,
-        min_derivative=min_derivative
+        min_derivative=min_derivative,
     )
     return outputs, logabsdet
 
 
-def RQS(inputs, unnormalized_widths, unnormalized_heights,
-        unnormalized_derivatives, inverse=False, left=0., right=1.,
-        bottom=0., top=1., min_bin_width=DEFAULT_MIN_BIN_WIDTH,
-        min_bin_height=DEFAULT_MIN_BIN_HEIGHT,
-        min_derivative=DEFAULT_MIN_DERIVATIVE):
+def RQS(
+    inputs,
+    unnormalized_widths,
+    unnormalized_heights,
+    unnormalized_derivatives,
+    inverse=False,
+    left=0.0,
+    right=1.0,
+    bottom=0.0,
+    top=1.0,
+    min_bin_width=DEFAULT_MIN_BIN_WIDTH,
+    min_bin_height=DEFAULT_MIN_BIN_HEIGHT,
+    min_derivative=DEFAULT_MIN_DERIVATIVE,
+):
     if torch.min(inputs) < left or torch.max(inputs) > right:
         raise ValueError("Input outside domain")
 
     num_bins = unnormalized_widths.shape[-1]
 
     if min_bin_width * num_bins > 1.0:
-        raise ValueError('Minimal bin width too large for the number of bins')
+        raise ValueError("Minimal bin width too large for the number of bins")
     if min_bin_height * num_bins > 1.0:
-        raise ValueError('Minimal bin height too large for the number of bins')
+        raise ValueError("Minimal bin height too large for the number of bins")
 
     widths = F.softmax(unnormalized_widths, dim=-1)
     widths = min_bin_width + (1 - min_bin_width * num_bins) * widths
     cumwidths = torch.cumsum(widths, dim=-1)
-    cumwidths = F.pad(cumwidths, pad=(1, 0), mode='constant', value=0.0)
+    cumwidths = F.pad(cumwidths, pad=(1, 0), mode="constant", value=0.0)
     cumwidths = (right - left) * cumwidths + left
     cumwidths[..., 0] = left
     cumwidths[..., -1] = right
@@ -88,7 +103,7 @@ def RQS(inputs, unnormalized_widths, unnormalized_heights,
     heights = F.softmax(unnormalized_heights, dim=-1)
     heights = min_bin_height + (1 - min_bin_height * num_bins) * heights
     cumheights = torch.cumsum(heights, dim=-1)
-    cumheights = F.pad(cumheights, pad=(1, 0), mode='constant', value=0.0)
+    cumheights = F.pad(cumheights, pad=(1, 0), mode="constant", value=0.0)
     cumheights = (top - bottom) * cumheights + bottom
     cumheights[..., 0] = bottom
     cumheights[..., -1] = top
@@ -113,13 +128,13 @@ def RQS(inputs, unnormalized_widths, unnormalized_heights,
     input_heights = heights.gather(-1, bin_idx)[..., 0]
 
     if inverse:
-        a = (((inputs - input_cumheights) * (input_derivatives \
-                                             + input_derivatives_plus_one - 2 * input_delta) \
-              + input_heights * (input_delta - input_derivatives)))
-        b = (input_heights * input_derivatives - (inputs - input_cumheights) \
-             * (input_derivatives + input_derivatives_plus_one \
-                - 2 * input_delta))
-        c = - input_delta * (inputs - input_cumheights)
+        a = (inputs - input_cumheights) * (
+            input_derivatives + input_derivatives_plus_one - 2 * input_delta
+        ) + input_heights * (input_delta - input_derivatives)
+        b = input_heights * input_derivatives - (inputs - input_cumheights) * (
+            input_derivatives + input_derivatives_plus_one - 2 * input_delta
+        )
+        c = -input_delta * (inputs - input_cumheights)
 
         discriminant = b.pow(2) - 4 * a * c
         assert (discriminant >= 0).all()
@@ -128,36 +143,41 @@ def RQS(inputs, unnormalized_widths, unnormalized_heights,
         outputs = root * input_bin_widths + input_cumwidths
 
         theta_one_minus_theta = root * (1 - root)
-        denominator = input_delta \
-                      + ((input_derivatives + input_derivatives_plus_one \
-                          - 2 * input_delta) * theta_one_minus_theta)
-        derivative_numerator = input_delta.pow(2) \
-                               * (input_derivatives_plus_one * root.pow(2) \
-                                  + 2 * input_delta * theta_one_minus_theta \
-                                  + input_derivatives * (1 - root).pow(2))
+        denominator = input_delta + (
+            (input_derivatives + input_derivatives_plus_one - 2 * input_delta)
+            * theta_one_minus_theta
+        )
+        derivative_numerator = input_delta.pow(2) * (
+            input_derivatives_plus_one * root.pow(2)
+            + 2 * input_delta * theta_one_minus_theta
+            + input_derivatives * (1 - root).pow(2)
+        )
         logabsdet = torch.log(derivative_numerator) - 2 * torch.log(denominator)
         return outputs, -logabsdet
     else:
         theta = (inputs - input_cumwidths) / input_bin_widths
         theta_one_minus_theta = theta * (1 - theta)
 
-        numerator = input_heights * (input_delta * theta.pow(2) \
-                                     + input_derivatives * theta_one_minus_theta)
-        denominator = input_delta + ((input_derivatives \
-                                      + input_derivatives_plus_one - 2 * input_delta) \
-                                     * theta_one_minus_theta)
+        numerator = input_heights * (
+            input_delta * theta.pow(2) + input_derivatives * theta_one_minus_theta
+        )
+        denominator = input_delta + (
+            (input_derivatives + input_derivatives_plus_one - 2 * input_delta)
+            * theta_one_minus_theta
+        )
         outputs = input_cumheights + numerator / denominator
 
-        derivative_numerator = input_delta.pow(2) \
-                               * (input_derivatives_plus_one * theta.pow(2) \
-                                  + 2 * input_delta * theta_one_minus_theta \
-                                  + input_derivatives * (1 - theta).pow(2))
+        derivative_numerator = input_delta.pow(2) * (
+            input_derivatives_plus_one * theta.pow(2)
+            + 2 * input_delta * theta_one_minus_theta
+            + input_derivatives * (1 - theta).pow(2)
+        )
         logabsdet = torch.log(derivative_numerator) - 2 * torch.log(denominator)
         return outputs, logabsdet
 
 
 class NSF_AR(nn.Module):
-    """ Neural spline flow, coupling layer, [Durkan et al. 2019] """
+    """Neural spline flow, coupling layer, [Durkan et al. 2019]"""
 
     def __init__(self, dim, K=5, B=3, hidden_dim=8, base_network=MLP4):
         super().__init__()
@@ -171,7 +191,7 @@ class NSF_AR(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        init.uniform_(self.init_param, - 1 / 2, 1 / 2)
+        init.uniform_(self.init_param, -1 / 2, 1 / 2)
 
     def forward(self, x):
         z = torch.zeros_like(x)
@@ -186,7 +206,9 @@ class NSF_AR(nn.Module):
             W, H = torch.softmax(W, dim=1), torch.softmax(H, dim=1)
             W, H = 2 * self.B * W, 2 * self.B * H
             D = F.softplus(D)
-            z[:, i], ld = unconstrained_RQS(x[:, i], W, H, D, inverse=False, tail_bound=self.B)
+            z[:, i], ld = unconstrained_RQS(
+                x[:, i], W, H, D, inverse=False, tail_bound=self.B
+            )
             log_det += ld
         return z, log_det
 
@@ -203,13 +225,15 @@ class NSF_AR(nn.Module):
             W, H = torch.softmax(W, dim=1), torch.softmax(H, dim=1)
             W, H = 2 * self.B * W, 2 * self.B * H
             D = F.softplus(D)
-            x[:, i], ld = unconstrained_RQS(z[:, i], W, H, D, inverse=True, tail_bound=self.B)
+            x[:, i], ld = unconstrained_RQS(
+                z[:, i], W, H, D, inverse=True, tail_bound=self.B
+            )
             log_det += ld
         return x, log_det
 
 
 class NSF_CL(nn.Module):
-    """ Neural spline flow, coupling layer, [Durkan et al. 2019] """
+    """Neural spline flow, coupling layer, [Durkan et al. 2019]"""
 
     def __init__(self, dim, K=5, B=3, hidden_dim=8, base_network=MLP4):
         super().__init__()
@@ -221,7 +245,7 @@ class NSF_CL(nn.Module):
 
     def forward(self, x):
         log_det = torch.zeros(x.shape[0])
-        lower, upper = x[:, :self.dim // 2], x[:, self.dim // 2:]
+        lower, upper = x[:, : self.dim // 2], x[:, self.dim // 2 :]
         out = self.f1(lower).reshape(-1, self.dim // 2, 3 * self.K - 1)
         W, H, D = torch.split(out, self.K, dim=2)
         W, H = torch.softmax(W, dim=2), torch.softmax(H, dim=2)
@@ -240,7 +264,7 @@ class NSF_CL(nn.Module):
 
     def backward(self, z):
         log_det = torch.zeros(z.shape[0])
-        lower, upper = z[:, :self.dim // 2], z[:, self.dim // 2:]
+        lower, upper = z[:, : self.dim // 2], z[:, self.dim // 2 :]
         out = self.f2(upper).reshape(-1, self.dim // 2, 3 * self.K - 1)
         W, H, D = torch.split(out, self.K, dim=2)
         W, H = torch.softmax(W, dim=2), torch.softmax(H, dim=2)

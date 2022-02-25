@@ -154,7 +154,7 @@ def permutation_disentanglement(
             Y = z
             X = hz
 
-            beta = np.diag((Y * X).sum(0) / (X ** 2).sum(0))
+            beta = np.diag((Y * X).sum(0) / (X**2).sum(0))
 
             Thz = X @ beta
 

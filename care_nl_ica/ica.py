@@ -7,7 +7,9 @@ class ICAModel(nn.Module):
     Linear ICA class
     """
 
-    def __init__(self, dim: int, signal_model: torch.distributions.distribution.Distribution):
+    def __init__(
+        self, dim: int, signal_model: torch.distributions.distribution.Distribution
+    ):
         """
         :param dim: an integer specifying the number of signals
         :param signal_model: class of the signal model distribution
@@ -26,7 +28,9 @@ class ICAModel(nn.Module):
         return torch.matmul(x, self.W)
 
     @staticmethod
-    def _ml_objective(x: torch.Tensor, signal_model: torch.distributions.laplace.Laplace):
+    def _ml_objective(
+        x: torch.Tensor, signal_model: torch.distributions.laplace.Laplace
+    ):
         """
         Implements the ML objective
 

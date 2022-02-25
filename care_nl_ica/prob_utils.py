@@ -20,10 +20,8 @@ def setup_marginal(args):
             size, device=device
         )
     else:
-        sample_marginal = (
-            lambda space, size, device=device: space.generalized_normal(
-                eta, args.m_param, p=args.m_p, size=size, device=device
-            )
+        sample_marginal = lambda space, size, device=device: space.generalized_normal(
+            eta, args.m_param, p=args.m_p, size=size, device=device
         )
     return sample_marginal
 
@@ -49,7 +47,10 @@ def setup_conditional(args):
     elif args.c_p == 0:
         sample_conditional = (
             lambda space, z, size, device=device: space.von_mises_fisher(
-                z, args.c_param, size, device,
+                z,
+                args.c_param,
+                size,
+                device,
             )
         )
     else:
@@ -77,8 +78,6 @@ def laplace_log_cdf(x: torch.Tensor, signal_model: torch.distributions.laplace.L
     neg_res = torch.log(torch.tensor(0.5)) + x_tr
 
     # x >= 0
-    pos_res = torch.log1p(-.5 * (-x_tr.abs()).exp())
+    pos_res = torch.log1p(-0.5 * (-x_tr.abs()).exp())
 
     return torch.where(x < signal_model.mean, neg_res, pos_res)
-
-

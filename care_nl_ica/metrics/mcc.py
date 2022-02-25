@@ -4,7 +4,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.stats import spearmanr
 
 
-def auction_linear_assignment(x, eps=None, reduce='sum'):
+def auction_linear_assignment(x, eps=None, reduce="sum"):
     """
     Solve the linear sum assignment problem using the auction algorithm.
     Implementation in pytorch, GPU compatible.
@@ -57,7 +57,9 @@ def auction_linear_assignment(x, eps=None, reduce='sum'):
         # every unassigned row i makes a bid at one j_i with value \gamma_i
         bids_ = bids[I, :]
         bids_.zero_()
-        bids_.scatter_(dim=1, index=jI.contiguous().view(-1, 1), src=gamma_I.view(-1, 1))
+        bids_.scatter_(
+            dim=1, index=jI.contiguous().view(-1, 1), src=gamma_I.view(-1, 1)
+        )
 
         # -- Assignment --
         # set J of columns (objects) that have at least a bidder
@@ -80,19 +82,19 @@ def auction_linear_assignment(x, eps=None, reduce='sum'):
         assignment[iJ] = J
 
     score = x.gather(dim=1, index=assignment.view(-1, 1)).squeeze()
-    if reduce == 'sum':
+    if reduce == "sum":
         score = torch.sum(score)
-    elif reduce == 'mean':
+    elif reduce == "mean":
         score = torch.mean(score)
-    elif reduce == 'none':
+    elif reduce == "none":
         pass
     else:
-        raise ValueError('not a valid reduction method: {}'.format(reduce))
+        raise ValueError("not a valid reduction method: {}".format(reduce))
 
     return score, assignment, n_iter
 
 
-def rankdata_pt(b, tie_method='ordinal', dim=0):
+def rankdata_pt(b, tie_method="ordinal", dim=0):
     """
     pytorch equivalent of scipy.stats.rankdata, GPU compatible.
 
@@ -132,17 +134,19 @@ def rankdata_pt(b, tie_method='ordinal', dim=0):
     # b = torch.flatten(b)
 
     if b.dim() > 2:
-        raise ValueError('input has more than 2 dimensions')
+        raise ValueError("input has more than 2 dimensions")
     if b.dim() < 1:
-        raise ValueError('input has less than 1 dimension')
+        raise ValueError("input has less than 1 dimension")
 
     order = torch.argsort(b, dim=dim)
 
-    if tie_method == 'ordinal':
+    if tie_method == "ordinal":
         ranks = order + 1
     else:
         if b.dim() != 1:
-            raise NotImplementedError('tie_method {} not supported for 2-D tensors'.format(tie_method))
+            raise NotImplementedError(
+                "tie_method {} not supported for 2-D tensors".format(tie_method)
+            )
         else:
             n = b.size(0)
             ranks = torch.empty(n).to(b.device)
@@ -152,17 +156,19 @@ def rankdata_pt(b, tie_method='ordinal', dim=0):
             for i in range(n):
                 inext = i + 1
                 if i == n - 1 or b[order[i]] != b[order[inext]]:
-                    if tie_method == 'average':
+                    if tie_method == "average":
                         tie_rank = inext - 0.5 * dupcount
-                    elif tie_method == 'min':
+                    elif tie_method == "min":
                         tie_rank = inext - dupcount
-                    elif tie_method == 'max':
+                    elif tie_method == "max":
                         tie_rank = inext
-                    elif tie_method == 'dense':
+                    elif tie_method == "dense":
                         tie_rank = inext - dupcount - total_tie_count
                         total_tie_count += dupcount
                     else:
-                        raise ValueError('not a valid tie_method: {}'.format(tie_method))
+                        raise ValueError(
+                            "not a valid tie_method: {}".format(tie_method)
+                        )
                     for j in range(i - dupcount, inext):
                         ranks[order[j]] = tie_rank
                     dupcount = 0
@@ -198,9 +204,9 @@ def cov_pt(x, y=None, rowvar=False):
     """
     if y is not None:
         if not x.size() == y.size():
-            raise ValueError('x and y have different shapes')
+            raise ValueError("x and y have different shapes")
     if x.dim() > 2:
-        raise ValueError('x has more than 2 dimensions')
+        raise ValueError("x has more than 2 dimensions")
     if x.dim() < 2:
         x = x.view(1, -1)
     if not rowvar and x.size(0) != 1:
@@ -281,7 +287,7 @@ def spearmanr_pt(x, y=None, rowvar=False):
     return rs
 
 
-def mean_corr_coef_pt(x, y, method='pearson'):
+def mean_corr_coef_pt(x, y, method="pearson"):
     """
     A differentiable pytorch implementation of the mean correlation coefficient metric.
 
@@ -297,18 +303,18 @@ def mean_corr_coef_pt(x, y, method='pearson'):
     :return: float
     """
     d = x.size(1)
-    if method == 'pearson':
+    if method == "pearson":
         cc = corrcoef_pt(x, y)[:d, d:]
-    elif method == 'spearman':
+    elif method == "spearman":
         cc = spearmanr_pt(x, y)[:d, d:]
     else:
-        raise ValueError('not a valid method: {}'.format(method))
+        raise ValueError("not a valid method: {}".format(method))
     cc = torch.abs(cc)
-    score, _, _ = auction_linear_assignment(cc, reduce='mean')
+    score, _, _ = auction_linear_assignment(cc, reduce="mean")
     return score
 
 
-def mean_corr_coef_np(x, y, method='pearson'):
+def mean_corr_coef_np(x, y, method="pearson"):
     """
     A numpy implementation of the mean correlation coefficient metric.
 
@@ -324,44 +330,46 @@ def mean_corr_coef_np(x, y, method='pearson'):
     :return: float
     """
     d = x.shape[1]
-    if method == 'pearson':
+    if method == "pearson":
         cc = np.corrcoef(x, y, rowvar=False)[:d, d:]
-    elif method == 'spearman':
+    elif method == "spearman":
         cc = spearmanr(x, y)[0][:d, d:]
     else:
-        raise ValueError('not a valid method: {}'.format(method))
+        raise ValueError("not a valid method: {}".format(method))
     cc = np.abs(cc)
     score = cc[linear_sum_assignment(-1 * cc)].mean()
     return score
 
 
-def mean_corr_coef(x, y, method='pearson'):
+def mean_corr_coef(x, y, method="pearson"):
     if type(x) != type(y):
-        raise ValueError('inputs are of different types: ({}, {})'.format(type(x), type(y)))
+        raise ValueError(
+            "inputs are of different types: ({}, {})".format(type(x), type(y))
+        )
     if isinstance(x, np.ndarray):
         return mean_corr_coef_np(x, y, method)
     elif isinstance(x, torch.Tensor):
         return mean_corr_coef_pt(x, y, method)
     else:
-        raise ValueError('not a supported input type: {}'.format(type(x)))
+        raise ValueError("not a supported input type: {}".format(type(x)))
 
 
-def mean_corr_coef_out_of_sample(x, y, x_test, y_test, method='pearson'):
+def mean_corr_coef_out_of_sample(x, y, x_test, y_test, method="pearson"):
     """
-    we compare mean correlation coefficients out of sample 
+    we compare mean correlation coefficients out of sample
     -> we use (x,y) to learn permutation and then evaluate the correlations
-    determined by this permutation on (x_test, y_test) 
+    determined by this permutation on (x_test, y_test)
     """
 
     d = x.shape[1]
-    if method == 'pearson':
+    if method == "pearson":
         cc = np.corrcoef(x, y, rowvar=False)[:d, d:]
         cc_test = np.corrcoef(x_test, y_test, rowvar=False)[:d, d:]
-    elif method == 'spearman':
+    elif method == "spearman":
         cc = spearmanr(x, y)[0][:d, d:]
         cc_test = spearmanr(x_test, y_test)[0][:d, d:]
     else:
-        raise ValueError('not a valid method: {}'.format(method))
+        raise ValueError("not a valid method: {}".format(method))
     cc = np.abs(cc)
 
     score = np.abs(cc_test)[linear_sum_assignment(-1 * cc)].mean()

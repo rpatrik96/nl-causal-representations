@@ -14,7 +14,14 @@ FeatureList = List[int]
 
 
 class LinearSEM(nn.Module):
-    def __init__(self, num_vars: int, permute: bool = False, variant: int = -1, force_chain: bool = False, force_uniform: bool = False):
+    def __init__(
+        self,
+        num_vars: int,
+        permute: bool = False,
+        variant: int = -1,
+        force_chain: bool = False,
+        force_uniform: bool = False,
+    ):
         super().__init__()
 
         self.variant = variant
@@ -23,13 +30,18 @@ class LinearSEM(nn.Module):
         # weight init
         self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
         if force_uniform is True:
-            print('---------Forcing uniform weights---------')
+            print("---------Forcing uniform weights---------")
             self.weight = nn.Parameter(torch.tril(torch.ones(num_vars, num_vars)))
-        print(f'{self.weight=}')
+        print(f"{self.weight=}")
 
-        self.mask = (torch.tril(torch.bernoulli(0.65 * torch.ones_like(self.weight)), 1) + torch.eye(
-            num_vars)).bool().float()
-
+        self.mask = (
+            (
+                torch.tril(torch.bernoulli(0.65 * torch.ones_like(self.weight)), 1)
+                + torch.eye(num_vars)
+            )
+            .bool()
+            .float()
+        )
 
         # construct a chain
         if force_chain is True:
@@ -37,8 +49,7 @@ class LinearSEM(nn.Module):
             self.mask = torch.tril(torch.ones_like(self.weight))
 
             zeros_in_chain = torch.tril(torch.ones_like(self.weight), -2)
-            self.mask[zeros_in_chain==1] = 0
-
+            self.mask[zeros_in_chain == 1] = 0
 
         self.mask.requires_grad = False
         print(f"{self.mask=}")
@@ -54,11 +65,15 @@ class LinearSEM(nn.Module):
                 permutations = list(itertools.permutations(range(self.num_vars)))
                 self.permute_indices = torch.tensor(permutations[self.variant])
             else:
-                raise ValueError(f'{self.variant=} should be smaller than {fac}')
+                raise ValueError(f"{self.variant=} should be smaller than {fac}")
 
-        self.permutation = (lambda x: x) if permute is False else (lambda x: x[:, self.permute_indices])
+        self.permutation = (
+            (lambda x: x)
+            if permute is False
+            else (lambda x: x[:, self.permute_indices])
+        )
 
-        print(f'Using permutation with indices {self.permute_indices}')
+        print(f"Using permutation with indices {self.permute_indices}")
         print(f"{self.permutation_matrix=}")
 
     @property
@@ -94,14 +109,32 @@ class LinearSEM(nn.Module):
 
 
 class NonLinearSEM(LinearSEM):
-    def __init__(self, num_vars: int, permute: bool = False, variant=-1, force_chain: bool = False, force_uniform: bool = False):
-        super().__init__(num_vars=num_vars, permute=permute, variant=variant, force_chain=force_chain, force_uniform=force_uniform)
+    def __init__(
+        self,
+        num_vars: int,
+        permute: bool = False,
+        variant=-1,
+        force_chain: bool = False,
+        force_uniform: bool = False,
+    ):
+        super().__init__(
+            num_vars=num_vars,
+            permute=permute,
+            variant=variant,
+            force_chain=force_chain,
+            force_uniform=force_uniform,
+        )
 
-        self.nonlin = [lambda x: x ** 3, lambda x: torch.tanh(x), lambda x: torch.sigmoid(x),
-                       lambda x: torch.nn.functional.leaky_relu(x, .1), lambda x: x]
+        self.nonlin = [
+            lambda x: x**3,
+            lambda x: torch.tanh(x),
+            lambda x: torch.sigmoid(x),
+            lambda x: torch.nn.functional.leaky_relu(x, 0.1),
+            lambda x: x,
+        ]
 
         # Nonlinearitites
-        self.nonlin_names = ['cube', 'tanh', 'sigmoid', 'leaky_relu', 'identity']
+        self.nonlin_names = ["cube", "tanh", "sigmoid", "leaky_relu", "identity"]
         self.nonlin_selector = torch.randint(0, len(self.nonlin) - 1, (num_vars,))
 
         # print the selected nonlinearities
@@ -115,17 +148,25 @@ class NonLinearSEM(LinearSEM):
 
         for i, nonlin_idx in enumerate(self.nonlin_selector):
             if i != 0:
-                z[:, i] = self.nonlin[nonlin_idx](w[i, i] * x[:, i] + z[:, :i] @ w[i, :i])
+                z[:, i] = self.nonlin[nonlin_idx](
+                    w[i, i] * x[:, i] + z[:, :i] @ w[i, :i]
+                )
             else:
                 z[:, i] = w[i, i] * self.nonlin[nonlin_idx](x[:, i])
 
         return self.permutation(z)
 
 
-
 class ARMLP(nn.Module):
-    def __init__(self, num_vars: int, transform: callable = None, residual: bool = False, num_weights: int = 5,
-                 triangular=True, budget:bool=False):
+    def __init__(
+        self,
+        num_vars: int,
+        transform: callable = None,
+        residual: bool = False,
+        num_weights: int = 5,
+        triangular=True,
+        budget: bool = False,
+    ):
         super().__init__()
 
         self.num_vars = num_vars
@@ -136,14 +177,19 @@ class ARMLP(nn.Module):
         if self.budget is True:
             self.budget_net = SparseBudgetNet(self.num_vars)
 
-        self.weight = nn.ParameterList([
-                                        nn.Parameter(
-                                                        torch.tril(nn.Linear(num_vars, num_vars).weight, 0 if self.residual is False else -1)
-                                                        if self.triangular is True else nn.Linear(num_vars, num_vars, bias=False).weight
-                                                     )
-
-                                        for _ in range(num_weights)
-        ])
+        self.weight = nn.ParameterList(
+            [
+                nn.Parameter(
+                    torch.tril(
+                        nn.Linear(num_vars, num_vars).weight,
+                        0 if self.residual is False else -1,
+                    )
+                    if self.triangular is True
+                    else nn.Linear(num_vars, num_vars, bias=False).weight
+                )
+                for _ in range(num_weights)
+            ]
+        )
         if self.residual is True and self.triangular is True:
             self.scaling = nn.Parameter(torch.ones(self.num_vars), requires_grad=True)
 
@@ -157,12 +203,16 @@ class ARMLP(nn.Module):
         for i in range(len(self.weight)):
             w *= self.weight[i]
 
-        w = w if (self.residual is False or self.triangular is False) else w + torch.diag(self.scaling)
+        w = (
+            w
+            if (self.residual is False or self.triangular is False)
+            else w + torch.diag(self.scaling)
+        )
 
         assembled = w if self.triangular is False else torch.tril(w)
 
         if self.budget is True:
-            assembled = assembled*self.budget_net.mask
+            assembled = assembled * self.budget_net.mask
         return assembled
 
     def forward(self, x):
@@ -197,7 +247,14 @@ class ARMLP(nn.Module):
 
 
 class FeatureMLP(nn.Module):
-    def __init__(self, num_vars: int, in_features: int, out_feature: int, bias: bool = True, force_identity: bool = False):
+    def __init__(
+        self,
+        num_vars: int,
+        in_features: int,
+        out_feature: int,
+        bias: bool = True,
+        force_identity: bool = False,
+    ):
         super().__init__()
         self.num_vars = num_vars
         self.in_features = in_features
@@ -206,7 +263,11 @@ class FeatureMLP(nn.Module):
 
         # create MLPs
         self.mlps = nn.ModuleList(
-            [nn.Linear(self.in_features, self.out_feature, self.bias) for _ in range(self.num_vars)])
+            [
+                nn.Linear(self.in_features, self.out_feature, self.bias)
+                for _ in range(self.num_vars)
+            ]
+        )
 
         self.act = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_vars)])
         if force_identity is True:
@@ -225,19 +286,25 @@ class FeatureMLP(nn.Module):
 
         # the ith layer only gets the ith variable
         # reassemble into shape (batch_size, num_vars, out_features)
-        return torch.stack([self.act[i](mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1)
+        return torch.stack(
+            [self.act[i](mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1
+        )
 
 
 class PermutationNet(nn.Module):
     def __init__(self, num_vars):
         super().__init__()
         self.num_vars = num_vars
-        self.weight = nn.Parameter(torch.randn(num_vars,))
+        self.weight = nn.Parameter(
+            torch.randn(
+                num_vars,
+            )
+        )
         self.softmax = nn.Softmax(0)
 
         self.i = 0
 
-    def forward(self,x):
+    def forward(self, x):
 
         self.i += 1
         if self.i % 250 == 0:
@@ -245,10 +312,10 @@ class PermutationNet(nn.Module):
 
         sorted, indices = self.weight.sort()
         perm = torch.zeros(self.num_vars, self.num_vars, device=self.weight.device)
-        perm[list(range(self.num_vars)), indices] =sorted
-        perm/=perm.sum(0)
+        perm[list(range(self.num_vars)), indices] = sorted
+        perm /= perm.sum(0)
 
-        return perm@x
+        return perm @ x
 
     def to(self, device):
         """
@@ -261,33 +328,57 @@ class PermutationNet(nn.Module):
 
         return self
 
+
 class ARBottleneckNet(nn.Module):
-    def __init__(self, num_vars: int, pre_layer_feats: FeatureList, post_layer_feats: FeatureList, bias: bool = True,
-                 normalize: bool = False, residual: bool = False, permute=False, sinkhorn=False, triangular=True,
-                 budget:bool=False):
+    def __init__(
+        self,
+        num_vars: int,
+        pre_layer_feats: FeatureList,
+        post_layer_feats: FeatureList,
+        bias: bool = True,
+        normalize: bool = False,
+        residual: bool = False,
+        permute=False,
+        sinkhorn=False,
+        triangular=True,
+        budget: bool = False,
+    ):
         super().__init__()
         self.num_vars = num_vars
         self.pre_layer_feats = pre_layer_feats
         self.post_layer_feats = post_layer_feats
         self.bias = bias
 
-
         self._init_feature_layers()
 
-        self.ar_bottleneck = ARMLP(self.num_vars, residual=residual, triangular=triangular, budget=budget)
+        self.ar_bottleneck = ARMLP(
+            self.num_vars, residual=residual, triangular=triangular, budget=budget
+        )
 
-        self.scaling = lambda x: x if normalize is False else ls.SoftclipLayer(self.num_vars, 1, True)
+        self.scaling = (
+            lambda x: x
+            if normalize is False
+            else ls.SoftclipLayer(self.num_vars, 1, True)
+        )
 
         self.sinkhorn = SinkhornNet(self.num_vars, 5, 1e-3)
         self.perm_net = PermutationNet(self.num_vars)
 
         self.inv_permutation = torch.arange(self.num_vars)
 
-        self.permutation = (lambda x: x) if (permute is False or sinkhorn is False) else (lambda x: self.sinkhorn(x))
+        self.permutation = (
+            (lambda x: x)
+            if (permute is False or sinkhorn is False)
+            else (lambda x: self.sinkhorn(x))
+        )
 
     def _layer_generator(self, features: FeatureList):
-        return nn.Sequential(*[FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias) for idx in
-                               range(len(features) - 1)])
+        return nn.Sequential(
+            *[
+                FeatureMLP(self.num_vars, features[idx], features[idx + 1], self.bias)
+                for idx in range(len(features) - 1)
+            ]
+        )
 
     def _init_feature_layers(self):
         """
@@ -334,7 +425,13 @@ class ARBottleneckNet(nn.Module):
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
-        return self.scaling(torch.squeeze(self.post_layers(self.ar_bottleneck(self.permutation(self.pre_layers(x))))))
+        return self.scaling(
+            torch.squeeze(
+                self.post_layers(
+                    self.ar_bottleneck(self.permutation(self.pre_layers(x)))
+                )
+            )
+        )
         # return self.ar_bottleneck(x.T).T
 
     def to(self, device):
@@ -360,16 +457,14 @@ class ARBottleneckNet(nn.Module):
         return self.ar_bottleneck.assembled_weight.abs().l1_loss()
 
 
-
-
 if __name__ == "__main__":
     NUM_DIM = 3
     L1 = 5e0
-    s = SinkhornNet(NUM_DIM,20,3e-4)
-    permute_indices = [1,2,0]
+    s = SinkhornNet(NUM_DIM, 20, 3e-4)
+    permute_indices = [1, 2, 0]
 
-    permute_mat = torch.zeros(NUM_DIM,NUM_DIM)
-    permute_mat[list(range(NUM_DIM)), permute_indices]=1
+    permute_mat = torch.zeros(NUM_DIM, NUM_DIM)
+    permute_mat[list(range(NUM_DIM)), permute_indices] = 1
 
     causal2repr = torch.randn_like(permute_mat)
 
@@ -384,21 +479,24 @@ if __name__ == "__main__":
     class ReprNet(nn.Module):
         def __init__(self):
             super().__init__()
-            self.unmixing = torch.nn.Parameter(torch.tril(torch.randn_like(weight)), requires_grad=True)
-            self.repr_weight = torch.nn.Parameter(torch.randn_like(weight), requires_grad=True)
-        def forward(self, x):
-            return torch.tril(self.unmixing)@self.repr_weight @x
+            self.unmixing = torch.nn.Parameter(
+                torch.tril(torch.randn_like(weight)), requires_grad=True
+            )
+            self.repr_weight = torch.nn.Parameter(
+                torch.randn_like(weight), requires_grad=True
+            )
 
+        def forward(self, x):
+            return torch.tril(self.unmixing) @ self.repr_weight @ x
 
     mixing = torch.tril(torch.randn(NUM_DIM, NUM_DIM)) * mask
-    J_repr = causal2repr@mixing
-
+    J_repr = causal2repr @ mixing
 
     print(f"{J_repr=}")
-    reprnet= ReprNet()
+    reprnet = ReprNet()
     optim = torch.optim.Adam(reprnet.parameters(), lr=1e-3)
 
-    from metrics import frobenius_diagonality
+    from ica_dis import frobenius_diagonality
 
     for i in range(12000):
 
@@ -413,9 +511,7 @@ if __name__ == "__main__":
 
         loss.backward()
 
-
         optim.step()
-
 
     print(f"{mixing=}")
     print(f"{reprnet.unmixing=}")

@@ -12,9 +12,11 @@ class Invertible1x1Conv(nn.Module):
     As introduced in Glow paper.
     """
 
-    def __init__(self, dim, device='cpu', condition_size=0):
+    def __init__(self, dim, device="cpu", condition_size=0):
         super().__init__()
-        self.conditional = True  # forward backward unchanged when conditional, thus always True
+        self.conditional = (
+            True  # forward backward unchanged when conditional, thus always True
+        )
         self.cond_size = condition_size  # for compatibility with the rest of the flow who have this attribute
         self.dim = dim
         self.device = device
@@ -22,12 +24,18 @@ class Invertible1x1Conv(nn.Module):
         P, L, U = torch.lu_unpack(*Q.lu())
         self.P = P.to(self.device)  # remains fixed during optimization
         self.L = nn.Parameter(L).to(self.device)  # lower triangular portion
-        self.S = nn.Parameter(U.diag()).to(self.device)  # "crop out" the diagonal to its own parameter
-        self.U = nn.Parameter(torch.triu(U, diagonal=1)).to(self.device)  # "crop out" diagonal, stored in S
+        self.S = nn.Parameter(U.diag()).to(
+            self.device
+        )  # "crop out" the diagonal to its own parameter
+        self.U = nn.Parameter(torch.triu(U, diagonal=1)).to(
+            self.device
+        )  # "crop out" diagonal, stored in S
 
     def _assemble_W(self):
-        """ assemble W from its pieces (P, L, U, S) """
-        L = torch.tril(self.L, diagonal=-1) + torch.diag(torch.ones(self.dim).to(self.device))
+        """assemble W from its pieces (P, L, U, S)"""
+        L = torch.tril(self.L, diagonal=-1) + torch.diag(
+            torch.ones(self.dim).to(self.device)
+        )
         U = torch.triu(self.U, diagonal=1)
         W = self.P @ L @ (U + torch.diag(self.S))
         return W
@@ -47,9 +55,18 @@ class Invertible1x1Conv(nn.Module):
 
 
 class NSF_CL(nn.Module):
-    """ Neural spline flow, coupling layer, [Durkan et al. 2019] """
+    """Neural spline flow, coupling layer, [Durkan et al. 2019]"""
 
-    def __init__(self, dim, K=5, B=3, hidden_dim=8, base_network=MLP4, device='cpu', condition_size=0):
+    def __init__(
+        self,
+        dim,
+        K=5,
+        B=3,
+        hidden_dim=8,
+        base_network=MLP4,
+        device="cpu",
+        condition_size=0,
+    ):
         super().__init__()
         self.dim = dim
         self.K = K
@@ -57,12 +74,16 @@ class NSF_CL(nn.Module):
         self.device = device
         self.conditional = condition_size != 0
         self.cond_size = condition_size
-        self.f1 = base_network(dim // 2 + self.cond_size, (3 * K - 1) * dim // 2, hidden_dim).to(self.device)
-        self.f2 = base_network(dim // 2 + self.cond_size, (3 * K - 1) * dim // 2, hidden_dim).to(self.device)
+        self.f1 = base_network(
+            dim // 2 + self.cond_size, (3 * K - 1) * dim // 2, hidden_dim
+        ).to(self.device)
+        self.f2 = base_network(
+            dim // 2 + self.cond_size, (3 * K - 1) * dim // 2, hidden_dim
+        ).to(self.device)
 
     def forward(self, x, y=None):
         log_det = torch.zeros(x.shape[0]).to(self.device)
-        lower, upper = x[:, :self.dim // 2], x[:, self.dim // 2:]
+        lower, upper = x[:, : self.dim // 2], x[:, self.dim // 2 :]
         if y is not None and self.conditional:
             lower_y = torch.cat([lower, y], dim=1)
         else:
@@ -72,7 +93,9 @@ class NSF_CL(nn.Module):
         W, H = torch.softmax(W, dim=2), torch.softmax(H, dim=2)
         W, H = 2 * self.B * W, 2 * self.B * H
         D = F.softplus(D)
-        upper, ld = unconstrained_RQS(upper, W, H, D, inverse=False, tail_bound=self.B, device=self.device)
+        upper, ld = unconstrained_RQS(
+            upper, W, H, D, inverse=False, tail_bound=self.B, device=self.device
+        )
         log_det += torch.sum(ld, dim=1)
         if y is not None and self.conditional:
             upper_y = torch.cat([upper, y], dim=1)
@@ -83,13 +106,15 @@ class NSF_CL(nn.Module):
         W, H = torch.softmax(W, dim=2), torch.softmax(H, dim=2)
         W, H = 2 * self.B * W, 2 * self.B * H
         D = F.softplus(D)
-        lower, ld = unconstrained_RQS(lower, W, H, D, inverse=False, tail_bound=self.B, device=self.device)
+        lower, ld = unconstrained_RQS(
+            lower, W, H, D, inverse=False, tail_bound=self.B, device=self.device
+        )
         log_det += torch.sum(ld, dim=1)
         return torch.cat([lower, upper], dim=1), log_det
 
     def backward(self, z, y=None):
         log_det = torch.zeros(z.shape[0]).to(self.device)
-        lower, upper = z[:, :self.dim // 2], z[:, self.dim // 2:]
+        lower, upper = z[:, : self.dim // 2], z[:, self.dim // 2 :]
         if y is not None and self.conditional:
             upper_y = torch.cat([upper, y], dim=1)
         else:
@@ -99,7 +124,9 @@ class NSF_CL(nn.Module):
         W, H = torch.softmax(W, dim=2), torch.softmax(H, dim=2)
         W, H = 2 * self.B * W, 2 * self.B * H
         D = F.softplus(D)
-        lower, ld = unconstrained_RQS(lower, W, H, D, inverse=True, tail_bound=self.B, device=self.device)
+        lower, ld = unconstrained_RQS(
+            lower, W, H, D, inverse=True, tail_bound=self.B, device=self.device
+        )
         log_det += torch.sum(ld, dim=1)
         if y is not None and self.conditional:
             lower_y = torch.cat([lower, y], dim=1)
@@ -110,15 +137,17 @@ class NSF_CL(nn.Module):
         W, H = torch.softmax(W, dim=2), torch.softmax(H, dim=2)
         W, H = 2 * self.B * W, 2 * self.B * H
         D = F.softplus(D)
-        upper, ld = unconstrained_RQS(upper, W, H, D, inverse=True, tail_bound=self.B, device=self.device)
+        upper, ld = unconstrained_RQS(
+            upper, W, H, D, inverse=True, tail_bound=self.B, device=self.device
+        )
         log_det += torch.sum(ld, dim=1)
         return torch.cat([lower, upper], dim=1), log_det
 
 
 class NormalizingFlow(nn.Module):
-    """ A sequence of Normalizing Flows is a Normalizing Flow """
+    """A sequence of Normalizing Flows is a Normalizing Flow"""
 
-    def __init__(self, flows, device='cpu'):
+    def __init__(self, flows, device="cpu"):
         super().__init__()
         self.device = device
         self.flows = nn.ModuleList(flows)
@@ -127,7 +156,7 @@ class NormalizingFlow(nn.Module):
         self.conditional = True
         self.cond_size = 0
         for flow in self.flows:
-            if not hasattr(flow, 'conditional'):
+            if not hasattr(flow, "conditional"):
                 self.conditional = False
             else:
                 if not flow.conditional:
@@ -157,14 +186,16 @@ class NormalizingFlow(nn.Module):
 
 
 class NormalizingFlowModel(nn.Module):
-    """ A Normalizing Flow Model is a (prior, flow) pair """
+    """A Normalizing Flow Model is a (prior, flow) pair"""
 
-    def __init__(self, prior, flows, device='cpu'):
+    def __init__(self, prior, flows, device="cpu"):
         super().__init__()
         self.prior = prior
         self.flow = NormalizingFlow(flows, device=device)
         self.device = device
-        self.conditional = self.flow.conditional  # conditional if its flow is conditional
+        self.conditional = (
+            self.flow.conditional
+        )  # conditional if its flow is conditional
         self.cond_size = self.flow.cond_size
 
     def forward(self, x, y=None):
@@ -178,7 +209,7 @@ class NormalizingFlowModel(nn.Module):
 
     def log_pdf(self, x, y=None):
         zs, prior_logprob, log_det = self.forward(x, y)
-        flow_logdensity = (prior_logprob + log_det)
+        flow_logdensity = prior_logprob + log_det
         return flow_logdensity
 
     def sample(self, n_samples, cond_size=None):
@@ -188,7 +219,9 @@ class NormalizingFlowModel(nn.Module):
         if self.conditional and cond_size is not None:
             # generate n_samples in total
             n_samples_per_cond = n_samples // cond_size  # nbr of samples per condition
-            n_samples_rem = n_samples % cond_size  # remaining of division to have toatal n_samples samples
+            n_samples_rem = (
+                n_samples % cond_size
+            )  # remaining of division to have toatal n_samples samples
             # THIS WORKS ONLY FOR DISCRETE CONDITONING VARIABLES
             samples = []
             labels = torch.eye(cond_size).to(self.device)

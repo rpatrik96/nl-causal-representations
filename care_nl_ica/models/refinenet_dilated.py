@@ -9,18 +9,27 @@ import torch.nn.functional as F
 
 def conv3x3(in_planes, out_planes, stride=1, bias=False):
     "3x3 convolution with padding"
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=bias)
+    return nn.Conv2d(
+        in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=bias
+    )
 
 
 def conv1x1(in_planes, out_planes, stride=1, bias=False):
     "1x1 convolution"
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride,
-                     padding=0, bias=bias)
+    return nn.Conv2d(
+        in_planes, out_planes, kernel_size=1, stride=stride, padding=0, bias=bias
+    )
 
 
 def dilated_conv3x3(in_planes, out_planes, dilation, bias=True):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, padding=dilation, dilation=dilation, bias=bias)
+    return nn.Conv2d(
+        in_planes,
+        out_planes,
+        kernel_size=3,
+        padding=dilation,
+        dilation=dilation,
+        bias=bias,
+    )
 
 
 class ConditionalBatchNorm2d(nn.Module):
@@ -31,7 +40,9 @@ class ConditionalBatchNorm2d(nn.Module):
         self.bn = nn.BatchNorm2d(num_features, affine=False)
         if self.bias:
             self.embed = nn.Embedding(num_classes, num_features * 2)
-            self.embed.weight.data[:, :num_features].uniform_()  # Initialise scale at N(1, 0.02)
+            self.embed.weight.data[
+                :, :num_features
+            ].uniform_()  # Initialise scale at N(1, 0.02)
             self.embed.weight.data[:, num_features:].zero_()  # Initialise bias at 0
         else:
             self.embed = nn.Embedding(num_classes, num_features)
@@ -41,7 +52,9 @@ class ConditionalBatchNorm2d(nn.Module):
         out = self.bn(x)
         if self.bias:
             gamma, beta = self.embed(y).chunk(2, dim=1)
-            out = gamma.view(-1, self.num_features, 1, 1) * out + beta.view(-1, self.num_features, 1, 1)
+            out = gamma.view(-1, self.num_features, 1, 1) * out + beta.view(
+                -1, self.num_features, 1, 1
+            )
         else:
             gamma = self.embed(y)
             out = gamma.view(-1, self.num_features, 1, 1) * out
@@ -92,14 +105,23 @@ class CondCRPBlock(nn.Module):
 
 
 class CondRCUBlock(nn.Module):
-    def __init__(self, features, n_blocks, n_stages, num_classes, normalizer, act=nn.ReLU()):
+    def __init__(
+        self, features, n_blocks, n_stages, num_classes, normalizer, act=nn.ReLU()
+    ):
         super().__init__()
 
         for i in range(n_blocks):
             for j in range(n_stages):
-                setattr(self, '{}_{}_norm'.format(i + 1, j + 1), normalizer(features, num_classes, bias=True))
-                setattr(self, '{}_{}_conv'.format(i + 1, j + 1),
-                        conv3x3(features, features, stride=1, bias=False))
+                setattr(
+                    self,
+                    "{}_{}_norm".format(i + 1, j + 1),
+                    normalizer(features, num_classes, bias=True),
+                )
+                setattr(
+                    self,
+                    "{}_{}_conv".format(i + 1, j + 1),
+                    conv3x3(features, features, stride=1, bias=False),
+                )
 
         self.stride = 1
         self.n_blocks = n_blocks
@@ -110,9 +132,9 @@ class CondRCUBlock(nn.Module):
         for i in range(self.n_blocks):
             residual = x
             for j in range(self.n_stages):
-                x = getattr(self, '{}_{}_norm'.format(i + 1, j + 1))(x, y)
+                x = getattr(self, "{}_{}_norm".format(i + 1, j + 1))(x, y)
                 x = self.act(x)
-                x = getattr(self, '{}_{}_conv'.format(i + 1, j + 1))(x)
+                x = getattr(self, "{}_{}_conv".format(i + 1, j + 1))(x)
             x += residual
         return x
 
@@ -138,13 +160,22 @@ class CondMSFBlock(nn.Module):
         for i in range(len(self.convs)):
             h = self.norms[i](xs[i], y)
             h = self.convs[i](h)
-            h = F.interpolate(h, size=shape, mode='bilinear', align_corners=True)
+            h = F.interpolate(h, size=shape, mode="bilinear", align_corners=True)
             sums += h
         return sums
 
 
 class CondRefineBlock(nn.Module):
-    def __init__(self, in_planes, features, num_classes, normalizer, act=nn.ReLU(), start=False, end=False):
+    def __init__(
+        self,
+        in_planes,
+        features,
+        num_classes,
+        normalizer,
+        act=nn.ReLU(),
+        start=False,
+        end=False,
+    ):
         super().__init__()
 
         assert isinstance(in_planes, tuple) or isinstance(in_planes, list)
@@ -156,7 +187,9 @@ class CondRefineBlock(nn.Module):
                 CondRCUBlock(in_planes[i], 2, 2, num_classes, normalizer, act)
             )
 
-        self.output_convs = CondRCUBlock(features, 3 if end else 1, 2, num_classes, normalizer, act)
+        self.output_convs = CondRCUBlock(
+            features, 3 if end else 1, 2, num_classes, normalizer, act
+        )
 
         if not start:
             self.msf = CondMSFBlock(in_planes, features, num_classes, normalizer)
@@ -182,39 +215,87 @@ class CondRefineBlock(nn.Module):
 
 
 class ConvMeanPool(nn.Module):
-    def __init__(self, input_dim, output_dim, kernel_size=3, biases=True, adjust_padding=False):
+    def __init__(
+        self, input_dim, output_dim, kernel_size=3, biases=True, adjust_padding=False
+    ):
         super().__init__()
         if not adjust_padding:
-            self.conv = nn.Conv2d(input_dim, output_dim, kernel_size, stride=1, padding=kernel_size // 2, bias=biases)
+            self.conv = nn.Conv2d(
+                input_dim,
+                output_dim,
+                kernel_size,
+                stride=1,
+                padding=kernel_size // 2,
+                bias=biases,
+            )
         else:
             self.conv = nn.Sequential(
                 nn.ZeroPad2d((1, 0, 1, 0)),
-                nn.Conv2d(input_dim, output_dim, kernel_size, stride=1, padding=kernel_size // 2, bias=biases)
+                nn.Conv2d(
+                    input_dim,
+                    output_dim,
+                    kernel_size,
+                    stride=1,
+                    padding=kernel_size // 2,
+                    bias=biases,
+                ),
             )
 
     def forward(self, inputs):
         output = self.conv(inputs)
-        output = sum(
-            [output[:, :, ::2, ::2], output[:, :, 1::2, ::2], output[:, :, ::2, 1::2], output[:, :, 1::2, 1::2]]) / 4.
+        output = (
+            sum(
+                [
+                    output[:, :, ::2, ::2],
+                    output[:, :, 1::2, ::2],
+                    output[:, :, ::2, 1::2],
+                    output[:, :, 1::2, 1::2],
+                ]
+            )
+            / 4.0
+        )
         return output
 
 
 class MeanPoolConv(nn.Module):
     def __init__(self, input_dim, output_dim, kernel_size=3, biases=True):
         super().__init__()
-        self.conv = nn.Conv2d(input_dim, output_dim, kernel_size, stride=1, padding=kernel_size // 2, bias=biases)
+        self.conv = nn.Conv2d(
+            input_dim,
+            output_dim,
+            kernel_size,
+            stride=1,
+            padding=kernel_size // 2,
+            bias=biases,
+        )
 
     def forward(self, inputs):
         output = inputs
-        output = sum(
-            [output[:, :, ::2, ::2], output[:, :, 1::2, ::2], output[:, :, ::2, 1::2], output[:, :, 1::2, 1::2]]) / 4.
+        output = (
+            sum(
+                [
+                    output[:, :, ::2, ::2],
+                    output[:, :, 1::2, ::2],
+                    output[:, :, ::2, 1::2],
+                    output[:, :, 1::2, 1::2],
+                ]
+            )
+            / 4.0
+        )
         return self.conv(output)
 
 
 class UpsampleConv(nn.Module):
     def __init__(self, input_dim, output_dim, kernel_size=3, biases=True):
         super().__init__()
-        self.conv = nn.Conv2d(input_dim, output_dim, kernel_size, stride=1, padding=kernel_size // 2, bias=biases)
+        self.conv = nn.Conv2d(
+            input_dim,
+            output_dim,
+            kernel_size,
+            stride=1,
+            padding=kernel_size // 2,
+            bias=biases,
+        )
         self.pixelshuffle = nn.PixelShuffle(upscale_factor=2)
 
     def forward(self, inputs):
@@ -225,14 +306,23 @@ class UpsampleConv(nn.Module):
 
 
 class ConditionalResidualBlock(nn.Module):
-    def __init__(self, input_dim, output_dim, num_classes, resample=None, act=nn.ELU(),
-                 normalization=ConditionalBatchNorm2d, adjust_padding=False, dilation=None):
+    def __init__(
+        self,
+        input_dim,
+        output_dim,
+        num_classes,
+        resample=None,
+        act=nn.ELU(),
+        normalization=ConditionalBatchNorm2d,
+        adjust_padding=False,
+        dilation=None,
+    ):
         super().__init__()
         self.non_linearity = act
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.resample = resample
-        if resample == 'down':
+        if resample == "down":
             if dilation is not None:
                 self.conv1 = dilated_conv3x3(input_dim, input_dim, dilation=dilation)
                 self.normalize2 = normalization(input_dim, num_classes)
@@ -241,8 +331,12 @@ class ConditionalResidualBlock(nn.Module):
             else:
                 self.conv1 = nn.Conv2d(input_dim, input_dim, 3, stride=1, padding=1)
                 self.normalize2 = normalization(input_dim, num_classes)
-                self.conv2 = ConvMeanPool(input_dim, output_dim, 3, adjust_padding=adjust_padding)
-                conv_shortcut = partial(ConvMeanPool, kernel_size=1, adjust_padding=adjust_padding)
+                self.conv2 = ConvMeanPool(
+                    input_dim, output_dim, 3, adjust_padding=adjust_padding
+                )
+                conv_shortcut = partial(
+                    ConvMeanPool, kernel_size=1, adjust_padding=adjust_padding
+                )
 
         elif resample is None:
             if dilation is not None:
@@ -252,11 +346,15 @@ class ConditionalResidualBlock(nn.Module):
                 self.conv2 = dilated_conv3x3(output_dim, output_dim, dilation=dilation)
             else:
                 conv_shortcut = nn.Conv2d
-                self.conv1 = nn.Conv2d(input_dim, output_dim, kernel_size=3, stride=1, padding=1)
+                self.conv1 = nn.Conv2d(
+                    input_dim, output_dim, kernel_size=3, stride=1, padding=1
+                )
                 self.normalize2 = normalization(output_dim, num_classes)
-                self.conv2 = nn.Conv2d(output_dim, output_dim, kernel_size=3, stride=1, padding=1)
+                self.conv2 = nn.Conv2d(
+                    output_dim, output_dim, kernel_size=3, stride=1, padding=1
+                )
         else:
-            raise Exception('invalid resample value')
+            raise Exception("invalid resample value")
 
         if output_dim != input_dim or resample is not None:
             self.shortcut = conv_shortcut(input_dim, output_dim)
@@ -284,7 +382,9 @@ class InstanceNorm2dPlus(nn.Module):
         super().__init__()
         self.num_features = num_features
         self.bias = bias
-        self.instance_norm = nn.InstanceNorm2d(num_features, affine=False, track_running_stats=False)
+        self.instance_norm = nn.InstanceNorm2d(
+            num_features, affine=False, track_running_stats=False
+        )
         self.alpha = nn.Parameter(torch.zeros(num_features))
         self.gamma = nn.Parameter(torch.zeros(num_features))
         self.alpha.data.normal_(1, 0.02)
@@ -301,7 +401,9 @@ class InstanceNorm2dPlus(nn.Module):
 
         if self.bias:
             h = h + means[..., None, None] * self.alpha[..., None, None]
-            out = self.gamma.view(-1, self.num_features, 1, 1) * h + self.beta.view(-1, self.num_features, 1, 1)
+            out = self.gamma.view(-1, self.num_features, 1, 1) * h + self.beta.view(
+                -1, self.num_features, 1, 1
+            )
         else:
             h = h + means[..., None, None] * self.alpha[..., None, None]
             out = self.gamma.view(-1, self.num_features, 1, 1) * h
@@ -317,8 +419,8 @@ class RefineNetDilated(nn.Module):
         self.num_classes = config.model.num_classes
         self.act = act = nn.ELU()
         # self.act = act = nn.ReLU(True)
-        self.input_size = config.data.image_size ** 2 * config.data.channels
-        self.output_size = config.data.image_size ** 2 * config.data.channels
+        self.input_size = config.data.image_size**2 * config.data.channels
+        self.output_size = config.data.image_size**2 * config.data.channels
 
         try:
             self.afl = config.model.final_layer
@@ -334,46 +436,146 @@ class RefineNetDilated(nn.Module):
 
         self.end_conv = nn.Conv2d(ngf, config.data.channels, 3, stride=1, padding=1)
 
-        self.res1 = nn.ModuleList([
-            ConditionalResidualBlock(self.ngf, self.ngf, self.num_classes, resample=None, act=act,
-                                     normalization=self.norm),
-            ConditionalResidualBlock(self.ngf, self.ngf, self.num_classes, resample=None, act=act,
-                                     normalization=self.norm)]
+        self.res1 = nn.ModuleList(
+            [
+                ConditionalResidualBlock(
+                    self.ngf,
+                    self.ngf,
+                    self.num_classes,
+                    resample=None,
+                    act=act,
+                    normalization=self.norm,
+                ),
+                ConditionalResidualBlock(
+                    self.ngf,
+                    self.ngf,
+                    self.num_classes,
+                    resample=None,
+                    act=act,
+                    normalization=self.norm,
+                ),
+            ]
         )
 
-        self.res2 = nn.ModuleList([
-            ConditionalResidualBlock(self.ngf, 2 * self.ngf, self.num_classes, resample='down', act=act,
-                                     normalization=self.norm),
-            ConditionalResidualBlock(2 * self.ngf, 2 * self.ngf, self.num_classes, resample=None, act=act,
-                                     normalization=self.norm)]
+        self.res2 = nn.ModuleList(
+            [
+                ConditionalResidualBlock(
+                    self.ngf,
+                    2 * self.ngf,
+                    self.num_classes,
+                    resample="down",
+                    act=act,
+                    normalization=self.norm,
+                ),
+                ConditionalResidualBlock(
+                    2 * self.ngf,
+                    2 * self.ngf,
+                    self.num_classes,
+                    resample=None,
+                    act=act,
+                    normalization=self.norm,
+                ),
+            ]
         )
 
-        self.res3 = nn.ModuleList([
-            ConditionalResidualBlock(2 * self.ngf, 2 * self.ngf, self.num_classes, resample='down', act=act,
-                                     normalization=self.norm, dilation=2),
-            ConditionalResidualBlock(2 * self.ngf, 2 * self.ngf, self.num_classes, resample=None, act=act,
-                                     normalization=self.norm, dilation=2)]
+        self.res3 = nn.ModuleList(
+            [
+                ConditionalResidualBlock(
+                    2 * self.ngf,
+                    2 * self.ngf,
+                    self.num_classes,
+                    resample="down",
+                    act=act,
+                    normalization=self.norm,
+                    dilation=2,
+                ),
+                ConditionalResidualBlock(
+                    2 * self.ngf,
+                    2 * self.ngf,
+                    self.num_classes,
+                    resample=None,
+                    act=act,
+                    normalization=self.norm,
+                    dilation=2,
+                ),
+            ]
         )
 
         if config.data.image_size == 28:
-            self.res4 = nn.ModuleList([
-                ConditionalResidualBlock(2 * self.ngf, 2 * self.ngf, self.num_classes, resample='down', act=act,
-                                         normalization=self.norm, adjust_padding=True, dilation=4),
-                ConditionalResidualBlock(2 * self.ngf, 2 * self.ngf, self.num_classes, resample=None, act=act,
-                                         normalization=self.norm, dilation=4)]
+            self.res4 = nn.ModuleList(
+                [
+                    ConditionalResidualBlock(
+                        2 * self.ngf,
+                        2 * self.ngf,
+                        self.num_classes,
+                        resample="down",
+                        act=act,
+                        normalization=self.norm,
+                        adjust_padding=True,
+                        dilation=4,
+                    ),
+                    ConditionalResidualBlock(
+                        2 * self.ngf,
+                        2 * self.ngf,
+                        self.num_classes,
+                        resample=None,
+                        act=act,
+                        normalization=self.norm,
+                        dilation=4,
+                    ),
+                ]
             )
         else:
-            self.res4 = nn.ModuleList([
-                ConditionalResidualBlock(2 * self.ngf, 2 * self.ngf, self.num_classes, resample='down', act=act,
-                                         normalization=self.norm, adjust_padding=False, dilation=4),
-                ConditionalResidualBlock(2 * self.ngf, 2 * self.ngf, self.num_classes, resample=None, act=act,
-                                         normalization=self.norm, dilation=4)]
+            self.res4 = nn.ModuleList(
+                [
+                    ConditionalResidualBlock(
+                        2 * self.ngf,
+                        2 * self.ngf,
+                        self.num_classes,
+                        resample="down",
+                        act=act,
+                        normalization=self.norm,
+                        adjust_padding=False,
+                        dilation=4,
+                    ),
+                    ConditionalResidualBlock(
+                        2 * self.ngf,
+                        2 * self.ngf,
+                        self.num_classes,
+                        resample=None,
+                        act=act,
+                        normalization=self.norm,
+                        dilation=4,
+                    ),
+                ]
             )
 
-        self.refine1 = CondRefineBlock([2 * self.ngf], 2 * self.ngf, self.num_classes, self.norm, act=act, start=True)
-        self.refine2 = CondRefineBlock([2 * self.ngf, 2 * self.ngf], 2 * self.ngf, self.num_classes, self.norm, act=act)
-        self.refine3 = CondRefineBlock([2 * self.ngf, 2 * self.ngf], self.ngf, self.num_classes, self.norm, act=act)
-        self.refine4 = CondRefineBlock([self.ngf, self.ngf], self.ngf, self.num_classes, self.norm, act=act, end=True)
+        self.refine1 = CondRefineBlock(
+            [2 * self.ngf],
+            2 * self.ngf,
+            self.num_classes,
+            self.norm,
+            act=act,
+            start=True,
+        )
+        self.refine2 = CondRefineBlock(
+            [2 * self.ngf, 2 * self.ngf],
+            2 * self.ngf,
+            self.num_classes,
+            self.norm,
+            act=act,
+        )
+        self.refine3 = CondRefineBlock(
+            [2 * self.ngf, 2 * self.ngf], self.ngf, self.num_classes, self.norm, act=act
+        )
+        self.refine4 = CondRefineBlock(
+            [self.ngf, self.ngf],
+            self.ngf,
+            self.num_classes,
+            self.norm,
+            act=act,
+            end=True,
+        )
 
     def _compute_cond_module(self, module, x, y):
         for m in module:
@@ -382,7 +584,7 @@ class RefineNetDilated(nn.Module):
 
     def forward(self, x):
         if not self.logit_transform:
-            x = 2 * x - 1.
+            x = 2 * x - 1.0
 
         y = None
         output = self.begin_conv(x)

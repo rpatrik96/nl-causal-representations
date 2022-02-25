@@ -342,7 +342,7 @@ class SlowVAELoss(CLLoss):
         return 0.5 * (logvar + np.log(2 * np.pi * np.e))
 
     def compute_cross_ent_normal(self, mu, logvar):
-        return 0.5 * (mu ** 2 + torch.exp(logvar)) + np.log(np.sqrt(2 * np.pi))
+        return 0.5 * (mu**2 + torch.exp(logvar)) + np.log(np.sqrt(2 * np.pi))
 
     def compute_cross_ent_laplace(self, mean, logvar, rate_prior):
         var = torch.exp(logvar)
@@ -352,7 +352,7 @@ class SlowVAELoss(CLLoss):
             + rate_prior
             * sigma
             * np.sqrt(2 / np.pi)
-            * torch.exp(-(mean ** 2) / (2 * var))
+            * torch.exp(-(mean**2) / (2 * var))
             - rate_prior * mean * (1 - 2 * self.normal_dist.cdf(mean / sigma))
         )
         return ce

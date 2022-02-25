@@ -30,8 +30,8 @@ def pca(x, num_comp=None, params=None, zerotolerance=1e-7):
     if params is not None:
         # Use previously-trained model
         print("    use learned value")
-        data_pca = x - params['mean']
-        x = np.dot(params['W'], data_pca)
+        data_pca = x - params["mean"]
+        x = np.dot(params["W"], data_pca)
 
     # Learn from data ----------------------------------------
     else:
@@ -63,7 +63,7 @@ def pca(x, num_comp=None, params=None, zerotolerance=1e-7):
         A = np.dot(V, np.diag(dsqrt))  # de-whitening matrix
         x = np.dot(W, x)
 
-        params = {'mean': xmean, 'W': W, 'A': A}
+        params = {"mean": xmean, "W": W, "A": A}
 
         # Check
         datacov = np.cov(x)

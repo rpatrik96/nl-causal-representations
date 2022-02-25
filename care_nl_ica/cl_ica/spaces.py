@@ -133,7 +133,7 @@ class NSphereSpace(Space):
 
     def uniform(self, size, device="cpu"):
         x = torch.randn((size, self.n), device=device)
-        x /= torch.sqrt(torch.sum(x ** 2, dim=-1, keepdim=True))
+        x /= torch.sqrt(torch.sum(x**2, dim=-1, keepdim=True))
 
         return x
 
@@ -160,12 +160,12 @@ class NSphereSpace(Space):
 
         assert mean.shape[1] == self.n
         assert torch.allclose(
-            torch.sqrt((mean ** 2).sum(-1)), torch.Tensor([self.r]).to(device)
+            torch.sqrt((mean**2).sum(-1)), torch.Tensor([self.r]).to(device)
         )
 
         result = torch.randn((size, self.n), device=device) * std + mean
         # project back on sphere
-        result /= torch.sqrt(torch.sum(result ** 2, dim=-1, keepdim=True))
+        result /= torch.sqrt(torch.sum(result**2, dim=-1, keepdim=True))
 
         return result
 
@@ -189,12 +189,12 @@ class NSphereSpace(Space):
 
         assert mean.shape[1] == self.n
         assert torch.allclose(
-            torch.sqrt((mean ** 2).sum(-1)), torch.Tensor([self.r]).to(device)
+            torch.sqrt((mean**2).sum(-1)), torch.Tensor([self.r]).to(device)
         )
 
         result = NRealSpace(self.n).laplace(mean, lbd, size, device)
         # project back on sphere
-        result /= torch.sqrt(torch.sum(result ** 2, dim=-1, keepdim=True))
+        result /= torch.sqrt(torch.sum(result**2, dim=-1, keepdim=True))
 
         return result
 
@@ -219,14 +219,14 @@ class NSphereSpace(Space):
 
         assert mean.shape[1] == self.n
         assert torch.allclose(
-            torch.sqrt((mean ** 2).sum(-1)), torch.Tensor([self.r]).to(device)
+            torch.sqrt((mean**2).sum(-1)), torch.Tensor([self.r]).to(device)
         )
 
         result = NRealSpace(self.n).generalized_normal(
             mean=mean, lbd=lbd, p=p, size=size, device=device
         )
         # project back on sphere
-        result /= torch.sqrt(torch.sum(result ** 2, dim=-1, keepdim=True))
+        result /= torch.sqrt(torch.sum(result**2, dim=-1, keepdim=True))
 
         return result
 
@@ -249,7 +249,7 @@ class NSphereSpace(Space):
             mean = np.repeat(np.expand_dims(mean, 0), size, axis=0)
 
         assert mean.shape[1] == self.n
-        assert np.allclose(np.sqrt((mean ** 2).sum(-1)), self.r)
+        assert np.allclose(np.sqrt((mean**2).sum(-1)), self.r)
 
         samples_np = vmf.sample_vMF(mean, kappa, size)
         samples = torch.Tensor(samples_np).to(device)

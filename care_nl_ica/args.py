@@ -1,41 +1,109 @@
 import argparse
 
+import dep_mat
+
 
 def parse_args(args):
     parser = argparse.ArgumentParser(
         description="Disentanglement with InfoNCE/Contrastive Learning - MLP Mixing"
     )
-    parser.add_argument('--verbose', action='store_true', help="Print out details")
-    parser.add_argument('--use-flows', action='store_true', help="Use a Flow encoder")
-    parser.add_argument('--use-ar-mlp', action='store_true', help="Use the AR MLP encoder")
-    parser.add_argument('--use-reverse', action='store_true', help="Use reverse layers in the Flow encoder")
-    parser.add_argument('--use-batch-norm', action='store_true', help="Use batchnorm layers in the Flow encoder")
-    parser.add_argument('--log-latent-rec', action='store_true', help="Log the latents and their reconstructions")
-    parser.add_argument('--triangular', action='store_true', help="Force the AR MLP bottleneck to be triangular")
-    parser.add_argument("--triangularity-loss", type=float, default=0.0, help="triangularity loss on the correlation matrix")
-    parser.add_argument("--qr-loss", type=float, default=0.0, help="QR loss on the bottleneck matrix")
-    parser.add_argument('--cholesky-permutation', action='store_true', help="Estimate the permutation matrix from the Cholesky decomposition of the Jacobian")
-    parser.add_argument('--use-sem', action='store_true', help="Use SEM as decoder")
-    parser.add_argument('--sinkhorn', action='store_true', help="Use the Sinkhorn network")
-    parser.add_argument('--permute', action='store_true', help="Learn the permutation")
-    parser.add_argument('--budget', type=float, default=0.0, help="Constrain the non-zero elements on the bottleneck")
-    parser.add_argument('--normalize-latents', action='store_true', help="Normalizes the latent (marginal) distribution")
-    parser.add_argument('--nonlin-sem', action='store_true', help="Use nonlinear SEM as decoder")
-    parser.add_argument('--use-bias', action='store_true', help="Use bias in the network")
+    parser.add_argument("--verbose", action="store_true", help="Print out details")
+    parser.add_argument("--use-flows", action="store_true", help="Use a Flow encoder")
+    parser.add_argument(
+        "--use-ar-mlp", action="store_true", help="Use the AR MLP encoder"
+    )
+    parser.add_argument(
+        "--use-reverse",
+        action="store_true",
+        help="Use reverse layers in the Flow encoder",
+    )
+    parser.add_argument(
+        "--use-batch-norm",
+        action="store_true",
+        help="Use batchnorm layers in the Flow encoder",
+    )
+    parser.add_argument(
+        "--log-latent-rec",
+        action="store_true",
+        help="Log the latents and their reconstructions",
+    )
+    parser.add_argument(
+        "--triangular",
+        action="store_true",
+        help="Force the AR MLP bottleneck to be triangular",
+    )
+    parser.add_argument(
+        "--triangularity-loss",
+        type=float,
+        default=0.0,
+        help="triangularity loss on the correlation matrix",
+    )
+    parser.add_argument(
+        "--qr-loss", type=float, default=0.0, help="QR loss on the bottleneck matrix"
+    )
+    parser.add_argument(
+        "--cholesky-permutation",
+        action="store_true",
+        help="Estimate the permutation matrix from the Cholesky decomposition of the Jacobian",
+    )
+    parser.add_argument("--use-sem", action="store_true", help="Use SEM as decoder")
+    parser.add_argument(
+        "--sinkhorn", action="store_true", help="Use the Sinkhorn network"
+    )
+    parser.add_argument("--permute", action="store_true", help="Learn the permutation")
+    parser.add_argument(
+        "--budget",
+        type=float,
+        default=0.0,
+        help="Constrain the non-zero elements on the bottleneck",
+    )
+    parser.add_argument(
+        "--normalize-latents",
+        action="store_true",
+        help="Normalizes the latent (marginal) distribution",
+    )
+    parser.add_argument(
+        "--nonlin-sem", action="store_true", help="Use nonlinear SEM as decoder"
+    )
+    parser.add_argument(
+        "--use-bias", action="store_true", help="Use bias in the network"
+    )
     parser.add_argument("--l1", type=float, default=0.0, help="L1 regularization")
     parser.add_argument("--l2", type=float, default=0.0, help="L2 regularization")
-    parser.add_argument("--entropy-coeff", default=0.0, type=float, help="Entropy coefficient on the Sinkhorn weights")
-    parser.add_argument('--variant', type=int, default=0)
-    parser.add_argument('--start-step', type=int, default=None, help="Starting step index to activate functions")
-    parser.add_argument('--use-dep-mat', action='store_true', help="Use the dependency matrix")
-    parser.add_argument('--inject-structure', action='store_true',
-                        help="Injects a fixed structure into the flow to see the effect when the GT cannot be recovered")
-    parser.add_argument('--preserve-vol', action='store_true',
-                        help="Normalize the dependency matrix to have determinant=1")
-    parser.add_argument('--learnable-mask', action='store_true', help="Makes the masks in the flow learnable")
-    parser.add_argument('--num-permutations', type=int, default=50)
-    parser.add_argument('--n-eval-samples', type=int, default=512)
-    #############################   
+    parser.add_argument(
+        "--entropy-coeff",
+        default=0.0,
+        type=float,
+        help="Entropy coefficient on the Sinkhorn weights",
+    )
+    parser.add_argument("--variant", type=int, default=0)
+    parser.add_argument(
+        "--start-step",
+        type=int,
+        default=None,
+        help="Starting step index to activate functions",
+    )
+    parser.add_argument(
+        "--use-dep-mat", action="store_true", help="Use the dependency matrix"
+    )
+    parser.add_argument(
+        "--inject-structure",
+        action="store_true",
+        help="Injects a fixed structure into the flow to see the effect when the GT cannot be recovered",
+    )
+    parser.add_argument(
+        "--preserve-vol",
+        action="store_true",
+        help="Normalize the dependency matrix to have determinant=1",
+    )
+    parser.add_argument(
+        "--learnable-mask",
+        action="store_true",
+        help="Makes the masks in the flow learnable",
+    )
+    parser.add_argument("--num-permutations", type=int, default=50)
+    parser.add_argument("--n-eval-samples", type=int, default=512)
+    #############################
     parser.add_argument("--sphere-r", type=float, default=1.0)
     parser.add_argument(
         "--box-min",
@@ -49,13 +117,22 @@ def parse_args(args):
         default=1.0,
         help="For box normalization only. Maximal value of box.",
     )
-    parser.add_argument("--alpha", default=0.5, type=float, help="Weight factor between the two loss components")
     parser.add_argument(
-        "--normalization", choices=("", "fixed_box", "learnable_box", "fixed_sphere", "learnable_sphere"),
-        help="Output normalization to use. If empty, do not normalize at all.", default=""
+        "--alpha",
+        default=0.5,
+        type=float,
+        help="Weight factor between the two loss components",
     )
-    parser.add_argument('--mode', type=str, default='unsupervised')
-    parser.add_argument('--data-gen-mode', type=str, default='rvs', choices=['rvs', 'pcl'])
+    parser.add_argument(
+        "--normalization",
+        choices=("", "fixed_box", "learnable_box", "fixed_sphere", "learnable_sphere"),
+        help="Output normalization to use. If empty, do not normalize at all.",
+        default="",
+    )
+    parser.add_argument("--mode", type=str, default="unsupervised")
+    parser.add_argument(
+        "--data-gen-mode", type=str, default="rvs", choices=["rvs", "pcl"]
+    )
     parser.add_argument(
         "--more-unsupervised",
         type=int,
@@ -106,7 +183,7 @@ def parse_args(args):
         type=int,
         default=0,
         help="Type of ground-truth marginal distribution. p=0 means uniform; "
-             "all other p values correspond to (projected) Lp Exponential",
+        "all other p values correspond to (projected) Lp Exponential",
     )
     parser.add_argument(
         "--c-p",
@@ -133,14 +210,28 @@ def parse_args(args):
     parser.add_argument("--resume-training", action="store_true")
 
     # W and B
-    parser.add_argument('--use-wandb', action='store_true', help="Log with Weights&Biases")
-    parser.add_argument("--project", type=str, default="experiment",
-                        help="This is the name of the experiment on Weights and Biases")
-    parser.add_argument("--notes", type=str, default=None, help="Notes for the run on Weights and Biases")
-    parser.add_argument("--tags", type=str,
-                        nargs="*",  # 0 or more values expected => creates a list
-                        default=None, help="Tags for the run on Weights and Biases")
-
+    parser.add_argument(
+        "--use-wandb", action="store_true", help="Log with Weights&Biases"
+    )
+    parser.add_argument(
+        "--project",
+        type=str,
+        default="experiment",
+        help="This is the name of the experiment on Weights and Biases",
+    )
+    parser.add_argument(
+        "--notes",
+        type=str,
+        default=None,
+        help="Notes for the run on Weights and Biases",
+    )
+    parser.add_argument(
+        "--tags",
+        type=str,
+        nargs="*",  # 0 or more values expected => creates a list
+        default=None,
+        help="Tags for the run on Weights and Biases",
+    )
 
     args = parser.parse_args(args)
 
@@ -157,15 +248,13 @@ def add_tags(args):
     if args.tags is None:
         args.tags = []
 
-
     if args.use_sem is True:
         args.tags.append("sem")
-    
+
     if args.nonlin_sem is True:
         args.tags.append("nonlinear")
     else:
         args.tags.append("linear")
-
 
     if args.sinkhorn is True:
         args.tags.append("sinkhorn")
@@ -185,7 +274,6 @@ def add_tags(args):
 
     if args.normalize_latents is True:
         args.tags.append("normalization")
-
 
     if args.l1 != 0.0:
         args.tags.append(f"L1")

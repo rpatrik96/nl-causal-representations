@@ -6,8 +6,17 @@ from .nets import CleanMLP
 
 
 class UnnormalizedConditialEBM(nn.Module):
-    def __init__(self, input_size, hidden_size, n_hidden, output_size, condition_size, activation='lrelu',
-                 augment=False, positive=False):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        n_hidden,
+        output_size,
+        condition_size,
+        activation="lrelu",
+        augment=False,
+        positive=False,
+    ):
         super().__init__()
 
         self.input_size = input_size
@@ -19,7 +28,9 @@ class UnnormalizedConditialEBM(nn.Module):
         self.augment = augment
         self.positive = positive
 
-        self.f = CleanMLP(input_size, hidden_size, n_hidden, output_size, activation=activation)
+        self.f = CleanMLP(
+            input_size, hidden_size, n_hidden, output_size, activation=activation
+        )
         self.g = nn.Linear(condition_size, output_size, bias=False)
 
     def forward(self, x, y):
@@ -30,10 +41,12 @@ class UnnormalizedConditialEBM(nn.Module):
             gy = F.relu(gy)
 
         if self.augment:
-            return torch.einsum('bi,bi->b', [fx, gy]) + torch.einsum('bi,bi->b', [fx.pow(2), gy.pow(2)])
+            return torch.einsum("bi,bi->b", [fx, gy]) + torch.einsum(
+                "bi,bi->b", [fx.pow(2), gy.pow(2)]
+            )
 
         else:
-            return torch.einsum('bi,bi->b', [fx, gy])
+            return torch.einsum("bi,bi->b", [fx, gy])
 
 
 class ModularUnnormalizedConditionalEBM(nn.Module):
@@ -59,15 +72,27 @@ class ModularUnnormalizedConditionalEBM(nn.Module):
             gy = F.relu(gy)
 
         if self.augment:
-            return torch.einsum('bi,bi->b', [fx, gy]) + torch.einsum('bi,bi->b', [fx.pow(2), gy.pow(2)])
+            return torch.einsum("bi,bi->b", [fx, gy]) + torch.einsum(
+                "bi,bi->b", [fx.pow(2), gy.pow(2)]
+            )
 
         else:
-            return torch.einsum('bi,bi->b', [fx, gy])
+            return torch.einsum("bi,bi->b", [fx, gy])
 
 
 class ConditionalEBM(UnnormalizedConditialEBM):
-    def __init__(self, input_size, hidden_size, n_hidden, output_size, condition_size, activation='lrelu'):
-        super().__init__(input_size, hidden_size, n_hidden, output_size, condition_size, activation)
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        n_hidden,
+        output_size,
+        condition_size,
+        activation="lrelu",
+    ):
+        super().__init__(
+            input_size, hidden_size, n_hidden, output_size, condition_size, activation
+        )
 
         self.log_norm = nn.Parameter(torch.randn(1) - 5, requires_grad=True)
 
@@ -86,7 +111,9 @@ class ModularConditionalEBM(ModularUnnormalizedConditionalEBM):
 
 
 class UnnormalizedEBM(nn.Module):
-    def __init__(self, input_size, hidden_size, n_hidden, output_size, activation='lrelu'):
+    def __init__(
+        self, input_size, hidden_size, n_hidden, output_size, activation="lrelu"
+    ):
         super().__init__()
 
         self.input_size = input_size
@@ -95,12 +122,14 @@ class UnnormalizedEBM(nn.Module):
         self.n_hidden = n_hidden
         self.activation = activation
 
-        self.f = CleanMLP(input_size, hidden_size, n_hidden, output_size, activation=activation)
+        self.f = CleanMLP(
+            input_size, hidden_size, n_hidden, output_size, activation=activation
+        )
         self.g = torch.ones(output_size)
 
     def forward(self, x, y=None):
         fx = self.f(x).view(-1, self.output_size)
-        return torch.einsum('bi,i->b', [fx, self.g])
+        return torch.einsum("bi,i->b", [fx, self.g])
 
 
 class ModularUnnormalizedEBM(nn.Module):
@@ -115,11 +144,13 @@ class ModularUnnormalizedEBM(nn.Module):
 
     def forward(self, x, y=None):
         fx = self.f(x).view(-1, self.output_size)
-        return torch.einsum('bi,i->b', [fx, self.g])
+        return torch.einsum("bi,i->b", [fx, self.g])
 
 
 class EBM(UnnormalizedEBM):
-    def __init__(self, input_size, hidden_size, n_hidden, output_size, activation='lrelu'):
+    def __init__(
+        self, input_size, hidden_size, n_hidden, output_size, activation="lrelu"
+    ):
         super().__init__(input_size, hidden_size, n_hidden, output_size, activation)
 
         self.log_norm = nn.Parameter(torch.randn(1) - 5, requires_grad=True)

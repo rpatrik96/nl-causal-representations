@@ -291,7 +291,7 @@ def setup_f(args, n_non_angular_latents, n_angular_latents):
         "rn50": models.resnet50,
         "rn101": models.resnet101,
         "rn152": models.resnet152,
-    }[args.encoder]
+    }[args.unmixing]
 
     if args.identity_solution:
         f = nn.Sequential(layers.Flatten())

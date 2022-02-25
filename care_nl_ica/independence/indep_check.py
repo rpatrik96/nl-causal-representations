@@ -4,7 +4,7 @@ import torch
 
 from care_nl_ica.dep_mat import calc_jacobian
 from care_nl_ica.independence.hsic import HSIC
-from care_nl_ica.metrics.metrics import calc_disentanglement_scores
+from care_nl_ica.metrics.ica_dis import calc_disent_metrics
 
 
 class IndependenceChecker(object):
@@ -22,14 +22,32 @@ class IndependenceChecker(object):
         decisions = []
         var_map = [1, 1, 2, 2]
         with torch.no_grad():
-            decisions.append(self.test.run_test(x1[:, 0], x2[:, 1], device="cpu", bonferroni=4).item())
-            decisions.append(self.test.run_test(x1[:, 0], x2[:, 0], device="cpu", bonferroni=4).item())
-            decisions.append(self.test.run_test(x1[:, 1], x2[:, 0], device="cpu", bonferroni=4).item())
-            decisions.append(self.test.run_test(x1[:, 1], x2[:, 1], device="cpu", bonferroni=4).item())
+            decisions.append(
+                self.test.run_test(
+                    x1[:, 0], x2[:, 1], device="cpu", bonferroni=4
+                ).item()
+            )
+            decisions.append(
+                self.test.run_test(
+                    x1[:, 0], x2[:, 0], device="cpu", bonferroni=4
+                ).item()
+            )
+            decisions.append(
+                self.test.run_test(
+                    x1[:, 1], x2[:, 0], device="cpu", bonferroni=4
+                ).item()
+            )
+            decisions.append(
+                self.test.run_test(
+                    x1[:, 1], x2[:, 1], device="cpu", bonferroni=4
+                ).item()
+            )
 
         return decisions, var_map
 
-    def check_multivariate_dependence(self, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+    def check_multivariate_dependence(
+        self, x1: torch.Tensor, x2: torch.Tensor
+    ) -> torch.Tensor:
         """
         Carries out HSIC for the multivariate case, all pairs are tested
         :param x1: tensor of the first batch of variables in the shape of (num_elem, num_dim)
@@ -37,26 +55,28 @@ class IndependenceChecker(object):
         :return: the adjacency matrix
         """
         num_dim = x1.shape[-1]
-        max_edge_num = num_dim ** 2
+        max_edge_num = num_dim**2
         adjacency_matrix = torch.zeros(num_dim, num_dim).bool()
 
         with torch.no_grad():
             for i in range(num_dim):
                 for j in range(num_dim):
-                    adjacency_matrix[i, j] = self.test.run_test(x1[:, i], x2[:, j], device="cpu",
-                                                                bonferroni=max_edge_num).item()
+                    adjacency_matrix[i, j] = self.test.run_test(
+                        x1[:, i], x2[:, j], device="cpu", bonferroni=max_edge_num
+                    ).item()
 
         return adjacency_matrix
 
     def check_independence_z_gz(self, decoder, latent_space, dep_mat):
         z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
-        disent_metrics = calc_disentanglement_scores(z_disentanglement, decoder(z_disentanglement))
+        disent_metrics = calc_disent_metrics(
+            z_disentanglement, decoder(z_disentanglement)
+        )
 
         print(f"Id. Lin. Disentanglement: {disent_metrics.lin_score:.4f}")
         print(f"Id. Perm. Disentanglement: {disent_metrics.perm_score:.4f}")
         print(f"Id. MCC matrix: {disent_metrics.perm_corr_mat=}")
-        print('Run test with ground truth sources')
-
+        print("Run test with ground truth sources")
 
         if dep_mat is not None:
             # x \times z
@@ -66,16 +86,18 @@ class IndependenceChecker(object):
             null_list[torch.argmin(dep_mat).item()] = True
             var_map = [1, 1, 2, 2]
         else:
-            null_list, var_map = self.check_bivariate_dependence(decoder(z_disentanglement), z_disentanglement)
+            null_list, var_map = self.check_bivariate_dependence(
+                decoder(z_disentanglement), z_disentanglement
+            )
         ######Note this is specific to a dense 2x2 triangular matrix!######
         if Counter(null_list) == Counter([False, False, False, True]):
 
-            print('concluded a causal effect')
+            print("concluded a causal effect")
 
             for i, null in enumerate(null_list):
                 if null:
-                    print('cause variable is X{}'.format(str(var_map[i])))
+                    print("cause variable is X{}".format(str(var_map[i])))
 
         else:
-            print('no causal effect...?')
+            print("no causal effect...?")
             # sys.exit()

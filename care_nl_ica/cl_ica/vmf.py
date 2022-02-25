@@ -40,7 +40,7 @@ def sample_vMF_sequential(mu, kappa, num_samples):
         v = _sample_orthonormal_to_sequential(n_mu)
 
         # compute new point
-        result[nn, :] = v * np.sqrt(1.0 - w ** 2) + w * n_mu
+        result[nn, :] = v * np.sqrt(1.0 - w**2) + w * n_mu
 
     return result
 
@@ -63,7 +63,7 @@ def sample_vMF(mu, kappa, num_samples):
     v = _sample_orthonormal_to(mu)
 
     # compute new point
-    result = v * np.sqrt(1.0 - w ** 2).reshape(-1, 1) + w.reshape(-1, 1) * mu
+    result = v * np.sqrt(1.0 - w**2).reshape(-1, 1) + w.reshape(-1, 1) * mu
 
     return result
 
@@ -73,9 +73,9 @@ def _sample_weight_sequential(kappa, dim):
     surface of the sphere.
     """
     dim = dim - 1  # since S^{n-1}
-    b = dim / (np.sqrt(4.0 * kappa ** 2 + dim ** 2) + 2 * kappa)
+    b = dim / (np.sqrt(4.0 * kappa**2 + dim**2) + 2 * kappa)
     x = (1.0 - b) / (1.0 + b)
-    c = kappa * x + dim * np.log(1 - x ** 2)
+    c = kappa * x + dim * np.log(1 - x**2)
 
     while True:
         z = np.random.beta(dim / 2.0, dim / 2.0)
@@ -90,9 +90,9 @@ def _sample_weight(kappa, dim, num_samples):
     surface of the sphere.
     """
     dim = dim - 1  # since S^{n-1}
-    b = dim / (np.sqrt(4.0 * kappa ** 2 + dim ** 2) + 2 * kappa)
+    b = dim / (np.sqrt(4.0 * kappa**2 + dim**2) + 2 * kappa)
     x = (1.0 - b) / (1.0 + b)
-    c = kappa * x + dim * np.log(1 - x ** 2)
+    c = kappa * x + dim * np.log(1 - x**2)
 
     results = []
     n = 0
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     def setup_mu(num_samples, n):
         mu = np.random.normal(0.0, 1.0, size=(num_samples, n))
-        mu /= np.sqrt(np.sum(mu ** 2, -1, keepdims=True))
+        mu /= np.sqrt(np.sum(mu**2, -1, keepdims=True))
         return mu
 
     print(

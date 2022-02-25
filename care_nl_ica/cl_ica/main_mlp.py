@@ -185,7 +185,8 @@ def main():
     else:
         sample_conditional = (
             lambda space, z, size, device=device: space.von_mises_fisher(
-                z, args.c_param, size, device)
+                z, args.c_param, size, device
+            )
         )
     latent_space = latent_spaces.LatentSpace(
         space=space,

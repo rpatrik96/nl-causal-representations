@@ -36,7 +36,7 @@ class PositionalEncoder(nn.Module):
     tightly "curled up" data.
     """
 
-    def __init__(self, freqs=(.5, 1, 2, 4, 8)):
+    def __init__(self, freqs=(0.5, 1, 2, 4, 8)):
         super().__init__()
         self.freqs = freqs
 
@@ -48,7 +48,7 @@ class PositionalEncoder(nn.Module):
 
 
 class MLP4(nn.Module):
-    """ a simple 4-layer MLP4 """
+    """a simple 4-layer MLP4"""
 
     def __init__(self, nin, nout, nh):
         super().__init__()
@@ -73,7 +73,7 @@ class PosEncMLP(nn.Module):
     using a fixed transformation of sin/cos of given frequencies.
     """
 
-    def __init__(self, nin, nout, nh, freqs=(.5, 1, 2, 4, 8)):
+    def __init__(self, nin, nout, nh, freqs=(0.5, 1, 2, 4, 8)):
         super().__init__()
         self.net = nn.Sequential(
             PositionalEncoder(freqs),
@@ -92,7 +92,13 @@ class MLPlayer(nn.Module):
     vector of dimension input_size to another vector of dimension input_size
     """
 
-    def __init__(self, input_size, output_size=None, activation_function=nn.functional.relu, use_bn=False):
+    def __init__(
+        self,
+        input_size,
+        output_size=None,
+        activation_function=nn.functional.relu,
+        use_bn=False,
+    ):
         super().__init__()
         if output_size is None:
             output_size = input_size
@@ -115,7 +121,15 @@ class MLP(nn.Module):
     the dimensions at each layer of the network
     """
 
-    def __init__(self, input_size, hidden_size, n_layers, output_size=None, activation_function=F.relu, use_bn=False):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        n_layers,
+        output_size=None,
+        activation_function=F.relu,
+        use_bn=False,
+    ):
         """
         Input:
          - input_size  : dimension of input data (e.g., 784 for MNIST)
@@ -125,16 +139,29 @@ class MLP(nn.Module):
         super().__init__()
 
         if output_size is None:
-            output_size = 1  # because we approximating a log density, output should be scalar!
+            output_size = (
+                1  # because we approximating a log density, output should be scalar!
+            )
 
         self.use_bn = use_bn
         self.activation_function = activation_function
-        self.linear1st = nn.Linear(input_size, hidden_size[0])  # map from data dim to dimension of hidden units
-        self.Layers = nn.ModuleList([MLPlayer(hidden_size[i - 1], hidden_size[i],
-                                              activation_function=self.activation_function, use_bn=self.use_bn) for i in
-                                     range(1, n_layers)])
-        self.linearLast = nn.Linear(hidden_size[-1],
-                                    output_size)  # map from dimension of hidden units to dimension of output
+        self.linear1st = nn.Linear(
+            input_size, hidden_size[0]
+        )  # map from data dim to dimension of hidden units
+        self.Layers = nn.ModuleList(
+            [
+                MLPlayer(
+                    hidden_size[i - 1],
+                    hidden_size[i],
+                    activation_function=self.activation_function,
+                    use_bn=self.use_bn,
+                )
+                for i in range(1, n_layers)
+            ]
+        )
+        self.linearLast = nn.Linear(
+            hidden_size[-1], output_size
+        )  # map from dimension of hidden units to dimension of output
 
     def forward(self, x):
         """
@@ -148,7 +175,15 @@ class MLP(nn.Module):
 
 
 class CleanMLP(nn.Module):
-    def __init__(self, input_size, hidden_size, n_hidden, output_size, activation='lrelu', batch_norm=False):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        n_hidden,
+        output_size,
+        activation="lrelu",
+        batch_norm=False,
+    ):
         super().__init__()
 
         self.input_size = input_size
@@ -158,21 +193,25 @@ class CleanMLP(nn.Module):
         self.activation = activation
         self.batch_norm = batch_norm
 
-        if activation == 'lrelu':
+        if activation == "lrelu":
             act = nn.LeakyReLU(0.2, inplace=True)
-        elif activation == 'relu':
+        elif activation == "relu":
             act = nn.ReLU()
         else:
-            raise ValueError('wrong activation')
+            raise ValueError("wrong activation")
 
         # construct model
         if n_hidden == 0:
             modules = [nn.Linear(input_size, output_size)]
         else:
-            modules = [nn.Linear(input_size, hidden_size), act] + batch_norm * [nn.BatchNorm1d(hidden_size)]
+            modules = [nn.Linear(input_size, hidden_size), act] + batch_norm * [
+                nn.BatchNorm1d(hidden_size)
+            ]
 
         for i in range(n_hidden - 1):
-            modules += [nn.Linear(hidden_size, hidden_size), act] + batch_norm * [nn.BatchNorm1d(hidden_size)]
+            modules += [nn.Linear(hidden_size, hidden_size), act] + batch_norm * [
+                nn.BatchNorm1d(hidden_size)
+            ]
 
         modules += [nn.Linear(hidden_size, output_size)]
 
@@ -201,22 +240,22 @@ class FullMLP(nn.Module):
         self.n_channels = config.data.channels
         self.ngf = ngf = config.model.ngf
 
-        self.input_size = config.data.image_size ** 2 * config.data.channels
+        self.input_size = config.data.image_size**2 * config.data.channels
         self.output_size = self.input_size
         if config.model.final_layer:
             self.output_size = config.model.feature_size
 
         self.linear = nn.Sequential(
             nn.Linear(self.input_size, ngf * 8),
-            nn.LeakyReLU(inplace=True, negative_slope=.1),
+            nn.LeakyReLU(inplace=True, negative_slope=0.1),
             nn.Linear(ngf * 8, ngf * 6),
-            nn.LeakyReLU(inplace=True, negative_slope=.1),
+            nn.LeakyReLU(inplace=True, negative_slope=0.1),
             nn.Dropout(p=0.1),
             nn.Linear(ngf * 6, ngf * 4),
-            nn.LeakyReLU(inplace=True, negative_slope=.1),
+            nn.LeakyReLU(inplace=True, negative_slope=0.1),
             nn.Linear(ngf * 4, ngf * 4),
-            nn.LeakyReLU(inplace=True, negative_slope=.1),
-            nn.Linear(ngf * 4, self.output_size)
+            nn.LeakyReLU(inplace=True, negative_slope=0.1),
+            nn.Linear(ngf * 4, self.output_size),
         )
 
     def forward(self, x):
@@ -233,7 +272,7 @@ class ConvMLP(nn.Module):
         self.n_channels = nc = config.data.channels
         self.ngf = ngf = config.model.ngf
 
-        self.input_size = config.data.image_size ** 2 * config.data.channels
+        self.input_size = config.data.image_size**2 * config.data.channels
         self.output_size = self.input_size
         if config.model.final_layer:
             self.output_size = config.model.feature_size
@@ -255,7 +294,7 @@ class ConvMLP(nn.Module):
             nn.BatchNorm2d(ngf * 4),  # (ngf*4, im/2, im/2)
             nn.ReLU(inplace=True),  # (ngf*4, im/2, im/2)
             nn.MaxPool2d(kernel_size=2, stride=2),  # (ngf*4, im/4, im/4)
-            nn.Conv2d(ngf * 4, ngf * 4, im // 4, 1, 0)  # (ngf*4, 1, 1)
+            nn.Conv2d(ngf * 4, ngf * 4, im // 4, 1, 0),  # (ngf*4, 1, 1)
         )
         # linear bit is [drop, (lin, lrelu)*2, lin]
         self.linear = nn.Sequential(
@@ -263,8 +302,8 @@ class ConvMLP(nn.Module):
             nn.Linear(ngf * 4, ngf * 4),
             # nn.LeakyReLU(inplace=True, negative_slope=.1),
             # nn.Linear(ngf * 2, ngf * 2),
-            nn.LeakyReLU(inplace=True, negative_slope=.1),
-            nn.Linear(ngf * 4, self.output_size)
+            nn.LeakyReLU(inplace=True, negative_slope=0.1),
+            nn.Linear(ngf * 4, self.output_size),
         )
 
     def forward(self, x):

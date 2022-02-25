@@ -6,15 +6,21 @@ import os.path
 import numpy as np
 import tensorflow as tf
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-FILTER_COLLECTION = 'filter'
+FILTER_COLLECTION = "filter"
 
 
 # =============================================================
 # =============================================================
-def _variable_init(name, shape, wd, initializer=tf.contrib.layers.variance_scaling_initializer(), trainable=True,
-                   collections=None):
+def _variable_init(
+    name,
+    shape,
+    wd,
+    initializer=tf.contrib.layers.variance_scaling_initializer(),
+    trainable=True,
+    collections=None,
+):
     """Helper to create an initialized Variable with weight decay.
 
     Args:
@@ -32,21 +38,35 @@ def _variable_init(name, shape, wd, initializer=tf.contrib.layers.variance_scali
     else:
         collections = [tf.GraphKeys.GLOBAL_VARIABLES] + collections
 
-    with tf.device('/cpu:0'):
-        var = tf.get_variable(name, shape, initializer=initializer, dtype=tf.float32, trainable=trainable,
-                              collections=collections)
+    with tf.device("/cpu:0"):
+        var = tf.get_variable(
+            name,
+            shape,
+            initializer=initializer,
+            dtype=tf.float32,
+            trainable=trainable,
+            collections=collections,
+        )
 
     # Weight decay
     if wd is not None:
-        weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-        tf.add_to_collection('losses', weight_decay)
+        weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name="weight_loss")
+        tf.add_to_collection("losses", weight_decay)
 
     return var
 
 
 # =============================================================
 # =============================================================
-def inference(x, list_hidden_nodes, num_class, wd=1e-4, maxout_k=2, MLP_trainable=True, feature_nonlinearity='abs'):
+def inference(
+    x,
+    list_hidden_nodes,
+    num_class,
+    wd=1e-4,
+    maxout_k=2,
+    MLP_trainable=True,
+    feature_nonlinearity="abs",
+):
     """Build the model.
         MLP4 with maxout activation units
     Args:
@@ -84,7 +104,7 @@ def inference(x, list_hidden_nodes, num_class, wd=1e-4, maxout_k=2, MLP_trainabl
 
     # Hidden layers -------------------------------------------
     for ln in range(num_layer):
-        with tf.variable_scope('layer' + str(ln + 1)) as scope:
+        with tf.variable_scope("layer" + str(ln + 1)) as scope:
             in_dim = list_hidden_nodes[ln - 1] if ln > 0 else x.get_shape().as_list()[1]
             out_dim = list_hidden_nodes[ln]
 
@@ -92,34 +112,51 @@ def inference(x, list_hidden_nodes, num_class, wd=1e-4, maxout_k=2, MLP_trainabl
                 out_dim = maxout_k * out_dim
 
             # Inner product
-            W = _variable_init('W', [in_dim, out_dim], wd, trainable=MLP_trainable,
-                               collections=[FILTER_COLLECTION])
-            b = _variable_init('b', [out_dim], 0, tf.constant_initializer(0.0), trainable=MLP_trainable,
-                               collections=[FILTER_COLLECTION])
+            W = _variable_init(
+                "W",
+                [in_dim, out_dim],
+                wd,
+                trainable=MLP_trainable,
+                collections=[FILTER_COLLECTION],
+            )
+            b = _variable_init(
+                "b",
+                [out_dim],
+                0,
+                tf.constant_initializer(0.0),
+                trainable=MLP_trainable,
+                collections=[FILTER_COLLECTION],
+            )
             x = tf.nn.xw_plus_b(x, W, b)
 
             # Nonlinearity
             if ln < num_layer - 1:
                 x = maxout(x, maxout_k)
             else:  # The last layer (feature value)
-                if feature_nonlinearity == 'abs':
+                if feature_nonlinearity == "abs":
                     x = tf.abs(x)
                 else:
                     raise ValueError
 
             # Add summary
-            tf.summary.histogram('layer' + str(ln + 1) + '/activations', x)
+            tf.summary.histogram("layer" + str(ln + 1) + "/activations", x)
 
     feats = x
 
     # MLR -----------------------------------------------------
-    with tf.variable_scope('MLR') as scope:
+    with tf.variable_scope("MLR") as scope:
         in_dim = list_hidden_nodes[-1]
         out_dim = num_class
 
         # Inner product
-        W = _variable_init('W', [in_dim, out_dim], wd, collections=[FILTER_COLLECTION])
-        b = _variable_init('b', [out_dim], 0, tf.constant_initializer(0.0), collections=[FILTER_COLLECTION])
+        W = _variable_init("W", [in_dim, out_dim], wd, collections=[FILTER_COLLECTION])
+        b = _variable_init(
+            "b",
+            [out_dim],
+            0,
+            tf.constant_initializer(0.0),
+            collections=[FILTER_COLLECTION],
+        )
         logits = tf.nn.xw_plus_b(x, W, b)
 
     return logits, feats
@@ -140,17 +177,18 @@ def tcl_loss(logits, labels):
     # Calculate the average cross entropy loss across the batch.
     labels = tf.cast(labels, tf.int64)
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-        labels=labels, logits=logits, name='cross_entropy_per_example')
-    cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
-    tf.add_to_collection('losses', cross_entropy_mean)
+        labels=labels, logits=logits, name="cross_entropy_per_example"
+    )
+    cross_entropy_mean = tf.reduce_mean(cross_entropy, name="cross_entropy")
+    tf.add_to_collection("losses", cross_entropy_mean)
 
     # Calculate accuracy
     correct_prediction = tf.equal(tf.argmax(logits, 1), labels)
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='acurracy')
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="acurracy")
 
     # The total loss is defined as the cross entropy loss plus all of the weight
     # decay terms (L2 loss).
-    return tf.add_n(tf.get_collection('losses'), name='total_loss'), accuracy
+    return tf.add_n(tf.get_collection("losses"), name="total_loss"), accuracy
 
 
 # =============================================================
@@ -166,8 +204,8 @@ def _add_loss_summaries(total_loss):
         loss_averages_op: op for generating moving averages of losses.
     """
     # Compute the moving average of all individual losses and the total loss.
-    loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
-    losses = tf.get_collection('losses')
+    loss_averages = tf.train.ExponentialMovingAverage(0.9, name="avg")
+    losses = tf.get_collection("losses")
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
     # Attach a scalar summary to all individual losses and the total loss; do the
@@ -175,7 +213,7 @@ def _add_loss_summaries(total_loss):
     for l in losses + [total_loss]:
         # Name each loss as '(raw)' and name the moving average version of the loss
         # as the original loss name.
-        tf.summary.scalar(l.op.name + ' (raw)', l)
+        tf.summary.scalar(l.op.name + " (raw)", l)
         tf.summary.scalar(l.op.name, loss_averages.average(l))
 
     return loss_averages_op
@@ -183,15 +221,17 @@ def _add_loss_summaries(total_loss):
 
 # =============================================================
 # =============================================================
-def train(total_loss,
-          accuracy,
-          global_step,
-          initial_learning_rate,
-          momentum,
-          decay_steps,
-          decay_factor,
-          moving_average_decay=0.9999,
-          moving_average_collections=tf.trainable_variables()):
+def train(
+    total_loss,
+    accuracy,
+    global_step,
+    initial_learning_rate,
+    momentum,
+    decay_steps,
+    decay_factor,
+    moving_average_decay=0.9999,
+    moving_average_collections=tf.trainable_variables(),
+):
     """Train model.
         Create an optimizer and apply to all trainable variables. Add moving
         average for all trainable variables.
@@ -209,20 +249,18 @@ def train(total_loss,
     """
 
     # Decay the learning rate exponentially based on the number of steps.
-    lr = tf.train.exponential_decay(initial_learning_rate,
-                                    global_step,
-                                    decay_steps,
-                                    decay_factor,
-                                    staircase=True)
-    tf.summary.scalar('learning_rate', lr)
+    lr = tf.train.exponential_decay(
+        initial_learning_rate, global_step, decay_steps, decay_factor, staircase=True
+    )
+    tf.summary.scalar("learning_rate", lr)
 
     # Generate moving averages of all losses and associated summaries.
     loss_averages_op = _add_loss_summaries(total_loss)
 
     # Generate moving averages of accuracy and associated summaries.
-    accu_averages = tf.train.ExponentialMovingAverage(0.9, name='avg_accu')
+    accu_averages = tf.train.ExponentialMovingAverage(0.9, name="avg_accu")
     accu_averages_op = accu_averages.apply([accuracy])
-    tf.summary.scalar(accuracy.op.name + ' (raw)', accuracy)
+    tf.summary.scalar(accuracy.op.name + " (raw)", accuracy)
     tf.summary.scalar(accuracy.op.name, accu_averages.average(accuracy))
 
     # Compute gradients.
@@ -241,39 +279,42 @@ def train(total_loss,
     # Add histograms for gradients.
     for grad, var in grads:
         if grad is not None:
-            tf.summary.histogram(var.op.name + '/gradients', grad)
+            tf.summary.histogram(var.op.name + "/gradients", grad)
 
     # Track the moving averages of all trainable variables.
     variable_averages = tf.train.ExponentialMovingAverage(
-        moving_average_decay, global_step)
+        moving_average_decay, global_step
+    )
     variables_averages_op = variable_averages.apply(tf.trainable_variables())
 
     with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
-        train_op = tf.no_op(name='train')
+        train_op = tf.no_op(name="train")
 
     return train_op, lr
 
 
 # =============================================================
 # =============================================================
-def train_cpu(data,
-              label,
-              num_class,
-              list_hidden_nodes,
-              initial_learning_rate,
-              momentum,
-              max_steps,
-              decay_steps,
-              decay_factor,
-              batch_size,
-              train_dir,
-              moving_average_decay=0.9999,
-              summary_steps=500,
-              checkpoint_steps=10000,
-              MLP_trainable=True,
-              save_file='model.ckpt',
-              load_file=None,
-              random_seed=None):
+def train_cpu(
+    data,
+    label,
+    num_class,
+    list_hidden_nodes,
+    initial_learning_rate,
+    momentum,
+    max_steps,
+    decay_steps,
+    decay_factor,
+    batch_size,
+    train_dir,
+    moving_average_decay=0.9999,
+    summary_steps=500,
+    checkpoint_steps=10000,
+    MLP_trainable=True,
+    save_file="model.ckpt",
+    load_file=None,
+    random_seed=None,
+):
     """Build and train a model
     Args:
         data: data. 2D ndarray [num_comp, num_data]
@@ -298,7 +339,7 @@ def train_cpu(data,
 
     """
 
-    with tf.Graph().as_default(), tf.device('/cpu:0'):
+    with tf.Graph().as_default(), tf.device("/cpu:0"):
 
         # Set random_seed
         if random_seed is not None:
@@ -308,9 +349,13 @@ def train_cpu(data,
         global_step = tf.Variable(0, trainable=False)
 
         # create our batches
-        data_holder, label_holder = tf.train.shuffle_batch([tf.constant(data.T), tf.constant(label)],
-                                                           batch_size=batch_size, capacity=20 * batch_size,
-                                                           min_after_dequeue=10 * batch_size, enqueue_many=True)
+        data_holder, label_holder = tf.train.shuffle_batch(
+            [tf.constant(data.T), tf.constant(label)],
+            batch_size=batch_size,
+            capacity=20 * batch_size,
+            min_after_dequeue=10 * batch_size,
+            enqueue_many=True,
+        )
         data_holder = tf.cast(data_holder, tf.float32)
         label_holder = tf.cast(label_holder, tf.float32)
 
@@ -320,21 +365,25 @@ def train_cpu(data,
 
         # Build a Graph that computes the logits predictions from the
         # inference model.
-        logits, feats = inference(data_holder, list_hidden_nodes, num_class, MLP_trainable=MLP_trainable)
+        logits, feats = inference(
+            data_holder, list_hidden_nodes, num_class, MLP_trainable=MLP_trainable
+        )
 
         # Calculate loss.
         loss, accuracy = tcl_loss(logits, label_holder)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        train_op, lr = train(loss,
-                             accuracy,
-                             global_step=global_step,
-                             initial_learning_rate=initial_learning_rate,
-                             momentum=momentum,
-                             decay_steps=decay_steps,
-                             decay_factor=decay_factor,
-                             moving_average_decay=moving_average_decay)
+        train_op, lr = train(
+            loss,
+            accuracy,
+            global_step=global_step,
+            initial_learning_rate=initial_learning_rate,
+            momentum=momentum,
+            decay_steps=decay_steps,
+            decay_factor=decay_factor,
+            moving_average_decay=moving_average_decay,
+        )
 
         # Create a saver.
         saver = tf.train.Saver(tf.global_variables())
@@ -361,7 +410,7 @@ def train_cpu(data,
             # list up vars contained in the file
             initialized_vars = []
             for lv in load_vars:
-                if lv.name.split(':')[0] in reader_var_to_shape_map:
+                if lv.name.split(":")[0] in reader_var_to_shape_map:
                     print("    {0:s}".format(lv.name))
                     initialized_vars.append(lv)
             # Restore
@@ -392,10 +441,12 @@ def train_cpu(data,
 
             # Run ---------------------------------------------
             # feed_dict = {data_holder:x_batch, label_holder:y_batch}
-            _, loss_value, accuracy_value, lr_value = sess.run([train_op, loss, accuracy, lr])  # , feed_dict=feed_dict)
+            _, loss_value, accuracy_value, lr_value = sess.run(
+                [train_op, loss, accuracy, lr]
+            )  # , feed_dict=feed_dict)
             # duration = time.time() - start_time
 
-            assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
+            assert not np.isnan(loss_value), "Model diverged with loss = NaN"
 
             if step % summary_steps == 0:
                 # print(step)
@@ -413,24 +464,26 @@ def train_cpu(data,
         saver.save(sess, save_path)
 
 
-def train_gpu(data,
-              label,
-              num_class,
-              list_hidden_nodes,
-              initial_learning_rate,
-              momentum,
-              max_steps,
-              decay_steps,
-              decay_factor,
-              batch_size,
-              train_dir,
-              moving_average_decay=0.9999,
-              summary_steps=500,
-              checkpoint_steps=10000,
-              MLP_trainable=True,
-              save_file='model.ckpt',
-              load_file=None,
-              random_seed=None):
+def train_gpu(
+    data,
+    label,
+    num_class,
+    list_hidden_nodes,
+    initial_learning_rate,
+    momentum,
+    max_steps,
+    decay_steps,
+    decay_factor,
+    batch_size,
+    train_dir,
+    moving_average_decay=0.9999,
+    summary_steps=500,
+    checkpoint_steps=10000,
+    MLP_trainable=True,
+    save_file="model.ckpt",
+    load_file=None,
+    random_seed=None,
+):
     """Build and train a model
     Args:
         data: data. 2D ndarray [num_comp, num_data]
@@ -465,9 +518,13 @@ def train_gpu(data,
         global_step = tf.Variable(0, trainable=False)
 
         # create our batches
-        data_holder, label_holder = tf.train.shuffle_batch([tf.constant(data.T), tf.constant(label)],
-                                                           batch_size=batch_size, capacity=20 * batch_size,
-                                                           min_after_dequeue=10 * batch_size, enqueue_many=True)
+        data_holder, label_holder = tf.train.shuffle_batch(
+            [tf.constant(data.T), tf.constant(label)],
+            batch_size=batch_size,
+            capacity=20 * batch_size,
+            min_after_dequeue=10 * batch_size,
+            enqueue_many=True,
+        )
         data_holder = tf.cast(data_holder, tf.float32)
         label_holder = tf.cast(label_holder, tf.float32)
 
@@ -477,21 +534,25 @@ def train_gpu(data,
 
         # Build a Graph that computes the logits predictions from the
         # inference model.
-        logits, feats = inference(data_holder, list_hidden_nodes, num_class, MLP_trainable=MLP_trainable)
+        logits, feats = inference(
+            data_holder, list_hidden_nodes, num_class, MLP_trainable=MLP_trainable
+        )
 
         # Calculate loss.
         loss, accuracy = tcl_loss(logits, label_holder)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        train_op, lr = train(loss,
-                             accuracy,
-                             global_step=global_step,
-                             initial_learning_rate=initial_learning_rate,
-                             momentum=momentum,
-                             decay_steps=decay_steps,
-                             decay_factor=decay_factor,
-                             moving_average_decay=moving_average_decay)
+        train_op, lr = train(
+            loss,
+            accuracy,
+            global_step=global_step,
+            initial_learning_rate=initial_learning_rate,
+            momentum=momentum,
+            decay_steps=decay_steps,
+            decay_factor=decay_factor,
+            moving_average_decay=moving_average_decay,
+        )
 
         # Create a saver.
         saver = tf.train.Saver(tf.global_variables())
@@ -518,7 +579,7 @@ def train_gpu(data,
             # list up vars contained in the file
             initialized_vars = []
             for lv in load_vars:
-                if lv.name.split(':')[0] in reader_var_to_shape_map:
+                if lv.name.split(":")[0] in reader_var_to_shape_map:
                     print("    {0:s}".format(lv.name))
                     initialized_vars.append(lv)
             # Restore
@@ -549,10 +610,12 @@ def train_gpu(data,
 
             # Run ---------------------------------------------
             # feed_dict = {data_holder:x_batch, label_holder:y_batch}
-            _, loss_value, accuracy_value, lr_value = sess.run([train_op, loss, accuracy, lr])  # , feed_dict=feed_dict)
+            _, loss_value, accuracy_value, lr_value = sess.run(
+                [train_op, loss, accuracy, lr]
+            )  # , feed_dict=feed_dict)
             # duration = time.time() - start_time
 
-            assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
+            assert not np.isnan(loss_value), "Model diverged with loss = NaN"
 
             if step % summary_steps == 0:
                 # print(step)

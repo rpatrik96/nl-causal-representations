@@ -42,7 +42,7 @@ def get_tensor(x, vars, sess, data_holder, batch=256):
     y = {}
     for iter in range(Niter):
 
-        sys.stdout.write('\r>> Getting tensors... %d/%d' % (iter + 1, Niter))
+        sys.stdout.write("\r>> Getting tensors... %d/%d" % (iter + 1, Niter))
         sys.stdout.flush()
 
         # Get batch -------------------------------------------
@@ -59,9 +59,11 @@ def get_tensor(x, vars, sess, data_holder, batch=256):
             if iter == 0:
                 y[tn] = np.zeros([Ndata] + list(ybatch[tn].shape[1:]), dtype=np.float32)
             # Store
-            y[tn][batchidx,] = ybatch[tn]
+            y[tn][
+                batchidx,
+            ] = ybatch[tn]
 
-    sys.stdout.write('\r\n')
+    sys.stdout.write("\r\n")
 
     return y
 
@@ -69,7 +71,7 @@ def get_tensor(x, vars, sess, data_holder, batch=256):
 # =============================================================
 # =============================================================
 def calc_accuracy(pred, label, normalize_confmat=True):
-    """ Calculate accuracy and confusion matrix
+    """Calculate accuracy and confusion matrix
     Args:
         pred: [Ndata x Nlabel]
         label: [Ndata x Nlabel]
@@ -92,6 +94,7 @@ def calc_accuracy(pred, label, normalize_confmat=True):
             conf[i, :] = conf[i, :] / np.sum(conf[i, :])
 
     return accuracy, conf
+
 
 # =============================================================
 # =============================================================

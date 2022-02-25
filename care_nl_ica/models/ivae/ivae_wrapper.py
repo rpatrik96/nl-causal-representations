@@ -7,30 +7,52 @@ from care_nl_ica.data import ConditionalDataset
 from .ivae_core import iVAE
 
 
-def IVAE_wrapper(X, U, batch_size=256, max_iter=7e4, seed=0, n_layers=3, hidden_dim=20, lr=1e-3, cuda=True,
-                 ckpt_file='ivae.pt', test=False):
-    " args are the arguments from the main.py file"
+def IVAE_wrapper(
+    X,
+    U,
+    batch_size=256,
+    max_iter=7e4,
+    seed=0,
+    n_layers=3,
+    hidden_dim=20,
+    lr=1e-3,
+    cuda=True,
+    ckpt_file="ivae.pt",
+    test=False,
+):
+    "args are the arguments from the main.py file"
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    device = torch.device('cuda:0' if cuda else 'cpu')
+    device = torch.device("cuda:0" if cuda else "cpu")
     # print('training on {}'.format(torch.cuda.get_device_name(device) if cuda else 'cpu'))
 
     # load data
     # print('Creating shuffled dataset..')
     dset = ConditionalDataset(X.astype(np.float32), U.astype(np.float32), device)
-    loader_params = {'num_workers': 1, 'pin_memory': True} if cuda else {}
-    train_loader = DataLoader(dset, shuffle=True, batch_size=batch_size, **loader_params)
+    loader_params = {"num_workers": 1, "pin_memory": True} if cuda else {}
+    train_loader = DataLoader(
+        dset, shuffle=True, batch_size=batch_size, **loader_params
+    )
     data_dim, latent_dim, aux_dim = dset.get_dims()
     N = len(dset)
     max_epochs = int(max_iter // len(train_loader) + 1)
 
     # define model and optimizer
     # print('Defining model and optimizer..')
-    model = iVAE(latent_dim, data_dim, aux_dim, activation='lrelu', device=device,
-                 n_layers=n_layers, hidden_dim=hidden_dim)
+    model = iVAE(
+        latent_dim,
+        data_dim,
+        aux_dim,
+        activation="lrelu",
+        device=device,
+        n_layers=n_layers,
+        hidden_dim=hidden_dim,
+    )
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, factor=0.1, patience=20, verbose=True
+    )
 
     # training loop
     if not test:
@@ -57,7 +79,13 @@ def IVAE_wrapper(X, U, batch_size=256, max_iter=7e4, seed=0, n_layers=3, hidden_
         model = torch.load(ckpt_file, map_location=device)
 
     Xt, Ut = dset.x, dset.y
-    decoder_params, encoder_params, z, prior_params = model(Xt.to(device), Ut.to(device))
-    params = {'decoder': decoder_params, 'encoder': encoder_params, 'prior': prior_params}
+    decoder_params, encoder_params, z, prior_params = model(
+        Xt.to(device), Ut.to(device)
+    )
+    params = {
+        "decoder": decoder_params,
+        "encoder": encoder_params,
+        "prior": prior_params,
+    }
 
     return z, model, params

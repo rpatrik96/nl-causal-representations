@@ -61,8 +61,8 @@ contrastive_one_hot_transform = lambda label: single_one_hot_encode(label, n_lab
 
 
 def make_dir(dir_name):
-    if dir_name[-1] != '/':
-        dir_name += '/'
+    if dir_name[-1] != "/":
+        dir_name += "/"
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
     return dir_name
@@ -70,5 +70,5 @@ def make_dir(dir_name):
 
 def make_file(file_name):
     if not os.path.exists(file_name):
-        open(file_name, 'a').close()
+        open(file_name, "a").close()
     return file_name

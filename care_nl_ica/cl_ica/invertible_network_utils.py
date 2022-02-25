@@ -26,9 +26,9 @@ def construct_invertible_mlp(
         Literal["smooth_leaky_relu"],
         Literal["softplus"],
     ] = "leaky_relu",
-    lower_triangular = True,
-    sparsity = True,
-    variant = None
+    lower_triangular=True,
+    sparsity=True,
+    variant=None,
 ):
     """
     Create an (approximately) invertible mixing network based on an MLP.
@@ -91,7 +91,7 @@ def construct_invertible_mlp(
     for i in range(n_layers):
 
         lin_layer = nn.Linear(n, n, bias=False)
-        if weight_matrix_init == "pcl" or weight_matrix_init == "rvs": 
+        if weight_matrix_init == "pcl" or weight_matrix_init == "rvs":
             if weight_matrix_init == "pcl":
                 condA = condThresh + 1
                 while condA > condThresh:
@@ -130,6 +130,7 @@ def construct_invertible_mlp(
 
     return mixing_net
 
+
 def tensor2bitlist(x: torch.IntTensor, bits: int) -> torch.Tensor:
     """
     Converts an integer into a list of binary tensors.
@@ -144,7 +145,10 @@ def tensor2bitlist(x: torch.IntTensor, bits: int) -> torch.Tensor:
     mask = 2 ** torch.arange(bits - 1, -1, -1).to(x.device, x.dtype)
     return x.unsqueeze(-1).bitwise_and(mask).ne(0).byte()
 
-def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, torch.Tensor]:
+
+def createARmask(
+    dim: int, variant: torch.IntTensor = None
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Create a (sparse) autoregressive triangular mask
 
@@ -157,7 +161,7 @@ def createARmask(dim: int, variant:torch.IntTensor=None) -> Tuple[torch.Tensor, 
     row_idx, col_idx = torch.tril_indices(dim, dim, -1)
 
     if variant is None:
-        max_variants = 2 ** mask_numel
+        max_variants = 2**mask_numel
         variant = torch.randint(max_variants, (1,)).int()
 
     # create mask elements

@@ -14,22 +14,22 @@ def indirect_causes(gt_jacobian_encoder) -> torch.Tensor:
     eps = 1e-6
     direct_causes = torch.tril((gt_jacobian_encoder.abs() > eps).float(), -1)
 
-
-
     # add together the matrix powers of the adjacency matrix
     # this yields all indirect paths
     paths = graph_paths(direct_causes)
 
     indirect_causes = torch.stack(list(paths.values())).sum(0)
 
-    indirect_causes = indirect_causes.bool().float()  # convert all non-1 value to 1 (for safety)
+    indirect_causes = (
+        indirect_causes.bool().float()
+    )  # convert all non-1 value to 1 (for safety)
     # correct for causes where both the direct and indirect paths are present
     indirect_causes = indirect_causes * ((indirect_causes - direct_causes) > 0).float()
 
     return indirect_causes, paths
 
 
-def graph_paths(direct_causes:torch.Tensor)->dict:
+def graph_paths(direct_causes: torch.Tensor) -> dict:
     paths = dict()
     matrix_power = direct_causes.clone()
 
@@ -40,26 +40,55 @@ def graph_paths(direct_causes:torch.Tensor)->dict:
         paths[i] = matrix_power
         matrix_power = matrix_power @ direct_causes
 
-
     return paths
 
 
-def false_positive_paths(dep_mat, gt_paths:dict, threshold:float=1e-2, weighted:bool=False)->torch.Tensor:
+def false_positive_paths(
+    dep_mat, gt_paths: dict, threshold: float = 1e-2, weighted: bool = False
+) -> torch.Tensor:
     direct_causes = torch.tril((dep_mat.abs() > threshold).float(), -1)
     dep_mat_paths = graph_paths(direct_causes)
 
-    weighting = lambda gt_path, path : ((1-gt_path)*path*(dep_mat if weighted is True else torch.ones_like(dep_mat))).sum()
+    weighting = lambda gt_path, path: (
+        (1 - gt_path)
+        * path
+        * (dep_mat if weighted is True else torch.ones_like(dep_mat))
+    ).sum()
 
-    return torch.Tensor([weighting(gt_path, path) for gt_path, path in zip(gt_paths.values(), dep_mat_paths.values())])
+    return torch.Tensor(
+        [
+            weighting(gt_path, path)
+            for gt_path, path in zip(gt_paths.values(), dep_mat_paths.values())
+        ]
+    )
 
 
-def false_negative_paths(dep_mat, gt_paths: dict, threshold: float = 1e-2, weighted:bool=False) -> torch.Tensor:
+def false_negative_paths(
+    dep_mat, gt_paths: dict, threshold: float = 1e-2, weighted: bool = False
+) -> torch.Tensor:
     direct_causes = torch.tril((dep_mat.abs() > threshold).float(), -1)
     dep_mat_paths = graph_paths(direct_causes)
 
-    weighting = lambda gt_path, path : ((1 - path[gt_path.bool()])*(dep_mat if weighted is True else torch.ones_like(dep_mat))).sum()
+    weighting = lambda gt_path, path: (
+        (1 - path[gt_path.bool()])
+        * (dep_mat if weighted is True else torch.ones_like(dep_mat))
+    ).sum()
 
-    return torch.Tensor([weighting(gt_path, path) for gt_path, path in zip(gt_paths.values(), dep_mat_paths.values())])
+    return torch.Tensor(
+        [
+            weighting(gt_path, path)
+            for gt_path, path in zip(gt_paths.values(), dep_mat_paths.values())
+        ]
+    )
+
+
+# todo: create a sweep over thresholds?
+def false_positive_curve():
+    pass
+
+
+def false_negative_curve():
+    pass
 
 
 def causal_orderings(gt_jacobian_encoder) -> list:
@@ -84,7 +113,9 @@ def causal_orderings(gt_jacobian_encoder) -> list:
         # this gives the smallest index of variable "i" in the causal ordering
         nonzero_in_row = nonzero_indices[nonzero_indices[:, 0] == i, :]
 
-        smallest_idx.append(0 if (tmp := nonzero_in_row[0][1]) == i else smallest_idx[tmp] + 1)
+        smallest_idx.append(
+            0 if (tmp := nonzero_in_row[0][1]) == i else smallest_idx[tmp] + 1
+        )
 
         # select nonzero indices for the current columns
         # and take the row index of the first element
@@ -95,7 +126,12 @@ def causal_orderings(gt_jacobian_encoder) -> list:
 
         # this means that there is only 1 appearance of variable i,
         # so it can be everywhere in the causal ordering
-        if len(nonzero_in_row) == 1 and len(nonzero_in_col) == 1 and smallest_idx[i] == i and biggest_idx[i] == i:
+        if (
+            len(nonzero_in_row) == 1
+            and len(nonzero_in_col) == 1
+            and smallest_idx[i] == i
+            and biggest_idx[i] == i
+        ):
 
             idx_range.append(list(range(dim)))
         else:

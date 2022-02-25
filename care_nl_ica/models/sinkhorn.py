@@ -6,6 +6,7 @@ class SinkhornOperator(object):
     """
     From http://arxiv.org/abs/1802.08665
     """
+
     def __init__(self, num_steps: int):
 
         if num_steps < 1:
@@ -14,7 +15,6 @@ class SinkhornOperator(object):
         self.num_steps = num_steps
 
     def __call__(self, matrix: torch.Tensor) -> torch.Tensor:
-
         def _normalize_row(matrix: torch.Tensor) -> torch.Tensor:
             return matrix - torch.logsumexp(matrix, 1, keepdim=True)
 
@@ -45,7 +45,7 @@ class SinkhornNet(nn.Module):
         return self.sinkhorn_operator(self.weight / self.temperature)
 
     def forward(self, x) -> torch.Tensor:
-        if (dim_idx:=x.shape.index(self.num_dim)) == 0 or len(x.shape)==3:
+        if (dim_idx := x.shape.index(self.num_dim)) == 0 or len(x.shape) == 3:
             return self.doubly_stochastic_matrix @ x
         elif dim_idx == 1:
             return x @ self.doubly_stochastic_matrix
@@ -64,12 +64,12 @@ class SinkhornNet(nn.Module):
 
 if __name__ == "__main__":
     NUM_DIM = 3
-    s = SinkhornNet(NUM_DIM,20,3e-4)
+    s = SinkhornNet(NUM_DIM, 20, 3e-4)
     optim = torch.optim.Adam(s.parameters(), lr=1e-3)
-    permute_indices = [1,2,0]
+    permute_indices = [1, 2, 0]
 
-    permute_mat = torch.zeros(NUM_DIM,NUM_DIM)
-    permute_mat[list(range(NUM_DIM)), permute_indices]=1
+    permute_mat = torch.zeros(NUM_DIM, NUM_DIM)
+    permute_mat[list(range(NUM_DIM)), permute_indices] = 1
 
     # generate chain
     weight = torch.tril(torch.ones_like(permute_mat), -2)
@@ -79,22 +79,24 @@ if __name__ == "__main__":
 
     # J
     mixing = torch.tril(torch.randn(NUM_DIM, NUM_DIM)) * mask
-    J_permuted = mixing@permute_mat
-    J_permuted = torch.tensor([[ 6.1357e-08,  7.5739e-01, -6.5171e-01],
-        [-1.2773e+00,  1.0414e-01,  7.0249e-01],
-        [ 1.3200e+00,  5.1018e-02,  3.5439e-02]])
+    J_permuted = mixing @ permute_mat
+    J_permuted = torch.tensor(
+        [
+            [6.1357e-08, 7.5739e-01, -6.5171e-01],
+            [-1.2773e00, 1.0414e-01, 7.0249e-01],
+            [1.3200e00, 5.1018e-02, 3.5439e-02],
+        ]
+    )
     print(f"{J_permuted=}")
-
-
 
     for i in range(2000):
 
         optim.zero_grad()
-        loss = torch.triu(J_permuted.float()@s.doubly_stochastic_matrix,1).norm()
+        loss = torch.triu(J_permuted.float() @ s.doubly_stochastic_matrix, 1).norm()
 
         loss.backward()
 
-        if i%500==0:
+        if i % 500 == 0:
             print(s.doubly_stochastic_matrix.detach())
 
         optim.step()

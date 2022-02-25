@@ -1,4 +1,4 @@
-### Wrapper function for TCL 
+### Wrapper function for TCL
 #
 # this code is adapted from: https://github.com/hirosm/TCL
 #
@@ -14,11 +14,19 @@ from .tcl_core import train_gpu as train
 from .tcl_eval import get_tensor, calc_accuracy
 from .tcl_preprocessing import pca
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
-def TCL_wrapper(sensor, label, list_hidden_nodes, random_seed=0, max_steps=int(7e4), max_steps_init=int(7e4),
-                ckpt_dir='./', test=False):
+def TCL_wrapper(
+    sensor,
+    label,
+    list_hidden_nodes,
+    random_seed=0,
+    max_steps=int(7e4),
+    max_steps_init=int(7e4),
+    ckpt_dir="./",
+    test=False,
+):
     # Training ----------------------------------------------------
     initial_learning_rate = 0.01  # initial learning rate
     momentum = 0.9  # momentum parameter of SGD
@@ -43,55 +51,61 @@ def TCL_wrapper(sensor, label, list_hidden_nodes, random_seed=0, max_steps=int(7
 
     if not test:
         # Train model (only MLR) --------------------------------------
-        train(sensor,
-              label,
-              num_class=len(np.unique(label)),  # num_segment,
-              list_hidden_nodes=list_hidden_nodes,
-              initial_learning_rate=initial_learning_rate,
-              momentum=momentum,
-              max_steps=max_steps_init,  # For init
-              decay_steps=decay_steps_init,  # For init
-              decay_factor=decay_factor,
-              batch_size=batch_size,
-              train_dir=train_dir,
-              checkpoint_steps=checkpoint_steps,
-              moving_average_decay=moving_average_decay,
-              MLP_trainable=False,  # For init
-              save_file='model_init.ckpt',  # For init
-              random_seed=random_seed)
+        train(
+            sensor,
+            label,
+            num_class=len(np.unique(label)),  # num_segment,
+            list_hidden_nodes=list_hidden_nodes,
+            initial_learning_rate=initial_learning_rate,
+            momentum=momentum,
+            max_steps=max_steps_init,  # For init
+            decay_steps=decay_steps_init,  # For init
+            decay_factor=decay_factor,
+            batch_size=batch_size,
+            train_dir=train_dir,
+            checkpoint_steps=checkpoint_steps,
+            moving_average_decay=moving_average_decay,
+            MLP_trainable=False,  # For init
+            save_file="model_init.ckpt",  # For init
+            random_seed=random_seed,
+        )
 
-        init_model_path = os.path.join(train_dir, 'model_init.ckpt')
+        init_model_path = os.path.join(train_dir, "model_init.ckpt")
 
         # Train model -------------------------------------------------
-        train(sensor,
-              label,
-              num_class=len(np.unique(label)),  # num_segment,
-              list_hidden_nodes=list_hidden_nodes,
-              initial_learning_rate=initial_learning_rate,
-              momentum=momentum,
-              max_steps=max_steps,
-              decay_steps=decay_steps,
-              decay_factor=decay_factor,
-              batch_size=batch_size,
-              train_dir=train_dir,
-              checkpoint_steps=checkpoint_steps,
-              moving_average_decay=moving_average_decay,
-              load_file=init_model_path,
-              random_seed=random_seed)
+        train(
+            sensor,
+            label,
+            num_class=len(np.unique(label)),  # num_segment,
+            list_hidden_nodes=list_hidden_nodes,
+            initial_learning_rate=initial_learning_rate,
+            momentum=momentum,
+            max_steps=max_steps,
+            decay_steps=decay_steps,
+            decay_factor=decay_factor,
+            batch_size=batch_size,
+            train_dir=train_dir,
+            checkpoint_steps=checkpoint_steps,
+            moving_average_decay=moving_average_decay,
+            load_file=init_model_path,
+            random_seed=random_seed,
+        )
 
     # now that we have trained everything, we can evaluate results:
     eval_dir = ckpt_dir
     ckpt = tf.train.get_checkpoint_state(eval_dir)
 
     with tf.Graph().as_default():
-        data_holder = tf.placeholder(tf.float32, shape=[None, sensor.shape[0]], name='data')
+        data_holder = tf.placeholder(
+            tf.float32, shape=[None, sensor.shape[0]], name="data"
+        )
 
         # Build a Graph that computes the logits predictions from the
         # inference model.
         logits, feats = inference(data_holder, list_hidden_nodes, num_class=num_segment)
 
         # Calculate predictions.
-        top_value, preds = tf.nn.top_k(logits, k=1, name='preds')
+        top_value, preds = tf.nn.top_k(logits, k=1, name="preds")
 
         # Restore the moving averaged version of the learned variables for eval.
         variable_averages = tf.train.ExponentialMovingAverage(moving_average_decay)
@@ -101,7 +115,9 @@ def TCL_wrapper(sensor, label, list_hidden_nodes, random_seed=0, max_steps=int(7
         with tf.Session() as sess:
             saver.restore(sess, ckpt.model_checkpoint_path)
 
-            tensor_val = get_tensor(sensor, [preds, feats], sess, data_holder, batch=256)
+            tensor_val = get_tensor(
+                sensor, [preds, feats], sess, data_holder, batch=256
+            )
             pred_val = tensor_val[0].reshape(-1)
             feat_val = tensor_val[1]
 

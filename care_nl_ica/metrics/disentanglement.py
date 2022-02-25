@@ -383,9 +383,9 @@ class Munkres:
         for i in range(n):
             for j in range(n):
                 if (
-                        (self.C[i][j] == 0)
-                        and (not self.col_covered[j])
-                        and (not self.row_covered[i])
+                    (self.C[i][j] == 0)
+                    and (not self.col_covered[j])
+                    and (not self.row_covered[i])
                 ):
                     self.marked[i][j] = 1
                     self.col_covered[j] = True
@@ -522,9 +522,9 @@ class Munkres:
             j = 0
             while True:
                 if (
-                        (self.C[i][j] == 0)
-                        and (not self.row_covered[i])
-                        and (not self.col_covered[j])
+                    (self.C[i][j] == 0)
+                    and (not self.row_covered[i])
+                    and (not self.col_covered[j])
                 ):
                     row = i
                     col = j
@@ -766,13 +766,13 @@ def linear_disentanglement(z, hz, mode: __Mode = "r2", train_test_split=False):
 
 
 def permutation_disentanglement(
-        z,
-        hz,
-        mode="r2",
-        rescaling=True,
-        solver: Union[Literal["naive", "munkres"]] = "naive",
-        sign_flips=True,
-        cache_permutations=None,
+    z,
+    hz,
+    mode="r2",
+    rescaling=True,
+    solver: Union[Literal["naive", "munkres"]] = "naive",
+    sign_flips=True,
+    cache_permutations=None,
 ):
     """Measure disentanglement up to permutations by either using the Munkres solver
     or naively trying out every possible permutation.
@@ -795,7 +795,7 @@ def permutation_disentanglement(
         assert solver == "naive", "R2 coefficient is only supported with naive solver"
 
     if cache_permutations and not hasattr(
-            permutation_disentanglement, "permutation_matrices"
+        permutation_disentanglement, "permutation_matrices"
     ):
         permutation_disentanglement.permutation_matrices = dict()
 
@@ -817,7 +817,7 @@ def permutation_disentanglement(
             Y = z
             X = hz
 
-            beta = np.diag((Y * X).sum(0) / (X ** 2).sum(0))
+            beta = np.diag((Y * X).sum(0) / (X**2).sum(0))
 
             Thz = X @ beta
 

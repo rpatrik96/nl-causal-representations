@@ -55,7 +55,9 @@ class LinearDataset(Dataset):
 
 
 class NonLinearDataset(Dataset):
-    def __init__(self, num_dim: int, num_layers: int, num_samples: int, variant: int = None):
+    def __init__(
+        self, num_dim: int, num_layers: int, num_samples: int, variant: int = None
+    ):
         """
         :param variant:
         :param num_dim: number of dimensions
@@ -75,19 +77,18 @@ class NonLinearDataset(Dataset):
 
         self.graph_idx, self.tril_mask = createARmask(self.num_dim, variant)
 
-        self.linears = nn.ModuleList([
-            nn.Linear(self.num_dim, self.num_dim, bias=False)
-            for _ in range(self.num_layers)
-        ])
+        self.linears = nn.ModuleList(
+            [
+                nn.Linear(self.num_dim, self.num_dim, bias=False)
+                for _ in range(self.num_layers)
+            ]
+        )
 
         # make it lower triangular
         for i in range(self.num_layers - 1):
             self.linears[i].weight.data = self.tril_mask * self.linears[i].weight.data
 
-        self.relus = nn.ModuleList([
-            nn.LeakyReLU()
-            for _ in range(self.num_layers - 1)
-        ])
+        self.relus = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_layers - 1)])
 
         self.data = self._generate_data()
 
@@ -135,7 +136,9 @@ def tensor2bitlist(x: torch.IntTensor, bits: int) -> torch.Tensor:
     return x.unsqueeze(-1).bitwise_and(mask).ne(0).byte()
 
 
-def createARmask(dim: int, variant: torch.IntTensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
+def createARmask(
+    dim: int, variant: torch.IntTensor = None
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Create a (sparse) autoregressive triangular mask
 
@@ -148,7 +151,7 @@ def createARmask(dim: int, variant: torch.IntTensor = None) -> Tuple[torch.Tenso
     row_idx, col_idx = torch.tril_indices(dim, dim, -1)
 
     if variant is None:
-        max_variants = 2 ** mask_numel
+        max_variants = 2**mask_numel
         variant = torch.randint(max_variants, (1,)).int()
 
     # create mask elements

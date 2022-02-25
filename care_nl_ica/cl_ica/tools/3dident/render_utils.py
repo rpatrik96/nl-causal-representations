@@ -38,7 +38,7 @@ def parse_args(parser, argv=None):
 
 # I wonder if there's a better way to do this?
 def delete_object(obj):
-    """ Delete a specified blender object """
+    """Delete a specified blender object"""
     for o in bpy.data.objects:
         o.select_set(False)
     obj.select_set(True)
@@ -69,7 +69,7 @@ def get_camera_coords(cam, pos):
 
 
 def set_layer(obj, layer_idx):
-    """ Move an object to a particular layer """
+    """Move an object to a particular layer"""
     # Set the target layer to True first because an object must always be on
     # at least one layer.
     obj.layers[layer_idx] = True

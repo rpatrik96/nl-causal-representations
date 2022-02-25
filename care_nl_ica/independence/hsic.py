@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 class HSIC(object):
-    def __init__(self, num_permutations: int, alpha: float = .05):
+    def __init__(self, num_permutations: int, alpha: float = 0.05):
         """
 
         :param num_permutations: number of index permutations
@@ -27,9 +27,11 @@ class HSIC(object):
         # calc distances
         dists_sq = torch.cdist(x, y).pow(2)
 
-        return torch.exp(-dists_sq / ls ** 2)
+        return torch.exp(-dists_sq / ls**2)
 
-    def test_statistics(self, x: torch.Tensor, y: torch.Tensor, ls_x: float, ls_y: float) -> torch.Tensor:
+    def test_statistics(
+        self, x: torch.Tensor, y: torch.Tensor, ls_x: float, ls_y: float
+    ) -> torch.Tensor:
         """
         Calculates the HSIC test statistics according to the code at
         http://www.gatsby.ucl.ac.uk/~gretton/indepTestFiles/indep.htm
@@ -48,7 +50,7 @@ class HSIC(object):
 
         H = torch.eye(num_samples) - torch.ones(num_samples, num_samples) / num_samples
 
-        return torch.trace(H @ kernel_x @ H @ kernel_y) / num_samples ** 2
+        return torch.trace(H @ kernel_x @ H @ kernel_y) / num_samples**2
 
     @staticmethod
     def calc_ls(x: torch.Tensor) -> torch.Tensor:
@@ -61,7 +63,15 @@ class HSIC(object):
 
         return torch.median(dists)
 
-    def run_test(self, x, y, device: str = 'cpu', ls_x: float = None, ls_y: float = None, bonferroni: int = 1) -> bool:
+    def run_test(
+        self,
+        x,
+        y,
+        device: str = "cpu",
+        ls_x: float = None,
+        ls_y: float = None,
+        bonferroni: int = 1,
+    ) -> bool:
         """
         Runs the HSIC test with randomly permuting the indices of y.
 

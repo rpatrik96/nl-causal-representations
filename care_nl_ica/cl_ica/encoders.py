@@ -20,7 +20,7 @@ def get_mlp(
         Literal["learnable_box"],
     ] = None,
     output_normalization_kwargs=None,
-    sinkhorn=False
+    sinkhorn=False,
 ):
     """
     Creates an MLP.
@@ -38,6 +38,7 @@ def get_mlp(
 
     if sinkhorn is True:
         from sinkhorn import SinkhornNet
+
         modules.append(SinkhornNet(n_in, 15, 1e-3))
 
     def add_module(n_layer_in: int, n_layer_out: int, last_layer: bool = False):

@@ -1,5 +1,6 @@
 import os
 import random
+from typing import Dict
 
 import numpy as np
 import torch
@@ -32,9 +33,9 @@ def save_state_dict(args, model, pth="g.pth"):
 
 
 def set_learning_mode(args):
-    if args.mode == 'unsupervised':
+    if args.mode == "unsupervised":
         learning_modes = [False]
-    elif args.mode == 'supervised':
+    elif args.mode == "supervised":
         learning_modes = [True]
     else:
         learning_modes = [True, False]
@@ -51,3 +52,33 @@ def set_device(args) -> None:
         print(f"{device=}")
 
     args.device = device
+
+
+def matrix_to_dict(matrix, name, panel_name=None, triangular=False) -> Dict[str, float]:
+    if matrix is not None:
+        if triangular is False:
+            labels = [
+                f"{name}_{i}{j}"
+                if panel_name is None
+                else f"{panel_name}/{name}_{i}{j}"
+                for i in range(matrix.shape[0])
+                for j in range(matrix.shape[1])
+            ]
+        else:
+            labels = [
+                f"{name}_{i}{j}"
+                if panel_name is None
+                else f"{panel_name}/{name}_{i}{j}"
+                for i in range(matrix.shape[0])
+                for j in range(i + 1)
+            ]
+        data = (
+            matrix.detach()
+            .cpu()
+            .reshape(
+                -1,
+            )
+            .tolist()
+        )
+
+    return {key: val for key, val in zip(labels, data)}

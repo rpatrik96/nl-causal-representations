@@ -42,15 +42,19 @@ from ..nets import LeafParam, MLP4
 
 
 class AffineConstantFlow(nn.Module):
-    """ 
+    """
     Scales + Shifts the flow by (learned) constants per dimension.
     In NICE paper there is a Scaling layer which is a special case of this where t is None
     """
 
     def __init__(self, dim, scale=True, shift=True):
         super().__init__()
-        self.s = nn.Parameter(torch.randn(1, dim, requires_grad=True)) if scale else None
-        self.t = nn.Parameter(torch.randn(1, dim, requires_grad=True)) if shift else None
+        self.s = (
+            nn.Parameter(torch.randn(1, dim, requires_grad=True)) if scale else None
+        )
+        self.t = (
+            nn.Parameter(torch.randn(1, dim, requires_grad=True)) if shift else None
+        )
 
     def forward(self, x):
         s = self.s if self.s is not None else x.new_zeros(x.size())
@@ -90,7 +94,7 @@ class ActNorm(AffineConstantFlow):
 
 class AffineHalfFlow(nn.Module):
     """
-    As seen in RealNVP, affine autoregressive flow (z = x * exp(s) + t), where half of the 
+    As seen in RealNVP, affine autoregressive flow (z = x * exp(s) + t), where half of the
     dimensions in x are linearly scaled/transfromed as a function of the other half.
     Which half is which is determined by the parity bit.
     - RealNVP both scales and shifts (default)
@@ -138,11 +142,11 @@ class AffineHalfFlow(nn.Module):
 
 
 class MaskedLinear(nn.Linear):
-    """ same as Linear except has a configurable mask on the weights """
+    """same as Linear except has a configurable mask on the weights"""
 
     def __init__(self, in_features, out_features, bias=True):
         super().__init__(in_features, out_features, bias)
-        self.register_buffer('mask', torch.ones(out_features, in_features))
+        self.register_buffer("mask", torch.ones(out_features, in_features))
 
     def set_mask(self, mask):
         self.mask.data.copy_(torch.from_numpy(mask.astype(np.uint8).T))
@@ -175,10 +179,12 @@ class MADE(nn.Module):
         self.net = []
         hs = [nin] + hidden_sizes + [nout]
         for h0, h1 in zip(hs, hs[1:]):
-            self.net.extend([
-                MaskedLinear(h0, h1),
-                nn.ReLU(),
-            ])
+            self.net.extend(
+                [
+                    MaskedLinear(h0, h1),
+                    nn.ReLU(),
+                ]
+            )
         self.net.pop()  # pop the last ReLU for the output layer
         self.net = nn.Sequential(*self.net)
 
@@ -193,7 +199,8 @@ class MADE(nn.Module):
         # could get memory expensive for large number of masks.
 
     def update_masks(self):
-        if self.m and self.num_masks == 1: return  # only a single seed, skip for efficiency
+        if self.m and self.num_masks == 1:
+            return  # only a single seed, skip for efficiency
         L = len(self.hidden_sizes)
 
         # fetch the next seed and construct a random stream
@@ -201,9 +208,13 @@ class MADE(nn.Module):
         self.seed = (self.seed + 1) % self.num_masks
 
         # sample the order of the inputs and the connectivity of all neurons
-        self.m[-1] = np.arange(self.nin) if self.natural_ordering else rng.permutation(self.nin)
+        self.m[-1] = (
+            np.arange(self.nin) if self.natural_ordering else rng.permutation(self.nin)
+        )
         for l in range(L):
-            self.m[l] = rng.randint(self.m[l - 1].min(), self.nin - 1, size=self.hidden_sizes[l])
+            self.m[l] = rng.randint(
+                self.m[l - 1].min(), self.nin - 1, size=self.hidden_sizes[l]
+            )
 
         # construct the mask matrices
         masks = [self.m[l - 1][:, None] <= self.m[l][None, :] for l in range(L)]
@@ -225,7 +236,7 @@ class MADE(nn.Module):
 
 
 class ARMLP(nn.Module):
-    """ a 4-layer auto-regressive MLP, wrapper around MADE net """
+    """a 4-layer auto-regressive MLP, wrapper around MADE net"""
 
     def __init__(self, nin, nout, nh):
         super().__init__()
@@ -236,7 +247,7 @@ class ARMLP(nn.Module):
 
 
 class SlowMAF(nn.Module):
-    """ 
+    """
     Masked Autoregressive Flow, slow version with explicit networks per dim
     """
 
@@ -271,7 +282,7 @@ class SlowMAF(nn.Module):
 
 
 class MAF(nn.Module):
-    """ Masked Autoregressive Flow that uses a MADE-style network for fast forward """
+    """Masked Autoregressive Flow that uses a MADE-style network for fast forward"""
 
     def __init__(self, dim, parity, net_class=ARMLP, nh=24):
         super().__init__()
@@ -313,7 +324,7 @@ class IAF(MAF):
 
 
 class Invertible1x1Conv(nn.Module):
-    """ 
+    """
     As introduced in Glow paper.
     """
 
@@ -325,10 +336,12 @@ class Invertible1x1Conv(nn.Module):
         self.P = P  # remains fixed during optimization
         self.L = nn.Parameter(L)  # lower triangular portion
         self.S = nn.Parameter(U.diag())  # "crop out" the diagonal to its own parameter
-        self.U = nn.Parameter(torch.triu(U, diagonal=1))  # "crop out" diagonal, stored in S
+        self.U = nn.Parameter(
+            torch.triu(U, diagonal=1)
+        )  # "crop out" diagonal, stored in S
 
     def _assemble_W(self):
-        """ assemble W from its pieces (P, L, U, S) """
+        """assemble W from its pieces (P, L, U, S)"""
         L = torch.tril(self.L, diagonal=-1) + torch.diag(torch.ones(self.dim))
         U = torch.triu(self.U, diagonal=1)
         W = self.P @ L @ (U + torch.diag(self.S))
@@ -350,8 +363,9 @@ class Invertible1x1Conv(nn.Module):
 
 # ------------------------------------------------------------------------
 
+
 class NormalizingFlow(nn.Module):
-    """ A sequence of Normalizing Flows is a Normalizing Flow """
+    """A sequence of Normalizing Flows is a Normalizing Flow"""
 
     def __init__(self, flows):
         super().__init__()
@@ -379,7 +393,7 @@ class NormalizingFlow(nn.Module):
 
 
 class NormalizingFlowModel(nn.Module):
-    """ A Normalizing Flow Model is a (prior, flow) pair """
+    """A Normalizing Flow Model is a (prior, flow) pair"""
 
     def __init__(self, prior, flows):
         super().__init__()
