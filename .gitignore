@@ -5,6 +5,7 @@ run
 */.ipynb_checkpoints/*
 __pycache__
 */__pycache__/*
+*/lightning_logs/*
 */wandb/*
 *.sif
 *.egg-info/*
