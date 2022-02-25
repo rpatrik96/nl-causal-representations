@@ -28,6 +28,7 @@ class MyLightningCLI(LightningCLI):
         parser.link_arguments("model.box_min", "data.box_min")
         parser.link_arguments("model.box_max", "data.box_max")
         parser.link_arguments("model.sphere_r", "data.sphere_r")
+        parser.link_arguments("model.normalize_latents", "data.normalize_latents")
 
     def before_fit(self):
         if isinstance(self.trainer.logger, WandbLogger) is True:

@@ -25,16 +25,16 @@ class DisentanglementMetrics:
     non_perm_corr_mig: float = 0
     ksi_corr_mig: float = 0
 
-    def log_dict(self, panel_name) -> Dict[str, float]:
+    def log_dict(self) -> Dict[str, float]:
         return {
-            f"{panel_name}/corr/non_perm": self.non_perm_score,
-            f"{panel_name}/corr/ksi": self.ksi_corr_mat.diag().mean().item(),
-            f"{panel_name}/diag/perm": self.perm_corr_diag,
-            f"{panel_name}/diag/non_perm": self.non_perm_corr_diag,
-            f"{panel_name}/diag/ksi": self.ksi_corr_diag,
-            f"{panel_name}/MIG/perm": self.perm_corr_mig,
-            f"{panel_name}/MIG/non_perm": self.non_perm_corr_mig,
-            f"{panel_name}/MIG/ksi": self.ksi_corr_mig,
+            "corr/non_perm": self.non_perm_score,
+            "corr/ksi": self.ksi_corr_mat.diag().mean().item(),
+            "diag/perm": self.perm_corr_diag,
+            "diag/non_perm": self.non_perm_corr_diag,
+            "diag/ksi": self.ksi_corr_diag,
+            "MIG/perm": self.perm_corr_mig,
+            "MIG/non_perm": self.non_perm_corr_mig,
+            "MIG/ksi": self.ksi_corr_mig,
         }
 
 

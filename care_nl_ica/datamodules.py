@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 from care_nl_ica.graph_utils import causal_orderings
@@ -121,7 +122,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
             # draw a sample from the latent space (marginal only)
             z = next(iter(self.train_dataloader()))[0][0, :]
             dep_mat = calc_jacobian(
-                self.mixing, z, normalize=self.hparams.latent_dimormalize_latents
+                self.mixing, z, normalize=self.hparams.normalize_latents
             ).mean(0)
 
             # save the decoder jacobian including the permutation
@@ -148,21 +149,21 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
         self._calc_dep_mat()
 
-    @property
-    def dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+    # @property
+    # def dataloader(self):
+    #     return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
 
     def train_dataloader(self):
-        return self.dataloader
+        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
 
     def val_dataloader(self):
-        return self.dataloader
+        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
 
     def test_dataloader(self):
-        return self.dataloader
+        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
 
     def predict_dataloader(self):
-        return self.dataloader
+        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
 
     @property
     def data_to_log(self):

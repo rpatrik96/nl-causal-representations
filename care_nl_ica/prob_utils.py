@@ -3,7 +3,7 @@ import torch
 
 def setup_marginal(args):
     device = args.device
-    eta = torch.zeros(args.n)
+    eta = torch.zeros(args.latent_dim)
     if args.space_type == "sphere":
         eta[0] = args.sphere_r
 

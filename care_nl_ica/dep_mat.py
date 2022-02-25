@@ -21,22 +21,22 @@ def calc_jacobian(
     # set to eval mode but remember original state
     in_training: bool = model.training
     model.eval()  # otherwise we will get 0 gradients
+    with torch.set_grad_enabled(True):
+        output_vars = model(input_vars)
 
-    output_vars = model(input_vars)
+        for i in range(output_vars.shape[1]):
+            jacob.append(
+                torch.autograd.grad(
+                    output_vars[:, i : i + 1],
+                    input_vars,
+                    create_graph=True,
+                    grad_outputs=torch.ones(output_vars[:, i : i + 1].shape).to(
+                        output_vars.device
+                    ),
+                )[0]
+            )
 
-    for i in range(output_vars.shape[1]):
-        jacob.append(
-            torch.autograd.grad(
-                output_vars[:, i : i + 1],
-                input_vars,
-                create_graph=True,
-                grad_outputs=torch.ones(output_vars[:, i : i + 1].shape).to(
-                    output_vars.device
-                ),
-            )[0]
-        )
-
-    jacobian = torch.stack(jacob, 1)
+        jacobian = torch.stack(jacob, 1)
 
     if normalize is True:
         # normalize the Jacobian by making it volume preserving

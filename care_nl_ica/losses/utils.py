@@ -21,14 +21,14 @@ class Losses:
 
         return total_loss
 
-    def log_dict(self, panel_name) -> Dict[str, float]:
+    def log_dict(self) -> Dict[str, float]:
         return {
-            f"{panel_name}/loss/cl_pos": self.cl_pos,
-            f"{panel_name}/loss/cl_neg": self.cl_neg,
-            f"{panel_name}/loss/sinkhorn_entropy": self.sinkhorn_entropy,
-            f"{panel_name}/loss/bottleneck_l1": self.bottleneck_l1,
-            f"{panel_name}/loss/sparsity_budget": self.sparsity_budget,
-            f"{panel_name}/loss/triangularity": self.triangularity,
-            f"{panel_name}/loss/qr": self.qr,
-            f"{panel_name}/loss/total": self.total_loss,
+            "cl_pos": self.cl_pos,
+            "cl_neg": self.cl_neg,
+            "sinkhorn_entropy": self.sinkhorn_entropy,
+            "bottleneck_l1": self.bottleneck_l1,
+            "sparsity_budget": self.sparsity_budget,
+            "triangularity": self.triangularity,
+            "qr": self.qr,
+            "total": self.total_loss,
         }

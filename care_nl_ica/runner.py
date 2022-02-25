@@ -1,3 +1,4 @@
+from pdb import set_trace
 import pytorch_lightning as pl
 import torch
 import wandb
@@ -48,9 +49,17 @@ class ContrastiveICAModule(pl.LightningModule):
         normalization: str = "",
         start_step=None,
         cholesky_permutation: bool = False,
+        use_flows=False,
+        use_bias=False,
+        normalize_latents: bool = True,
+        log_latent_rec=False,
     ):
         """
 
+        :param log_latent_rec:
+        :param normalize_latents:
+        :param use_bias:
+        :param use_flows:
         :param lr:
         :param latent_dim:
         :param use_ar_mlp:
@@ -90,46 +99,47 @@ class ContrastiveICAModule(pl.LightningModule):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
 
     def training_step(self, batch, batch_idx):
+        panel_name = "Train"
         _, _, _, losses = self._forward(batch)
-        self.logger.log(losses.log_dict("Train"))
+        self.log(f"{panel_name}/losses", losses.log_dict())
 
         return losses.total_loss
 
     def validation_step(self, batch, batch_idx):
         panel_name = "Val"
         sources, mixtures, reconstructions, losses = self._forward(batch)
+        self.log(f"{panel_name}/losses", losses.log_dict())
 
-        dep_mat = self._log_matrices(mixtures, sources)
+        dep_mat = self._calc_and_log_matrices(mixtures, sources)
 
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
-            sources, reconstructions
+            sources[0], reconstructions[0]
         )
+
+        self.log(f"{panel_name}/disent", disent_metrics.log_dict())
 
         # Update the metrics
         # todo: integrate torchmetrics
 
-        jacobian_metrics: JacobianMetrics = calc_jacobian_metrics(
-            dep_mat,
-            self.gt_jacobian_encoder,
-            self.indirect_causes,
-            self.gt_jacobian_decoder_permuted,
-            threshold=3e-5,
-        )
-
-        self.logger.log(losses.log_dict(panel_name))
-        self.logger.log(disent_metrics.log_dict(panel_name))
-        self.logger.log(jacobian_metrics.log_dict(panel_name))
+        # jacobian_metrics: JacobianMetrics = calc_jacobian_metrics(
+        #     dep_mat,
+        #     self.gt_jacobian_encoder,
+        #     self.indirect_causes,
+        #     self.gt_jacobian_decoder_permuted,
+        #     threshold=3e-5,
+        # )
+        # self.log(jacobian_metrics.log_dict(panel_name))
 
         self.log_scatter_latent_rec(sources[0], reconstructions[0], "n1")
         self.log_scatter_latent_rec(mixtures[0], reconstructions[0], "z1_n1_rec")
 
         return losses.total_loss
 
-    def _log_matrices(self, mixtures, sources):
+    def _calc_and_log_matrices(self, mixtures, sources):
+        dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
+            self.model, sources[0], mixtures[0]
+        )
         if self.hparams.verbose is True:
-            dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
-                self.model, sources, mixtures
-            )
             # log the Jacobian
             matrix_to_dict(dep_mat, "a", "Encoder Jacobian")
 
@@ -159,7 +169,10 @@ class ContrastiveICAModule(pl.LightningModule):
         sources, mixtures = tuple(sources), tuple(mixtures)
         # forward
         reconstructions = self.model(mixtures)
-        _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(*sources, *mixtures)
+        _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(
+            *sources, *reconstructions
+        )
+        # set_trace()
 
         losses = Losses(
             cl_pos=loss_pos_mean,
@@ -271,4 +284,4 @@ class ContrastiveICAModule(pl.LightningModule):
 
     def _log_mixing(self):
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            self.logger.log_summary(**self.trainer.datamodule.data_to_log)
+            self.log_summary(**self.trainer.datamodule.data_to_log)

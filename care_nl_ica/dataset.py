@@ -26,11 +26,13 @@ class ContrastiveDataset(torch.utils.data.IterableDataset):
     def _setup_space(self):
         hparams = self.hparams
         if hparams.space_type == "box":
-            self.space = spaces.NBoxSpace(hparams.n, hparams.box_min, hparams.box_max)
+            self.space = spaces.NBoxSpace(
+                hparams.latent_dim, hparams.box_min, hparams.box_max
+            )
         elif hparams.space_type == "sphere":
-            self.space = spaces.NSphereSpace(hparams.n, hparams.sphere_r)
+            self.space = spaces.NSphereSpace(hparams.latent_dim, hparams.sphere_r)
         else:
-            self.space = spaces.NRealSpace(hparams.n)
+            self.space = spaces.NRealSpace(hparams.latent_dim)
 
     def __iter__(self):
         sources = torch.stack(
