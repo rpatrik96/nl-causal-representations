@@ -5,7 +5,7 @@ trainer:
     init_args:
       log_model: true
       project: experiment
-      save_dir: care_nl_ica
+      save_dir:
   checkpoint_callback: null
   enable_checkpointing: true
   callbacks: null
