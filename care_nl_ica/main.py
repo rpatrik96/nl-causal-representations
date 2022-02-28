@@ -25,7 +25,7 @@ from omegaconf import DictConfig, OmegaConf
 from argparse import Namespace
 
 
-@hydra.main(config_path=".", config_name="config")
+@hydra.main(config_path="../configs", config_name="config")
 def main(cfg: DictConfig):
     # install the package
     install_package()

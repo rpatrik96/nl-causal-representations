@@ -24,7 +24,7 @@ from argparse import Namespace
 )
 def args(request):
     hydra.core.global_hydra.GlobalHydra.instance().clear()
-    initialize(config_path="../care_nl_ica", job_name="test_app")
+    initialize(config_path="../configs", job_name="test_app")
 
     cfg = compose(
         config_name="config",
