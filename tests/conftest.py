@@ -22,12 +22,13 @@ def args(request):
 
     args = parse_args(
         [
-            "--n",
+            "--latent_dim",
             str(request.param.n),
             "--use-ar-mlp",
             "--use-dep-mat",
             "--triangular",
             "--use-sem",
+            "--nonlin-sem",
         ]
     )
 

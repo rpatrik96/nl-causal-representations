@@ -305,7 +305,6 @@ class PermutationNet(nn.Module):
         self.i = 0
 
     def forward(self, x):
-
         self.i += 1
         if self.i % 250 == 0:
             print(f"{self.weight=}")

@@ -1,6 +1,6 @@
 import os
 import random
-from typing import Dict
+from typing import Dict, Literal
 
 import numpy as np
 import torch
@@ -82,3 +82,61 @@ def matrix_to_dict(matrix, name, panel_name=None, triangular=False) -> Dict[str,
         )
 
     return {key: val for key, val in zip(labels, data)}
+
+
+OutputNormalizationType = Literal[
+    "", "fixed_box", "learnable_box", "fixed_sphere", "learnable_sphere"
+]
+SpaceType = Literal["box", "sphere", "unbounded"]
+DataGenType = Literal["rvs", "pcl"]
+
+
+def add_tags(args):
+    try:
+        args.tags
+    except:
+        args.tags = []
+
+    if args.tags is None:
+        args.tags = []
+
+    if args.data.use_sem is True:
+        args.tags.append("sem")
+
+    if args.data.nonlin_sem is True:
+        args.tags.append("nonlinear")
+    else:
+        args.tags.append("linear")
+
+    if args.model.sinkhorn is True:
+        args.tags.append("sinkhorn")
+
+    if args.data.permute is True:
+        args.tags.append("permute")
+
+    if args.model.use_ar_mlp is False:
+        args.tags.append("mlp")
+    else:
+        args.tags.append("bottleneck")
+        if args.model.triangular is True:
+            args.tags.append("triangular")
+
+    if args.model.use_flows is True:
+        args.tags.append("flows")
+
+    if args.model.normalize_latents is True:
+        args.tags.append("normalization")
+
+    if args.model.l1 != 0.0:
+        args.tags.append(f"L1")
+
+    if args.model.triangularity_loss != 0.0:
+        args.tags.append(f"triangularity")
+
+    if args.model.entropy != 0.0:
+        args.tags.append(f"entropy")
+
+    if args.model.qr != 0.0:
+        args.tags.append(f"QR")
+
+    return list(set(args.tags))

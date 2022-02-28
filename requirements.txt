@@ -17,4 +17,6 @@ pip~=21.1.2
 imageio~=2.9.0
 pytorch-lightning
 jsonargparse[signatures]
+hydra-core~=1.1.1
 pre-commit
+omegaconf~=2.1.1

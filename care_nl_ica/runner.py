@@ -53,34 +53,34 @@ class ContrastiveICAModule(pl.LightningModule):
     ):
         """
 
-        :param log_latent_rec:
-        :param normalize_latents:
-        :param use_bias:
-        :param use_flows:
-        :param lr:
-        :param latent_dim:
-        :param use_ar_mlp:
-        :param device:
-        :param qr:
-        :param triangularity_loss:
-        :param entropy:
-        :param permute:
-        :param l1:
-        :param budget:
-        :param use_reverse:
-        :param use_batch_norm:
-        :param learnable_mask:
-        :param sinkhorn:
-        :param triangular:
-        :param verbose:
-        :param p:
-        :param tau:
-        :param alpha:
-        :param box_min:
-        :param box_max:
-        :param sphere_r:
-        :param normalization:
-        :param start_step:
+        :param log_latent_rec: Log the latents and their reconstructions
+        :param normalize_latents: normalize the latents to [0;1] (for the Jacobian calculation)
+        :param use_bias: Use bias in the network
+        :param use_flows: Use a Flow unmixing
+        :param lr: learning rate
+        :param latent_dim: latent dimension
+        :param use_ar_mlp: Use the AR MLP unmixing
+        :param device: device
+        :param qr: QR loss on the bottleneck matrix
+        :param triangularity_loss: triangularity loss on the correlation matrix
+        :param entropy: Entropy regularizer coefficient on the Sinkhorn weights
+        :param permute: Learn the permutation
+        :param l1: L1 regularization coefficient
+        :param budget: Constrain the non-zero elements on the bottleneck
+        :param use_reverse: Use reverse layers in teh flow unmixing
+        :param use_batch_norm: Use batchnorm layers in the Flow unmixing
+        :param learnable_mask: makes the masks in the flow learnable
+        :param sinkhorn: Use the Sinkhorn network
+        :param triangular: Force the AR MLP bottleneck to be triangular
+        :param verbose: Print out details, more logging
+        :param p: Exponent of the assumed model Lp Exponential distribution
+        :param tau: Print out details, more extensive logging
+        :param alpha: Weight factor between the two loss components
+        :param box_min: For box normalization only. Minimal value of box.
+        :param box_max: For box normalization only. Maximal value of box.
+        :param sphere_r: For sphere normalization only. Radius of the sphere.
+        :param normalization: Output normalization to use. If empty, do not normalize at all. Can be ("", "fixed_box", "learnable_box", "fixed_sphere", "learnable_sphere")
+        :param start_step: Starting step index to activate functions (e.g. the QR loss)
         """
         super().__init__()
         self.save_hyperparameters()

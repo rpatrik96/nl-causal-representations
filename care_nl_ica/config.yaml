@@ -49,7 +49,6 @@ trainer:
   reload_dataloaders_every_epoch: false
   auto_lr_find: false
   replace_sampler_ddp: true
-  detect_anomaly: false
   auto_scale_batch_size: false
   prepare_data_per_node: null
   plugins: null
@@ -84,7 +83,7 @@ model:
   start_step: null
   cholesky_permutation: false
 data:
-  n_mixing_layer: null
+  n_mixing_layer: 1
   permute: false
   act_fct: leaky_relu
   use_sem: true
@@ -100,7 +99,7 @@ data:
   m_param: 1.0
   c_param: 0.05
   batch_size: 6144
-  latent_dim: 2
+  latent_dim: 3
   normalize_latents: true
   use_dep_mat: true
   train_transforms: null

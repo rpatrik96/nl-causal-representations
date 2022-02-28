@@ -20,33 +20,26 @@ def install_package():
         )
 
 
-def main():
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
+
+@hydra.main(config_path=".", config_name="config")
+def main(cfg: DictConfig):
     # install the package
     install_package()
 
-    import torch.backends.cudnn
+    from pytorch_lightning import Trainer, seed_everything
+    from care_nl_ica.datamodules import ContrastiveDataModule
+    from care_nl_ica.runner import ContrastiveICAModule
 
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    seed_everything(cfg.seed_everything)
 
-    # setup
-    from args import parse_args
-    import sys
+    trainer = Trainer.from_argparse_args(cfg)
+    model = ContrastiveICAModule(**OmegaConf.to_container(cfg.model))
+    dm = ContrastiveDataModule.from_argparse_args(cfg.data)
 
-    args = parse_args(sys.argv[1:])
-
-    from runner import Runner
-    from utils import setup_seed, save_state_dict, set_learning_mode, set_device
-
-    set_device(args)
-    setup_seed(args.seed)
-    set_learning_mode(args)
-
-    runner = Runner(args)
-
-    save_state_dict(args, runner.model.mixing)
-
-    runner.training_loop()
+    trainer.fit(model, datamodule=dm)
 
 
 if __name__ == "__main__":

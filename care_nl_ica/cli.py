@@ -1,7 +1,7 @@
 from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.utilities.cli import LightningCLI
 
-from care_nl_ica.args import add_tags
+from care_nl_ica.utils import add_tags
 from care_nl_ica.datamodules import ContrastiveDataModule
 from care_nl_ica.runner import ContrastiveICAModule
 

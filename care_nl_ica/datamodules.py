@@ -1,4 +1,3 @@
-import os
 from typing import Optional
 
 from care_nl_ica.graph_utils import causal_orderings
@@ -14,27 +13,29 @@ from care_nl_ica.dep_mat import calc_jacobian
 from care_nl_ica.graph_utils import indirect_causes
 from care_nl_ica.models.mlp import LinearSEM, NonLinearSEM
 
+from care_nl_ica.utils import SpaceType, DataGenType
+
 
 class ContrastiveDataModule(pl.LightningDataModule):
     def __init__(
         self,
-        n_mixing_layer,
+        n_mixing_layer: int = 1,
         permute: bool = False,
         act_fct: str = "leaky_relu",
         use_sem: bool = True,
-        data_gen_mode: str = "rvs",
+        data_gen_mode: DataGenType = "rvs",
         variant: int = 0,
         nonlin_sem: bool = False,
         box_min: float = 0.0,
         box_max: float = 1.0,
         sphere_r: float = 1.0,
-        space_type: str = "box",
+        space_type: SpaceType = "box",
         m_p: int = 0,
         c_p: int = 1,
         m_param: float = 1.0,
         c_param: float = 0.05,
         batch_size: int = 64,
-        latent_dim: int = 2,
+        latent_dim: int = 3,
         normalize_latents: bool = True,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         use_dep_mat: bool = True,
@@ -43,26 +44,26 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
         """
 
-        :param n_mixing_layer:
-        :param permute:
-        :param act_fct:
-        :param use_sem:
-        :param data_gen_mode:
-        :param variant:
-        :param nonlin_sem:
-        :param box_min:
-        :param box_max:
-        :param sphere_r:
-        :param space_type:
-        :param m_p:
-        :param c_p:
-        :param m_param:
-        :param c_param:
-        :param batch_size:
-        :param latent_dim:
-        :param normalize_latents:
-        :param device:
-        :param use_dep_mat:
+        :param n_mixing_layer: Number of layers in nonlinear mixing network
+        :param permute: Permute causal ordering
+        :param act_fct: Activation function in mixing network
+        :param use_sem: Use **linear** SEM as mixing
+        :param data_gen_mode: Data generation mode, can be ('rvs', 'pcl')
+        :param variant: variant (e.g., ordering index)
+        :param nonlin_sem: Use nonlinear SEM as mixing
+        :param box_min: For box normalization only. Minimal value of box.
+        :param box_max: For box normalization only. Maximal value of box.
+        :param sphere_r: For sphere normalization only. Radius of the sphere.
+        :param space_type: can be ("box", "sphere", "unbounded")
+        :param m_p: Type of ground-truth marginal distribution. p=0 means uniform; all other p values correspond to (projected) Lp Exponential
+        :param c_p: Exponent of ground-truth Lp Exponential distribution
+        :param m_param: Additional parameter for the marginal (only relevant if it is not uniform)
+        :param c_param: Concentration parameter of the conditional distribution
+        :param batch_size: Batch size
+        :param latent_dim: Dimensionality of the latents
+        :param normalize_latents: Normalizes the latent (marginal) distribution
+        :param device: device
+        :param use_dep_mat: Use the Jacobian
         :param kwargs:
         """
         super().__init__()
