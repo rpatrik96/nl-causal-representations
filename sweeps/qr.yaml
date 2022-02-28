@@ -1,0 +1,31 @@
+command:
+  - ${env}
+  - python3
+  - care_nl_ica/cli.py
+  - fit
+  - "--config"
+  - "configs/config.yaml"
+  - "--config"
+  - "configs/model/ar_non_tri.yaml"
+  - "--config"
+  - "configs/data/permute.yaml"
+  - ${args}
+method: grid
+metric:
+  goal: minimize
+  name: Train/losses/total
+parameters:
+  data.variant:
+    values: [0,1,2,3,4,5]
+  model.qr:
+    values: [1e-3, 1e-2, 1e-1]
+  model.start_step:
+    values: [2000, 5000, 12000, 20000]
+early_terminate:
+  type: hyperband
+  eta: 3
+  min_iter: 10
+
+
+
+
