@@ -7,6 +7,7 @@ from typing import Dict
 class Losses:
     cl_pos: float = 0.0
     cl_neg: float = 0.0
+    cl_entropy: float = 0.0
     sinkhorn_entropy: float = 0.0
     bottleneck_l1: float = 0.0
     sparsity_budget: float = 0.0
@@ -16,8 +17,9 @@ class Losses:
     @property
     def total_loss(self):
         total_loss = 0.0
-        for loss in self.__dict__.values():
-            total_loss += loss
+        for key, loss in self.__dict__.items():
+            if key != "cl_entropy":
+                total_loss += loss
 
         return total_loss
 
@@ -25,6 +27,7 @@ class Losses:
         return {
             "cl_pos": self.cl_pos,
             "cl_neg": self.cl_neg,
+            "cl_entropy": self.cl_entropy,
             "sinkhorn_entropy": self.sinkhorn_entropy,
             "bottleneck_l1": self.bottleneck_l1,
             "sparsity_budget": self.sparsity_budget,

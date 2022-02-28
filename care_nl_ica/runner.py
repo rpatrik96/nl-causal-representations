@@ -171,11 +171,14 @@ class ContrastiveICAModule(pl.LightningModule):
         _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(
             *sources, *reconstructions
         )
-        # set_trace()
+
+        # estimate entropy (i.e., the baseline of the loss)
+        entropy_estimate, _, _ = self.model.loss(*sources, *sources)
 
         losses = Losses(
             cl_pos=loss_pos_mean,
             cl_neg=loss_neg_mean,
+            cl_entropy=entropy_estimate,
             sinkhorn_entropy=self.model.sinkhorn_entropy_loss,
             bottleneck_l1=self.model.bottleneck_l1_loss,
             sparsity_budget=self.model.budget_loss,
