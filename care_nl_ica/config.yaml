@@ -82,6 +82,8 @@ model:
   normalization: ''
   start_step: null
   cholesky_permutation: false
+  use_flows: false
+  use_bias: false
 data:
   n_mixing_layer: 1
   permute: false

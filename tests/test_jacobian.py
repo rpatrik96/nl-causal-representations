@@ -3,19 +3,29 @@ import torch
 from torch.autograd.functional import jacobian
 
 from care_nl_ica.dep_mat import calc_jacobian, calc_jacobian_numerical
-from model import ContrastiveLearningModel
+from care_nl_ica.models.model import ContrastiveLearningModel
+from argparse import Namespace
 
 
 @pytest.fixture()
 def model(args):
+
+    args = Namespace(
+        **{
+            **args.model,
+            **{
+                "latent_dim": args.data.latent_dim,
+                "device": "cuda" if torch.cuda.is_available() else "cpu",
+                "normalize_latents": args.data.normalize_latents,
+            },
+        }
+    )
     return ContrastiveLearningModel(args)
 
 
-@pytest.mark.parametrize("network", ["decoder", "encoder"])
 def test_triangularity_jacobian(
     model: ContrastiveLearningModel,
     dataloader,
-    network,
     numerical_check: bool = False,
     built_in_jacobian_check: bool = False,
 ):
@@ -24,34 +34,29 @@ def test_triangularity_jacobian(
     Checks the AR nature of the model by calculating the Jacobian.
 
     :param model: model to test
-    :param network: model components
     :return:
     """
-
-    print("\n------------------------")
-    print(f"{network=}")
-    print("------------------------")
 
     # draw a sample from the latent space (marginal only)
     z = next(iter(dataloader))[0, :]
 
     # calculate the Jacobian
     dep_mat = calc_jacobian(
-        model._modules[network], z, normalize=model.hparams.normalize_latents
+        model.unmixing, z[0], normalize=model.hparams.normalize_latents
     ).mean(0)
     print(f"{dep_mat=}")
 
     # numerical Jacobian
     if numerical_check is True:
         print(
-            f"{calc_jacobian_numerical(model._modules[network], z, model.hparams.n, model.hparams.device)=}"
+            f"{calc_jacobian_numerical(model.unmixing, z, model.hparams.latent_dim, model.hparams.device)=}"
         )
 
     # same as calc_jacobian, but using the torch jacobian function
     if built_in_jacobian_check is True:
         # x in shape (Batch, Length)
         def _func_sum(x):
-            return model._modules[network].forward(x).sum(dim=0)
+            return model.unmixing.forward(x).sum(dim=0)
 
         print("---------------")
 
@@ -60,23 +65,17 @@ def test_triangularity_jacobian(
     assert (torch.tril(dep_mat) != dep_mat).sum() == 0
 
 
-@pytest.mark.parametrize("network", ["decoder", "encoder"])
-def test_triangularity_naive(model: ContrastiveLearningModel, network):
+def test_triangularity_naive(model: ContrastiveLearningModel):
     """
     Checks the AR nature of the model by perturbing the input and observing the changes in the outputs.
 
     :param model: model to test
-    :param network: model components
     :return:
     """
 
-    print("------------------------")
-    print(f"{network=}")
-    print("------------------------")
-
     # constants
     batch_size = 1
-    tria_check = torch.zeros(model.hparams.n)
+    tria_check = torch.zeros(model.hparams.latent_dim)
 
     # set to eval mode but remember original state
     in_training: bool = model.training
@@ -84,8 +83,8 @@ def test_triangularity_naive(model: ContrastiveLearningModel, network):
 
     # calculate the baseline output - all inputs should be different from 0
     # this is to avoid degenerate cases making the test succeed
-    y0 = model._modules[network](
-        torch.ones(batch_size, model.hparams.n).to(model.hparams.device)
+    y0 = model.unmixing(
+        torch.ones(batch_size, model.hparams.latent_dim).to(model.hparams.device)
     )
     print(f"{y0=}")
 
@@ -94,11 +93,11 @@ def test_triangularity_naive(model: ContrastiveLearningModel, network):
         y0 = y0.unsqueeze(0)
 
     # loop for perturbing each input one-by-one
-    for i in range(model.hparams.n):
-        z = torch.ones(batch_size, model.hparams.n).to(model.hparams.device)
+    for i in range(model.hparams.latent_dim):
+        z = torch.ones(batch_size, model.hparams.latent_dim).to(model.hparams.device)
         z[:, i] = -1
 
-        y = model._modules[network](z)
+        y = model.unmixing(z)
 
         print(f"{i=},{y=}")
 

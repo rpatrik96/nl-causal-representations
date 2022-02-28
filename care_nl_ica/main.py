@@ -1,4 +1,5 @@
 import os
+
 import pip
 
 
@@ -21,6 +22,7 @@ def install_package():
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
+from argparse import Namespace
 
 
 @hydra.main(config_path=".", config_name="config")
@@ -34,9 +36,9 @@ def main(cfg: DictConfig):
 
     seed_everything(cfg.seed_everything)
 
-    trainer = Trainer.from_argparse_args(cfg)
+    trainer = Trainer.from_argparse_args(Namespace(**cfg))
     model = ContrastiveICAModule(**OmegaConf.to_container(cfg.model))
-    dm = ContrastiveDataModule.from_argparse_args(cfg.data)
+    dm = ContrastiveDataModule.from_argparse_args(Namespace(**cfg.data))
 
     trainer.fit(model, datamodule=dm)
 
