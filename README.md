@@ -24,5 +24,10 @@ pip3 install -e .
  PYTHONPATH=/mnt/qb/work/bethge/preizinger/nl-causal-representations/ python3 care_nl_ica/main.py --variant 1 --project mlp-test --use-ar-mlp --use-wandb --use-dep-mat --use-sem --nonlin-sem --n-steps 1501 --n 3 --notes "Description of the run" --permute
 ```
 
+Or
+```bash
+python3 care_nl_ica/cli.py fit --config configs/config.yaml
+```
+
 ## Logging
 https://wandb.ai/causal-representation-learning
