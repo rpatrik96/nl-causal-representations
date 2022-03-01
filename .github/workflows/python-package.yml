@@ -48,7 +48,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude cl_ica,icebeem,pytorch-flows
     - name: black
       run: |
-        black --check --verbose .
+        black --check --verbose ./care_nl_ica/
     - name: Test with pytest
       run: |
         python -m pip install pytest
