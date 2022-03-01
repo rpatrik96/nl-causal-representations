@@ -72,6 +72,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
             "-----------Set val_check_interval in the Trainer as the Iterable dataset does not have len!-------"
         )
 
+
         self.save_hyperparameters()
 
     def _setup_mixing(self):
@@ -116,7 +117,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
         for p in mixing.parameters():
             p.requires_grad = False
 
-        self.mixing = mixing
+        self.mixing = mixing.to(hparams.device)
 
     def _calc_dep_mat(self) -> None:
         if self.hparams.use_dep_mat is True:
