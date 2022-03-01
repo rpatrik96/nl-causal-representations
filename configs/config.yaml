@@ -6,6 +6,7 @@ trainer:
       log_model: true
       project: experiment
       save_dir:
+  auto_select_gpus: true
   checkpoint_callback: null
   enable_checkpointing: true
   callbacks: null
@@ -26,6 +27,7 @@ trainer:
   max_steps: -1
   min_steps: null
   max_time: null
+  gpus: 1
   limit_train_batches: 1.0
   limit_val_batches: 1.0
   limit_test_batches: 1.0

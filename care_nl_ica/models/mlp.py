@@ -290,6 +290,17 @@ class FeatureMLP(nn.Module):
             [self.act[i](mlp(x[:, i, :])) for i, mlp in enumerate(self.mlps)], dim=1
         )
 
+    def to(self, device):
+        """
+        Move the model to the specified device.
+
+        :param device: The device to move the model to.
+        """
+        super().to(device)
+        self.mlps = self.mlps.to(device)
+        self.act = self.act.to(device)
+        return self
+
 
 class PermutationNet(nn.Module):
     def __init__(self, num_vars):
@@ -441,13 +452,15 @@ class ARBottleneckNet(nn.Module):
         :return: self
         """
         super().to(device)
+        print(f"Moving model to {device}")
         # move the model to the specified device
-        self.pre_layers.to(device)
-        self.post_layers.to(device)
-        self.ar_bottleneck.to(device)
-        self.sinkhorn.to(device)
-        self.inv_permutation.to(device)
-        self.perm_net.to(device)
+        self.pre_layers = self.pre_layers.to(device)
+        self.post_layers = self.post_layers.to(device)
+        self.ar_bottleneck = self.ar_bottleneck.to(device)
+        self.sinkhorn = self.sinkhorn.to(device)
+        self.inv_permutation = self.inv_permutation.to(device)
+        self.perm_net = self.perm_net.to(device)
+
 
         return self
 

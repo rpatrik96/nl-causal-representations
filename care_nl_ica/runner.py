@@ -85,7 +85,8 @@ class ContrastiveICAModule(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.model: ContrastiveLearningModel = ContrastiveLearningModel(self.hparams)
+        self.model: ContrastiveLearningModel = ContrastiveLearningModel(self.hparams).to(self.hparams.device)
+
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.watch(self.model, log="all", log_freq=250)
@@ -166,6 +167,9 @@ class ContrastiveICAModule(pl.LightningModule):
     def _forward(self, batch):
         sources, mixtures = batch
         sources, mixtures = tuple(sources), tuple(mixtures)
+
+        from pdb import set_trace
+        set_trace()
         # forward
         reconstructions = self.model(mixtures)
         _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(
