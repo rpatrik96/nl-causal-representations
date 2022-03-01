@@ -15,7 +15,6 @@ from care_nl_ica.metrics.ica_dis import (
     corr_matrix,
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
-from care_nl_ica.utils import matrix_to_dict
 
 
 class ContrastiveICAModule(pl.LightningModule):
@@ -89,6 +88,8 @@ class ContrastiveICAModule(pl.LightningModule):
             self.hparams
         ).to(self.hparams.device)
 
+        self.dep_mat = None
+
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.watch(self.model, log="all", log_freq=250)
 
@@ -110,7 +111,7 @@ class ContrastiveICAModule(pl.LightningModule):
         # for sweeps
         self.log("val_loss", losses.total_loss)
 
-        dep_mat = self._calc_and_log_matrices(mixtures, sources)
+        self.dep_mat = self._calc_and_log_matrices(mixtures, sources)
 
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources[0], reconstructions[0]
@@ -143,29 +144,21 @@ class ContrastiveICAModule(pl.LightningModule):
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
 
-        if self.hparams.verbose is True:
-            # log the Jacobian
-            matrix_to_dict(dep_mat, "a", "Encoder Jacobian")
-
-            # log the Encoder-Decoder Jacobian
-            matrix_to_dict(enc_dec_jac, "j", "Encoder-Decoder Jacobian")
-
-            # log the numerical Jacobian
-            matrix_to_dict(numerical_jacobian, "a_num", "Numerical Encoder Jacobian")
-
-            # log the bottleneck weights
-            if hasattr(self.model.unmixing, "ar_bottleneck") is True:
-                matrix_to_dict(
-                    self.model.unmixing.ar_bottleneck,
-                    "w",
-                    "AR Bottleneck Weights",
-                    triangular=False,
+            if self.hparams.verbose is True:
+                self.logger.experiment.log({"enc_dec_jacobian": enc_dec_jac.detach()})
+                self.logger.experiment.log(
+                    {"numerical_jacobian": numerical_jacobian.detach()}
+                )
+                self.logger.experiment.log(
+                    {"sinkhorn": self.model.sinkhorn.doubly_stochastic_matrix.detach()}
                 )
 
-            # log the Sinkhorn matrix
-            matrix_to_dict(
-                self.model.sinkhorn.doubly_stochastic_matrix, "sink", "Sinkhorn matrix"
-            )
+                # log the bottleneck weights
+                if hasattr(self.model.unmixing, "ar_bottleneck") is True:
+                    self.logger.experiment.log(
+                        {"ar_bottleneck": self.model.unmixing.ar_bottleneck.detach()}
+                    )
+
         return dep_mat
 
     def _forward(self, batch):
@@ -189,12 +182,11 @@ class ContrastiveICAModule(pl.LightningModule):
             bottleneck_l1=self.model.bottleneck_l1_loss,
             sparsity_budget=self.model.budget_loss,
             triangularity=self.triangularity_loss(*sources, *reconstructions),
-            qr=self.qr,
+            qr=self.qr(),
         )
 
         return sources, mixtures, reconstructions, losses
 
-    @property
     def qr(self):
 
         loss = 0.0
@@ -233,8 +225,12 @@ class ContrastiveICAModule(pl.LightningModule):
                 """
 
                 # loss options
-                if self.logger.global_step % 250 == 0:
-                    print(f"{Q=}")
+
+                if (
+                    self.model.training is False
+                    and isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True
+                ):
+                    self.logger.experiment.log({"Val/Q": Q.detach()})
 
                 loss = self.hparams.qr * permutation_loss(Q, matrix_power=False)
 
