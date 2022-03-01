@@ -154,7 +154,6 @@ class ContrastiveLearningModel(nn.Module):
         if self.hparams.verbose is True:
             print(f"{encoder=}")
 
-
         self.unmixing = encoder.to(hparams.device)
 
     def _setup_loss(self):

@@ -461,7 +461,6 @@ class ARBottleneckNet(nn.Module):
         self.inv_permutation = self.inv_permutation.to(device)
         self.perm_net = self.perm_net.to(device)
 
-
         return self
 
     @property

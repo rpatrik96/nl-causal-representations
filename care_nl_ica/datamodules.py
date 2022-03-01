@@ -72,7 +72,6 @@ class ContrastiveDataModule(pl.LightningDataModule):
             "-----------Set val_check_interval in the Trainer as the Iterable dataset does not have len!-------"
         )
 
-
         self.save_hyperparameters()
 
     def _setup_mixing(self):
