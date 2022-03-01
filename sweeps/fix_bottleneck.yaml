@@ -6,6 +6,8 @@ command:
   - "--config"
   - "configs/config.yaml"
   - "--config"
+  - "configs/model/ar_non_tri.yaml"
+  - "--config"
   - "configs/data/permute.yaml"
   - ${args}
 method: grid
