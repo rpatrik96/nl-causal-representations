@@ -168,8 +168,6 @@ class ContrastiveICAModule(pl.LightningModule):
         sources, mixtures = batch
         sources, mixtures = tuple(sources), tuple(mixtures)
 
-        from pdb import set_trace
-        set_trace()
         # forward
         reconstructions = self.model(mixtures)
         _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(
