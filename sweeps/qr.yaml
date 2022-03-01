@@ -13,7 +13,7 @@ command:
 method: grid
 metric:
   goal: minimize
-  name: Train/losses/total
+  name: Train/losses.total
 parameters:
   data.variant:
     values: [0,1,2,3,4,5]
@@ -24,7 +24,7 @@ parameters:
 early_terminate:
   type: hyperband
   eta: 3
-  min_iter: 10
+  min_iter: 50
 
 
 
