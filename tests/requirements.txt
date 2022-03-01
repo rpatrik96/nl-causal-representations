@@ -1,0 +1,9 @@
+coverage
+codecov
+pytest~=6.2.5
+pytest-cov
+pytest-flake8
+black
+flake8
+check-manifest
+twine==1.13.0
