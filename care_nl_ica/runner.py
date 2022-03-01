@@ -85,8 +85,9 @@ class ContrastiveICAModule(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.model: ContrastiveLearningModel = ContrastiveLearningModel(self.hparams).to(self.hparams.device)
-
+        self.model: ContrastiveLearningModel = ContrastiveLearningModel(
+            self.hparams
+        ).to(self.hparams.device)
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.watch(self.model, log="all", log_freq=250)
@@ -105,6 +106,9 @@ class ContrastiveICAModule(pl.LightningModule):
         panel_name = "Val"
         sources, mixtures, reconstructions, losses = self._forward(batch)
         self.log(f"{panel_name}/losses", losses.log_dict())
+
+        # for sweeps
+        self.log("val_loss", losses.total_loss)
 
         dep_mat = self._calc_and_log_matrices(mixtures, sources)
 
