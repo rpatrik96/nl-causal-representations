@@ -13,7 +13,7 @@ class ContrastiveLearningModel(nn.Module):
 
         self.hparams = hparams
 
-        self._setup_encoder()
+        self._setup_unmixing()
         self._setup_loss()
 
         self.sinkhorn_net = None  # SinkhornNet(hparams.latent_dim, 15, 1e-3)
@@ -83,7 +83,7 @@ class ContrastiveLearningModel(nn.Module):
                 )
         return loss
 
-    def _setup_encoder(self):
+    def _setup_unmixing(self):
         hparams = self.hparams
 
         (
@@ -92,7 +92,7 @@ class ContrastiveLearningModel(nn.Module):
         ) = self._configure_output_normalization()
 
         if self.hparams.use_flows is True:
-            encoder = MaskMAF(
+            unmixing = MaskMAF(
                 hparams.latent_dim,
                 hparams.latent_dim * 40,
                 5,
@@ -102,11 +102,11 @@ class ContrastiveLearningModel(nn.Module):
                 learnable=hparams.learnable_mask,
             )
 
-            encoder.confidence.to(hparams.device)
+            unmixing.confidence.to(hparams.device)
 
         elif self.hparams.use_ar_mlp is True:
 
-            encoder = ARBottleneckNet(
+            unmixing = ARBottleneckNet(
                 hparams.latent_dim,
                 [
                     1,
@@ -130,7 +130,7 @@ class ContrastiveLearningModel(nn.Module):
             )
 
         else:
-            encoder = encoders.get_mlp(
+            unmixing = encoders.get_mlp(
                 n_in=hparams.latent_dim,
                 n_out=hparams.latent_dim,
                 layers=[
@@ -145,16 +145,11 @@ class ContrastiveLearningModel(nn.Module):
                 output_normalization_kwargs=output_normalization_kwargs,
                 sinkhorn=hparams.sinkhorn,
             )
-        # encoder = encoder.to(hparams.device)
-        # if hparams.load_f is not None:
-        #     encoder.load_state_dict(
-        #         torch.load(hparams.load_f, map_location=hparams.device)
-        #     )
 
         if self.hparams.verbose is True:
-            print(f"{encoder=}")
+            print(f"{unmixing=}")
 
-        self.unmixing = encoder.to(hparams.device)
+        self.unmixing = unmixing.to(hparams.device)
 
     def _setup_loss(self):
         hparams = self.hparams

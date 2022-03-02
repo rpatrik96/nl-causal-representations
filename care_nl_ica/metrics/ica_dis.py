@@ -27,6 +27,8 @@ class DisentanglementMetrics:
 
     def log_dict(self) -> Dict[str, float]:
         return {
+            "corr/lin": self.lin_score,
+            "corr/perm": self.perm_score,
             "corr/non_perm": self.non_perm_score,
             "corr/ksi": self.ksi_corr_mat.diag().mean().item(),
             "diag/perm": self.perm_corr_diag,
