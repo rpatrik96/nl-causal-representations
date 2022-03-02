@@ -1,0 +1,33 @@
+command:
+  - ${env}
+  - python3
+  - care_nl_ica/cli.py
+  - fit
+  - "--config"
+  - "configs/config.yaml"
+  - "--config"
+  - "configs/model/ar_non_tri.yaml"
+  - "--config"
+  - "configs/data/permute.yaml"
+  - "--config"
+  - "configs/data/nl_sem.yaml"
+  - ${args}
+method: grid
+metric:
+  goal: minimize
+  name: val_loss
+parameters:
+  data.variant:
+    values: [0,1,2,3,4,5]
+  model.qr:
+    values: [1e-3, 1e-2, 1e-1]
+  model.start_step:
+    values: [3500]
+early_terminate:
+  type: hyperband
+  eta: 2
+  min_iter: 6
+
+
+
+
