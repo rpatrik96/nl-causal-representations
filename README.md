@@ -17,6 +17,8 @@ singularity build --fakeroot nv.sif nv.def
 2. Install
 ```bash
 pip3 install -e .
+# install pre-commit hooks
+pre-commit install
 ```
 
 3. Run:
