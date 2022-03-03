@@ -54,7 +54,7 @@ class ContrastiveLearningModel(nn.Module):
     @property
     def sinkhorn_entropy_loss(self):
         loss = 0
-        if self.hparams.entropy != 0.0 and self.hparams.permute is True:
+        if self.hparams.entropy != 0.0 and self.hparams.sinkhorn is True:
             loss = self.hparams.entropy * self.sinkhorn_entropy
 
         return loss
@@ -123,7 +123,6 @@ class ContrastiveLearningModel(nn.Module):
                 hparams.use_bias,
                 hparams.normalization == "fixed_box",
                 residual=False,
-                permute=hparams.permute,
                 sinkhorn=hparams.sinkhorn,
                 triangular=self.hparams.triangular,
                 budget=(self.hparams.budget != 0.0),

@@ -66,7 +66,6 @@ model:
   qr: 0.0
   triangularity_loss: 0.0
   entropy: 0.0
-  permute: false
   l1: 0.0
   budget: 0.0
   use_reverse: false

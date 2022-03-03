@@ -348,7 +348,6 @@ class ARBottleneckNet(nn.Module):
         bias: bool = True,
         normalize: bool = False,
         residual: bool = False,
-        permute=False,
         sinkhorn=False,
         triangular=True,
         budget: bool = False,
@@ -377,9 +376,7 @@ class ARBottleneckNet(nn.Module):
         self.inv_permutation = torch.arange(self.num_vars)
 
         self.permutation = (
-            (lambda x: x)
-            if (permute is False or sinkhorn is False)
-            else (lambda x: self.sinkhorn(x))
+            (lambda x: x) if sinkhorn is False else (lambda x: self.sinkhorn(x))
         )
 
     def _layer_generator(self, features: FeatureList):
