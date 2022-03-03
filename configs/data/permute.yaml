@@ -1,3 +1,4 @@
 data:
   permute: true
-
+model:
+  permute: true
