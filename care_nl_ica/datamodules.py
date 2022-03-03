@@ -95,17 +95,17 @@ class ContrastiveDataModule(pl.LightningDataModule):
             print("Using SEM as mixing")
             if self.hparams.nonlin_sem is False:
                 mixing = LinearSEM(
-                    hparams.latent_dim,
-                    hparams.nonlin_sem,
-                    hparams.variant,
+                    num_vars=hparams.latent_dim,
+                    permute=hparams.permute,
+                    variant=hparams.variant,
                     force_chain=True,
                     force_uniform=True,
                 )
             else:
                 mixing = NonLinearSEM(
-                    hparams.latent_dim,
-                    hparams.permute,
-                    hparams.variant,
+                    num_vars=hparams.latent_dim,
+                    permute=hparams.permute,
+                    variant=hparams.variant,
                     force_chain=True,
                     force_uniform=True,
                 )
