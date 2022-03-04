@@ -49,14 +49,14 @@ class ContrastiveLearningModel(nn.Module):
         return torch.distributions.Categorical(probs).entropy()
 
     def sinkhorn_entropy_loss(self):
-        loss = 0
+        loss = 0.0
         if self.hparams.entropy != 0.0 and self.hparams.sinkhorn is True:
             loss = self.hparams.entropy * self.sinkhorn_entropy()
 
         return loss
 
     def bottleneck_l1_loss(self):
-        loss = 0
+        loss = 0.0
         if self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
             # add sparsity loss to the AR MLP bottleneck
             loss = self.hparams.l1 * self.unmixing.bottleneck_l1_norm
@@ -64,7 +64,7 @@ class ContrastiveLearningModel(nn.Module):
         return loss
 
     def budget_loss(self):
-        loss = 0
+        loss = 0.0
         if self.hparams.budget != 0.0 and self.hparams.use_ar_mlp is True:
             loss = (
                 self.hparams.budget * self.unmixing.ar_bottleneck.budget_net.budget_loss
