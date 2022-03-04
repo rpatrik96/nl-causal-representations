@@ -142,13 +142,15 @@ class ContrastiveICAModule(pl.LightningModule):
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
 
+            if self.hparams.sinkhorn is True:
+                self.logger.experiment.log(
+                    {"sinkhorn": self.model.sinkhorn.doubly_stochastic_matrix.detach()}
+                )
+
             if self.hparams.verbose is True:
                 self.logger.experiment.log({"enc_dec_jacobian": enc_dec_jac.detach()})
                 self.logger.experiment.log(
                     {"numerical_jacobian": numerical_jacobian.detach()}
-                )
-                self.logger.experiment.log(
-                    {"sinkhorn": self.model.sinkhorn.doubly_stochastic_matrix.detach()}
                 )
 
                 # log the bottleneck weights
