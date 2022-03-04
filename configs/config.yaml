@@ -77,9 +77,6 @@ model:
   p: 1.0
   tau: 1.0
   alpha: 0.5
-  box_min: 0.0
-  box_max: 1.0
-  sphere_r: 1.0
   normalization: ''
   start_step: null
   cholesky_permutation: false

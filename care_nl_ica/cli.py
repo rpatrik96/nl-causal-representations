@@ -23,11 +23,11 @@ class MyLightningCLI(LightningCLI):
             help="Tags for the run on Weights and Biases",
         )
 
-        parser.link_arguments("model.latent_dim", "data.latent_dim")
-        parser.link_arguments("model.box_min", "data.box_min")
-        parser.link_arguments("model.box_max", "data.box_max")
-        parser.link_arguments("model.sphere_r", "data.sphere_r")
-        parser.link_arguments("model.normalize_latents", "data.normalize_latents")
+        parser.link_arguments("data.latent_dim", "model.latent_dim")
+        parser.link_arguments("data.box_min", "model.box_min")
+        parser.link_arguments("data.box_max", "model.box_max")
+        parser.link_arguments("data.sphere_r", "model.sphere_r")
+        parser.link_arguments("data.normalize_latents", "model.normalize_latents")
 
     def before_instantiate_classes(self) -> None:
         self.config[self.subcommand].trainer.logger.init_args.tags = add_tags(
