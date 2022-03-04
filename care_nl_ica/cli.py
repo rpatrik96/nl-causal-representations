@@ -24,7 +24,6 @@ class MyLightningCLI(LightningCLI):
         )
 
         parser.link_arguments("model.latent_dim", "data.latent_dim")
-        parser.link_arguments("model.permute", "data.permute")
         parser.link_arguments("model.box_min", "data.box_min")
         parser.link_arguments("model.box_max", "data.box_max")
         parser.link_arguments("model.sphere_r", "data.sphere_r")
