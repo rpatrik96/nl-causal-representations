@@ -20,7 +20,7 @@ parameters:
   data.variant:
     values: [0,1,2,3,4,5]
   model.entropy:
-    values: [0, 1e-1]
+    values: [1e-1]
 early_terminate:
   type: hyperband
   eta: 2
