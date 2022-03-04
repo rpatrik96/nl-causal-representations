@@ -27,7 +27,6 @@ class ContrastiveICAModule(pl.LightningModule):
         qr: float = 0.0,
         triangularity_loss: float = 0.0,
         entropy: float = 0.0,
-        permute: bool = False,
         l1: float = 0.0,
         budget: float = 0.0,
         use_reverse: bool = False,
@@ -63,7 +62,6 @@ class ContrastiveICAModule(pl.LightningModule):
         :param qr: QR loss on the bottleneck matrix
         :param triangularity_loss: triangularity loss on the correlation matrix
         :param entropy: Entropy regularizer coefficient on the Sinkhorn weights
-        :param permute: Learn the permutation
         :param l1: L1 regularization coefficient
         :param budget: Constrain the non-zero elements on the bottleneck
         :param use_reverse: Use reverse layers in teh flow unmixing
