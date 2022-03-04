@@ -117,6 +117,16 @@ class ContrastiveICAModule(pl.LightningModule):
 
         self.log(f"{panel_name}/disent", disent_metrics.log_dict())
 
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log(
+                {
+                    f"{panel_name}/disent/non_perm_corr_mat": disent_metrics.non_perm_corr_mat
+                }
+            )
+            self.logger.experiment.log(
+                {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
+            )
+
         # Update the metrics
         # todo: integrate torchmetrics
 
