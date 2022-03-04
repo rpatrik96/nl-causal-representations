@@ -42,24 +42,19 @@ class ContrastiveLearningModel(nn.Module):
 
         return sinkhorn
 
-    @property
     def sinkhorn_entropy(self):
-        probs = torch.latent_dimn.functional.softmax(
-            self.sinkhorn.doubly_stochastic_matrix, -1
-        ).view(
+        probs = F.softmax(self.sinkhorn.doubly_stochastic_matrix, -1).view(
             -1,
         )
         return torch.distributions.Categorical(probs).entropy()
 
-    @property
     def sinkhorn_entropy_loss(self):
         loss = 0
         if self.hparams.entropy != 0.0 and self.hparams.sinkhorn is True:
-            loss = self.hparams.entropy * self.sinkhorn_entropy
+            loss = self.hparams.entropy * self.sinkhorn_entropy()
 
         return loss
 
-    @property
     def bottleneck_l1_loss(self):
         loss = 0
         if self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
@@ -68,7 +63,6 @@ class ContrastiveLearningModel(nn.Module):
 
         return loss
 
-    @property
     def budget_loss(self):
         loss = 0
         if self.hparams.budget != 0.0 and self.hparams.use_ar_mlp is True:

@@ -176,9 +176,9 @@ class ContrastiveICAModule(pl.LightningModule):
             cl_pos=loss_pos_mean,
             cl_neg=loss_neg_mean,
             cl_entropy=entropy_estimate,
-            sinkhorn_entropy=self.model.sinkhorn_entropy_loss,
-            bottleneck_l1=self.model.bottleneck_l1_loss,
-            sparsity_budget=self.model.budget_loss,
+            sinkhorn_entropy=self.model.sinkhorn_entropy_loss(),
+            bottleneck_l1=self.model.bottleneck_l1_loss(),
+            sparsity_budget=self.model.budget_loss(),
             triangularity=self.triangularity_loss(*sources, *reconstructions),
             qr=self.qr(),
         )
