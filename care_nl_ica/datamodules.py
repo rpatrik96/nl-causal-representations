@@ -39,11 +39,15 @@ class ContrastiveDataModule(pl.LightningDataModule):
         normalize_latents: bool = True,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         use_dep_mat: bool = True,
+        force_chain: bool = False,
+        force_uniform: bool = False,
         **kwargs,
     ):
 
         """
 
+        :param force_chain: make the graph to a chain
+        :param force_uniform: make the mixing weights the same
         :param n_mixing_layer: Number of layers in nonlinear mixing network
         :param permute: Permute causal ordering
         :param act_fct: Activation function in mixing network
@@ -98,16 +102,16 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     num_vars=hparams.latent_dim,
                     permute=hparams.permute,
                     variant=hparams.variant,
-                    force_chain=True,
-                    force_uniform=True,
+                    force_chain=hparams.force_chain,
+                    force_uniform=hparams.force_uniform,
                 )
             else:
                 mixing = NonLinearSEM(
                     num_vars=hparams.latent_dim,
                     permute=hparams.permute,
                     variant=hparams.variant,
-                    force_chain=True,
-                    force_uniform=True,
+                    force_chain=hparams.force_chain,
+                    force_uniform=hparams.force_uniform,
                 )
 
             print(f"{mixing.weight=}")

@@ -11,6 +11,8 @@ command:
   - "configs/model/sinkhorn.yaml"
   - "--config"
   - "configs/data/permute.yaml"
+  - "--config"
+  - "configs/data/chain.yaml"
   - ${args}
 method: grid
 metric:
@@ -20,7 +22,7 @@ parameters:
   data.variant:
     values: [0,1,2,3,4,5]
   model.entropy:
-    values: [1e-1, 3e-1]
+    values: [3e-1]
 early_terminate:
   type: hyperband
   eta: 2
