@@ -126,9 +126,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
         if self.hparams.use_dep_mat is True:
             # draw a sample from the latent space (marginal only)
             z = next(iter(self.train_dataloader()))[0][0, :]
-            dep_mat = calc_jacobian(
-                self.mixing, z, normalize=self.hparams.normalize_latents
-            ).mean(0)
+            dep_mat = calc_jacobian(self.mixing, z, normalize=False).mean(0)
 
             # save the decoder jacobian including the permutation
             self.mixing_jacobian_permuted = dep_mat.detach()
