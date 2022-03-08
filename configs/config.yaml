@@ -6,10 +6,15 @@ trainer:
       log_model: true
       project: experiment
       save_dir:
+  callbacks:
+    - class_path: pytorch_lightning.callbacks.EarlyStopping
+      init_args:
+        monitor: val_loss
+        mode: min
+        patience: 25
   auto_select_gpus: true
   checkpoint_callback: null
   enable_checkpointing: true
-  callbacks: null
   default_root_dir: null
   gradient_clip_val: null
   gradient_clip_algorithm: null

@@ -19,10 +19,7 @@ metric:
 parameters:
   data.variant:
     values: [0,1,2,3,4,5]
-early_terminate:
-  type: hyperband
-  eta: 2
-  min_iter: 6
+
 
 
 

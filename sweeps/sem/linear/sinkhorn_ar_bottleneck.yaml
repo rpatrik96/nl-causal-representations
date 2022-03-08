@@ -13,6 +13,8 @@ command:
   - "configs/data/permute.yaml"
   - "--config"
   - "configs/data/chain.yaml"
+  - "--config"
+  - "configs/data/uniform_weights.yaml"
   - ${args}
 method: grid
 metric:
@@ -23,10 +25,6 @@ parameters:
     values: [0,1,2,3,4,5]
   model.entropy:
     values: [3e-1]
-early_terminate:
-  type: hyperband
-  eta: 2
-  min_iter: 6
 
 
 
