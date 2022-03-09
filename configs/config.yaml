@@ -11,10 +11,10 @@ trainer:
       init_args:
         monitor: val_loss
         mode: min
-        patience: 25
+        patience: 3
   auto_select_gpus: true
   checkpoint_callback: null
-  enable_checkpointing: true
+  enable_checkpointing: false
   default_root_dir: null
   gradient_clip_val: null
   gradient_clip_algorithm: null
@@ -24,7 +24,7 @@ trainer:
   enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 40
   fast_dev_run: false
   accumulate_grad_batches: null
   max_epochs: 5000
@@ -33,7 +33,7 @@ trainer:
   min_steps: null
   max_time: null
   gpus: 1
-  limit_train_batches: 200.0
+  limit_train_batches: 400.0
   limit_val_batches: 5.0
   limit_test_batches: 1.0
   limit_predict_batches: 1.0
