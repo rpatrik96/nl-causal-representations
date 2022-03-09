@@ -125,17 +125,10 @@ class NonLinearSEM(LinearSEM):
             force_uniform=force_uniform,
         )
 
-        self.nonlin = [
-            lambda x: x**3,
-            lambda x: torch.tanh(x),
-            lambda x: torch.sigmoid(x),
-            lambda x: torch.nn.functional.leaky_relu(x, 0.1),
-            lambda x: x,
+        self.relus = [
+            lambda x: torch.nn.functional.leaky_relu(x, negative_slope=s)
+            for s in torch.rand(num_vars).clip(0.1, 1)
         ]
-
-        # Nonlinearitites
-        self.nonlin_names = ["cube", "tanh", "sigmoid", "leaky_relu", "identity"]
-        self.nonlin_selector = torch.randint(0, len(self.nonlin) - 1, (num_vars,))
 
         # print the selected nonlinearities
         for i in range(num_vars):
@@ -146,13 +139,11 @@ class NonLinearSEM(LinearSEM):
         z = torch.zeros_like(x)
         w = torch.tril(self.weight * self.mask)
 
-        for i, nonlin_idx in enumerate(self.nonlin_selector):
+        for i in range(self.num_vars):
             if i != 0:
-                z[:, i] = self.nonlin[nonlin_idx](
-                    w[i, i] * x[:, i] + z[:, :i] @ w[i, :i]
-                )
+                z[:, i] = self.relus[i](w[i, i] * x[:, i] + z[:, :i] @ w[i, :i])
             else:
-                z[:, i] = w[i, i] * self.nonlin[nonlin_idx](x[:, i])
+                z[:, i] = w[i, i] * self.relus[i](x[:, i])
 
         return self.permutation(z)
 
