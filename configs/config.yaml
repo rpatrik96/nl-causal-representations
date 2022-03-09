@@ -11,7 +11,7 @@ trainer:
       init_args:
         monitor: val_loss
         mode: min
-        patience: 3
+        patience: 5
   auto_select_gpus: true
   checkpoint_callback: null
   enable_checkpointing: false
@@ -24,7 +24,7 @@ trainer:
   enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
-  check_val_every_n_epoch: 60
+  check_val_every_n_epoch: 100
   fast_dev_run: false
   accumulate_grad_batches: null
   max_epochs: 5000
