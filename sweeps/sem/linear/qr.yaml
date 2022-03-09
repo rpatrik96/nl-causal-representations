@@ -24,7 +24,7 @@ parameters:
   model.start_step:
     value: 3500
   data.latent_dim:
-    values: [3,5,10,16]
+    values: [3,5,10]
 
 
 
