@@ -130,10 +130,6 @@ class NonLinearSEM(LinearSEM):
             for s in torch.rand(num_vars).clip(0.1, 1)
         ]
 
-        # print the selected nonlinearities
-        for i in range(num_vars):
-            print(f"{self.nonlin_names[self.nonlin_selector[i]]}")
-
     def forward(self, x):
 
         z = torch.zeros_like(x)
