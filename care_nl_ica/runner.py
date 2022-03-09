@@ -106,14 +106,15 @@ class ContrastiveICAModule(pl.LightningModule):
         sources, mixtures, reconstructions, losses = self._forward(batch)
         self.log(f"{panel_name}/losses", losses.log_dict())
 
-        # for sweeps
-        self.log("val_loss", losses.total_loss)
-
         self.dep_mat = self._calc_and_log_matrices(mixtures, sources)
 
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources[0], reconstructions[0]
         )
+
+        # for sweeps
+        self.log("val_loss", losses.total_loss)
+        self.log("val_mcc", disent_metrics.perm_score)
 
         self.log(f"{panel_name}/disent", disent_metrics.log_dict())
 
