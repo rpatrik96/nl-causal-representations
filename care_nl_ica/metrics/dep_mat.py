@@ -1,11 +1,11 @@
 from dataclasses import dataclass
+from typing import Dict
 
 import torch
+from torchmetrics import Metric
 
 from care_nl_ica.losses.dep_mat import permutation_loss
 from care_nl_ica.metrics.ica_dis import amari_distance
-
-from typing import Dict
 
 
 @dataclass
@@ -98,3 +98,91 @@ def check_permutation(candidate: torch.tensor, threshold: float = 0.95):
     success = permutation_loss(hard_permutation, False) == 0.0
 
     return hard_permutation, success.item()
+
+
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from torchmetrics.utilities.data import METRIC_EPS
+from warnings import warn
+
+
+class JacobianBinnedPrecisionRecallCurve(Metric):
+    """
+    Based on https://github.com/PyTorchLightning/metrics/blob/master/torchmetrics/classification/binned_precision_recall.py#L45-L184
+    """
+
+    TPs: torch.Tensor
+    FPs: torch.Tensor
+    FNs: torch.Tensor
+
+    def __init__(
+        self,
+        num_thresholds: Optional[int] = None,
+        thresholds: Union[int, torch.Tensor, List[float], None] = None,
+        log_base: Optional[float] = 10.0,
+        compute_on_step: Optional[bool] = None,
+        **kwargs: Dict[str, Any],
+    ) -> None:
+        super().__init__(compute_on_step=compute_on_step, **kwargs)
+
+        if isinstance(num_thresholds, int):
+            self.num_thresholds = num_thresholds
+            thresholds = (
+                torch.logspace(0, 1.0, self.num_thresholds, base=log_base) / log_base
+            )
+            self.register_buffer("thresholds", thresholds)
+        elif thresholds is not None:
+            if not isinstance(thresholds, (list, torch.Tensor)):
+                raise ValueError(
+                    "Expected argument `thresholds` to either be an integer, list of floats or a tensor"
+                )
+            thresholds = (
+                torch.tensor(thresholds) if isinstance(thresholds, list) else thresholds
+            )
+            self.num_thresholds = thresholds.numel()
+            self.register_buffer("thresholds", thresholds)
+
+        for name in ("TPs", "FPs", "FNs"):
+            self.add_state(
+                name=name,
+                default=torch.zeros(self.num_thresholds, dtype=torch.float32),
+                dist_reduce_fx="sum",
+            )
+
+    def update(self, preds: torch.Tensor, target: torch.Tensor) -> None:  # type: ignore
+        """
+        Args
+            preds: (n_samples,) tensor
+            target: (n_samples, ) tensor
+        """
+        preds, target = preds.reshape(-1,), target.reshape(
+            -1,
+        )
+
+        assert preds.shape == target.shape
+
+        if preds.min() < 0:
+            warn(
+                "The prediction has negative values, taking the absolute value...",
+                RuntimeWarning,
+            )
+            preds = preds.abs()
+
+        if (pred_max := preds.max()) != 1.0:
+            warn("The prediction values not in [0;1], normalizing...", RuntimeWarning)
+            preds /= pred_max
+
+        target = target == 1
+        # Iterate one threshold at a time to conserve memory
+        for i in range(self.num_thresholds):
+            predictions = preds >= self.thresholds[i]
+            self.TPs[i] += (target & predictions).sum(dim=0)
+            self.FPs[i] += ((~target) & (predictions)).sum(dim=0)
+            self.FNs[i] += (target & (~predictions)).sum(dim=0)
+
+    def compute(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Returns float tensor of size n_classes."""
+        precisions = (self.TPs + METRIC_EPS) / (self.TPs + self.FPs + METRIC_EPS)
+        recalls = self.TPs / (self.TPs + self.FNs + METRIC_EPS)
+
+        return precisions, recalls, self.thresholds
