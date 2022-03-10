@@ -5,8 +5,9 @@ import wandb
 from care_nl_ica.dep_mat import jacobians
 from care_nl_ica.losses.utils import Losses
 from care_nl_ica.metrics.dep_mat import (
-    extract_permutation_from_jacobian,
+    jacobian_to_tril_and_perm,
     permutation_loss,
+    check_permutation,
 )
 from care_nl_ica.metrics.ica_dis import (
     calc_disent_metrics,
@@ -222,17 +223,17 @@ class ContrastiveICAModule(pl.LightningModule):
                             @ self.model.sinkhorn.doubly_stochastic_matrix
                         )
 
-                # Q is incentivized to be the permutation for the causal ordering
-                Q = extract_permutation_from_jacobian(
+                # inv_perm is incentivized to be the permutation for the causal ordering
+                inv_perm, unmixing_weight = jacobian_to_tril_and_perm(
                     J, self.hparams.cholesky_permutation is False
                 )
 
                 """
-                The first step is to ensure that the Q in the QR decomposition of the transposed(bottleneck) is 
+                The first step is to ensure that the inv_perm in the QR decomposition of the transposed(bottleneck) is 
                 **a permutation** matrix.
 
                 The second step is to ensure that the permutation matrix is the identity. If we got a permutation matrix
-                in the first step, then we could use Q.T to multiply the observations. 
+                in the first step, then we could use inv_perm.T to multiply the observations. 
                 """
 
                 # loss options
@@ -241,9 +242,17 @@ class ContrastiveICAModule(pl.LightningModule):
                     self.model.training is False
                     and isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True
                 ):
-                    self.logger.experiment.log({"Val/Q": Q.detach()})
+                    self.logger.experiment.log({"Val/Q": inv_perm.detach()})
 
-                loss = self.hparams.qr * permutation_loss(Q, matrix_power=False)
+                if self.hparams.use_ar_mlp is True:
+                    hard_permutation, success = check_permutation(inv_perm)
+                    if success is True:
+                        self.hparams.qr = 0.0
+                        self.model.unmixing.ar_bottleneck.make_triangular_with_permute(
+                            unmixing_weight, inv_perm
+                        )
+
+                loss = self.hparams.qr * permutation_loss(inv_perm, matrix_power=False)
 
         return loss
 

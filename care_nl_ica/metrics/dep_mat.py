@@ -61,14 +61,14 @@ def calc_jacobian_metrics(
         sparsity_accuracy,
         amari_distance(dep_mat, gt_jacobian_decoder_permuted),
         permutation_loss(
-            extract_permutation_from_jacobian(dep_mat, qr=True), matrix_power=True
+            jacobian_to_tril_and_perm(dep_mat, qr=True), matrix_power=True
         ),
     )
 
     return metrics
 
 
-def extract_permutation_from_jacobian(dep_mat, qr: bool = False):
+def jacobian_to_tril_and_perm(dep_mat, qr: bool = False):
     """
     The Jacobian of the learned network J should be W@P to invert the causal data generation process (SEM),
     where W is the inverse of the mixing matrix, and P is a permutation matrix
@@ -83,12 +83,14 @@ def extract_permutation_from_jacobian(dep_mat, qr: bool = False):
     :return:
     """
     if qr is True:
-        permutation_estimate = dep_mat.T.qr()[0].T
+        Q, R = dep_mat.T.qr()
+        inv_permutation = Q.T
+        unmixing_tril_weight = R.T
     else:
-        unmixing_tril = (dep_mat @ dep_mat.T).cholesky()
-        permutation_estimate = unmixing_tril.inverse() @ dep_mat
+        unmixing_tril_weight = (dep_mat @ dep_mat.T).cholesky()
+        inv_permutation = unmixing_tril_weight.inverse() @ dep_mat
 
-    return permutation_estimate
+    return inv_permutation, unmixing_tril_weight
 
 
 def check_permutation(candidate: torch.tensor, threshold: float = 0.95):

@@ -183,6 +183,8 @@ class ARMLP(nn.Module):
 
         # structure injection
         self.transform = transform if transform is not None else lambda w: w
+        self.permutation = lambda x: self.permutation_matrix @ x
+        self.permutation_matrix = torch.ones(self.num_vars, self.num_vars)
         self.struct_mask = torch.ones_like(self.weight[0], requires_grad=False)
 
     @property
@@ -203,15 +205,23 @@ class ARMLP(nn.Module):
             assembled = assembled * self.budget_net.mask
         return assembled
 
-    @assembled_weight.setter
-    def assembled_weight(self, value):
+    def make_triangular_with_permute(
+        self, tri_weight: torch.Tensor, permute: torch.Tensor
+    ):
 
         self.triangular = True
         self.residual = False
+        self.transform = lambda x: x
 
         print(
-            "--------Setting bottleneck weights, switching to triangular structure with no residuality--------"
+            "--------Setting bottleneck weights, switching to triangular structure with no residuality and no transform--------"
         )
+
+        self.assembled_weight = tri_weight
+        self.permutation_matrix = permute
+
+    @assembled_weight.setter
+    def assembled_weight(self, value):
 
         self.weight = nn.ParameterList(
             [
@@ -224,7 +234,7 @@ class ARMLP(nn.Module):
         )
 
     def forward(self, x):
-        return self.transform(self.assembled_weight) @ x
+        return self.transform(self.assembled_weight) @ self.permutation(x)
 
     def to(self, device):
         """
@@ -234,6 +244,7 @@ class ARMLP(nn.Module):
         """
         super().to(device)
         self.weight = self.weight.to(device)
+        self.permutation_matrix = self.permutation_matrix.to(device)
 
         if self.residual is True:
             self.scaling = self.scaling.to(device)
