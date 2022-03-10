@@ -174,14 +174,9 @@ class JacobianBinnedPrecisionRecall(Metric):
         assert preds.shape == target.shape
 
         if preds.min() < 0:
-            warn(
-                "The prediction has negative values, taking the absolute value...",
-                RuntimeWarning,
-            )
             preds = preds.abs()
 
         if (pred_max := preds.max()) != 1.0:
-            warn("The prediction values not in [0;1], normalizing...", RuntimeWarning)
             preds /= pred_max
 
         target = target == 1
