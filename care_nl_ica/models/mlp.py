@@ -288,7 +288,7 @@ class FeatureMLP(nn.Module):
             ]
         )
 
-        self.act = nn.ModuleList([nn.LeakyReLU() for _ in range(self.num_vars)])
+        self.act = nn.ModuleList([nn.PReLU() for _ in range(self.num_vars)])
         if force_identity is True:
             self.act = nn.ModuleList([nn.Identity() for _ in range(self.num_vars)])
             print("-----------------using identity activation-----------------")
