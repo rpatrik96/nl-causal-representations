@@ -22,3 +22,5 @@ trainer:
   benchmark: false
   deterministic: true
   detect_anomaly: true
+data:
+  batch_size: 64
