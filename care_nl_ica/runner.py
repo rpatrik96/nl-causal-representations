@@ -17,6 +17,8 @@ from care_nl_ica.metrics.ica_dis import (
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
 
+from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
+
 
 class ContrastiveICAModule(pl.LightningModule):
     def __init__(
@@ -49,9 +51,11 @@ class ContrastiveICAModule(pl.LightningModule):
         use_bias=False,
         normalize_latents: bool = True,
         log_latent_rec=False,
+        num_thresholds: int = 10,
     ):
         """
 
+        :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
         :param log_latent_rec: Log the latents and their reconstructions
         :param normalize_latents: normalize the latents to [0;1] (for the Jacobian calculation)
         :param use_bias: Use bias in the network
@@ -89,8 +93,17 @@ class ContrastiveICAModule(pl.LightningModule):
 
         self.dep_mat = None
 
+        self._configure_metrics()
+
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.watch(self.model, log="all", log_freq=250)
+
+    def _configure_metrics(self):
+        self.jac_prec_recall = JacobianBinnedPrecisionRecall(
+            num_thresholds=self.hparams.num_thresholds
+        )
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log({f"thresholds": self.jac_prec_recall.thresholds})
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
@@ -109,6 +122,20 @@ class ContrastiveICAModule(pl.LightningModule):
 
         self.dep_mat = self._calc_and_log_matrices(mixtures, sources)
 
+        """Precision-Recall"""
+        self.jac_prec_recall.update(
+            self.dep_mat.detach(), self.trainer.datamodule.unmixing_jacobian
+        )
+        precisions, recalls, thresholds = self.jac_prec_recall.compute()
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log(
+                {
+                    f"{panel_name}/jacobian/precisions": precisions,
+                    f"{panel_name}/jacobian/recalls": recalls,
+                }
+            )
+
+        """Disentanglement"""
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources[0], reconstructions[0]
         )
@@ -128,9 +155,6 @@ class ContrastiveICAModule(pl.LightningModule):
             self.logger.experiment.log(
                 {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
             )
-
-        # Update the metrics
-        # todo: integrate torchmetrics
 
         # jacobian_metrics: JacobianMetrics = calc_jacobian_metrics(
         #     dep_mat,

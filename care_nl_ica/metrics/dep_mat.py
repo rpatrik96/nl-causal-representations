@@ -30,14 +30,26 @@ class JacobianMetrics:
 
 def calc_jacobian_metrics(
     dep_mat: torch.Tensor,
-    gt_jacobian_encoder,
+    gt_jacobian_unmixing,
     indirect_causes,
-    gt_jacobian_decoder_permuted,
+    gt_jacobian_mixing_permuted,
     threshold: float = 1e-3,
 ) -> JacobianMetrics:
+
+    if dep_mat.min() < 0:
+        warn(
+            "The prediction has negative values, taking the absolute value...",
+            RuntimeWarning,
+        )
+        dep_mat = dep_mat.abs()
+
+    if (dep_max := dep_mat.max()) != 1.0:
+        warn("The prediction values not in [0;1], normalizing...", RuntimeWarning)
+        dep_mat /= dep_max
+
     # calculate the optimal threshold for 1 accuracy
     # calculate the indices where the GT is 0 (in the lower triangular part)
-    sparsity_mask = (torch.tril(gt_jacobian_encoder.abs() < 1e-6)).bool()
+    sparsity_mask = (torch.tril(gt_jacobian_unmixing.abs() < 1e-6)).bool()
 
     if sparsity_mask.sum() > 0:
         optimal_threshold = dep_mat[sparsity_mask].abs().max()
@@ -45,9 +57,9 @@ def calc_jacobian_metrics(
         optimal_threshold = None
 
     # calculate the distance between ground truth and predicted jacobian
-    norm_diff: float = torch.norm(dep_mat.abs() - gt_jacobian_encoder.abs()).mean()
+    norm_diff: float = torch.norm(dep_mat.abs() - gt_jacobian_unmixing.abs()).mean()
     thresholded_norm_diff: float = torch.norm(
-        dep_mat.abs() * (dep_mat.abs() > threshold) - gt_jacobian_encoder.abs()
+        dep_mat.abs() * (dep_mat.abs() > threshold) - gt_jacobian_unmixing.abs()
     ).mean()
 
     # calculate the fraction of correctly identified zeroes
@@ -59,9 +71,9 @@ def calc_jacobian_metrics(
         thresholded_norm_diff,
         optimal_threshold,
         sparsity_accuracy,
-        amari_distance(dep_mat, gt_jacobian_decoder_permuted),
+        amari_distance(dep_mat, gt_jacobian_mixing_permuted),
         permutation_loss(
-            jacobian_to_tril_and_perm(dep_mat, qr=True), matrix_power=True
+            jacobian_to_tril_and_perm(dep_mat, qr=True)[0], matrix_power=True
         ),
     )
 
@@ -106,7 +118,7 @@ from torchmetrics.utilities.data import METRIC_EPS
 from warnings import warn
 
 
-class JacobianBinnedPrecisionRecallCurve(Metric):
+class JacobianBinnedPrecisionRecall(Metric):
     """
     Based on https://github.com/PyTorchLightning/metrics/blob/master/torchmetrics/classification/binned_precision_recall.py#L45-L184
     """
