@@ -52,9 +52,11 @@ class ContrastiveICAModule(pl.LightningModule):
         normalize_latents: bool = True,
         log_latent_rec=False,
         num_thresholds: int = 10,
+        log_freq=None,
     ):
         """
 
+        :param log_freq: gradient/weight log frequency for W&B, None turns it off
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
         :param log_latent_rec: Log the latents and their reconstructions
         :param normalize_latents: normalize the latents to [0;1] (for the Jacobian calculation)
@@ -95,15 +97,17 @@ class ContrastiveICAModule(pl.LightningModule):
 
         self._configure_metrics()
 
-        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            self.logger.watch(self.model, log="all", log_freq=250)
-
     def _configure_metrics(self):
         self.jac_prec_recall = JacobianBinnedPrecisionRecall(
             num_thresholds=self.hparams.num_thresholds
         )
+
+    def on_train_start(self) -> None:
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log({f"thresholds": self.jac_prec_recall.thresholds})
+
+            if self.hparams.log_freq is not None:
+                self.logger.watch(self.model, log="all", log_freq=self.hparams.log_freq)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
