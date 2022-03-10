@@ -209,6 +209,10 @@ class ARMLP(nn.Module):
         self.triangular = True
         self.residual = False
 
+        print(
+            "--------Setting bottleneck weights, switching to triangular structure with no residuality--------"
+        )
+
         self.weight = nn.ParameterList(
             [
                 nn.Parameter(value, requires_grad=True),

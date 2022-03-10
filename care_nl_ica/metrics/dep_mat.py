@@ -89,3 +89,10 @@ def extract_permutation_from_jacobian(dep_mat, qr: bool = False):
         permutation_estimate = unmixing_tril.inverse() @ dep_mat
 
     return permutation_estimate
+
+
+def check_permutation(candidate: torch.tensor, threshold: float = 0.95):
+    hard_permutation = (candidate.abs() > threshold).float()
+    success = permutation_loss(hard_permutation, False) == 0.0
+
+    return hard_permutation, success.item()
