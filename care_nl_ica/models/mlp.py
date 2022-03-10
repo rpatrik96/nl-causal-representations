@@ -160,6 +160,7 @@ class ARMLP(nn.Module):
         self.residual = residual
         self.triangular = triangular
         self.budget = budget
+        self.num_weights = num_weights
 
         if self.budget is True:
             self.budget_net = SparseBudgetNet(self.num_vars)
@@ -174,7 +175,7 @@ class ARMLP(nn.Module):
                     if self.triangular is True
                     else nn.Linear(num_vars, num_vars, bias=False).weight
                 )
-                for _ in range(num_weights)
+                for _ in range(self.num_weights)
             ]
         )
         if self.residual is True and self.triangular is True:
@@ -201,6 +202,22 @@ class ARMLP(nn.Module):
         if self.budget is True:
             assembled = assembled * self.budget_net.mask
         return assembled
+
+    @assembled_weight.setter
+    def assembled_weight(self, value):
+
+        self.triangular = True
+        self.residual = False
+
+        self.weight = nn.ParameterList(
+            [
+                nn.Parameter(value, requires_grad=True),
+                *[
+                    nn.Parameter(torch.tril(torch.ones_like(value)), requires_grad=True)
+                    for _ in range(self.num_weights - 1)
+                ],
+            ]
+        )
 
     def forward(self, x):
         return self.transform(self.assembled_weight) @ x
