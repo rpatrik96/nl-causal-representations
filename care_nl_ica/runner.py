@@ -295,6 +295,9 @@ class ContrastiveICAModule(pl.LightningModule):
                 ):
                     self.logger.experiment.log({"Val/Q": inv_perm.detach()})
 
+                if self.hparams.use_ar_mlp is True:
+                    self.hard_permutation, self.qr_success = check_permutation(inv_perm)
+
                 loss = self.hparams.qr * permutation_loss(inv_perm, matrix_power=False)
 
         return loss
