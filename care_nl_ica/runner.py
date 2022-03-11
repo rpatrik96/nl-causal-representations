@@ -1,3 +1,5 @@
+import sys
+
 import pytorch_lightning as pl
 import torch
 import wandb
@@ -94,6 +96,7 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
+        self.qr_success: bool = False
 
         self._configure_metrics()
 
@@ -108,6 +111,26 @@ class ContrastiveICAModule(pl.LightningModule):
 
             if self.hparams.log_freq is not None:
                 self.logger.watch(self.model, log="all", log_freq=self.hparams.log_freq)
+
+    def on_epoch_end(self) -> None:
+        self._set_bottleneck_with_qr_estimate()
+
+    def _set_bottleneck_with_qr_estimate(self):
+        if (
+            self.qr_success is True
+            and self.hparams.qr != 0.0
+            and (
+                self.hparams.start_step is None
+                or (
+                    self.hparams.start_step is not None
+                    and self.global_step >= self.hparams.start_step
+                )
+            )
+        ):
+            self.hparams.qr = 0.0
+            self.model.unmixing.ar_bottleneck.make_triangular_with_permute(
+                self.unmixing_weight_qr_estimate, self.hard_permutation
+            )
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
@@ -252,7 +275,7 @@ class ContrastiveICAModule(pl.LightningModule):
                         )
 
                 # inv_perm is incentivized to be the permutation for the causal ordering
-                inv_perm, unmixing_weight = jacobian_to_tril_and_perm(
+                inv_perm, self.unmixing_weight_qr_estimate = jacobian_to_tril_and_perm(
                     J, self.hparams.cholesky_permutation is False
                 )
 
@@ -271,14 +294,6 @@ class ContrastiveICAModule(pl.LightningModule):
                     and isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True
                 ):
                     self.logger.experiment.log({"Val/Q": inv_perm.detach()})
-
-                if self.hparams.use_ar_mlp is True:
-                    hard_permutation, success = check_permutation(inv_perm)
-                    if success is True:
-                        self.hparams.qr = 0.0
-                        self.model.unmixing.ar_bottleneck.make_triangular_with_permute(
-                            unmixing_weight, inv_perm
-                        )
 
                 loss = self.hparams.qr * permutation_loss(inv_perm, matrix_power=False)
 
