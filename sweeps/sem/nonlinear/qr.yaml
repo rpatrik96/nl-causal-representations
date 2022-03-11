@@ -18,7 +18,7 @@ metric:
   name: val_loss
 parameters:
   trainer.max_epochs:
-    value: 8000
+    value: 15000
   data.variant:
     values: [0,1,2,3,4,5]
   model.qr:
