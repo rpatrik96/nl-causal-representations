@@ -54,7 +54,7 @@ class ContrastiveICAModule(pl.LightningModule):
         normalize_latents: bool = True,
         log_latent_rec=False,
         num_thresholds: int = 10,
-        log_freq=250,
+        log_freq=500,
     ):
         """
 
