@@ -80,7 +80,7 @@ def calc_jacobian_metrics(
     return metrics
 
 
-def jacobian_to_tril_and_perm(dep_mat, qr: bool = False):
+def jacobian_to_tril_and_perm(dep_mat, qr: bool = True):
     """
     The Jacobian of the learned network J should be W@P to invert the causal data generation process (SEM),
     where W is the inverse of the mixing matrix, and P is a permutation matrix

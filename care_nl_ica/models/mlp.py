@@ -184,7 +184,7 @@ class ARMLP(nn.Module):
         # structure injection
         self.transform = transform if transform is not None else lambda w: w
         self.permutation = lambda x: self.permutation_matrix @ x
-        self.permutation_matrix = torch.ones(self.num_vars, self.num_vars)
+        self.permutation_matrix = torch.eye(self.num_vars)
         self.struct_mask = torch.ones_like(self.weight[0], requires_grad=False)
 
     @property
