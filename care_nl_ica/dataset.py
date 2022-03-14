@@ -22,6 +22,7 @@ class ContrastiveDataset(torch.utils.data.IterableDataset):
             sample_marginal=setup_marginal(self.hparams),
             sample_conditional=setup_conditional(self.hparams),
         )
+        torch.cuda.empty_cache()
 
     def _setup_space(self):
         hparams = self.hparams

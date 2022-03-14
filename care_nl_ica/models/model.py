@@ -21,6 +21,8 @@ class ContrastiveLearningModel(nn.Module):
             print("Using model-level sinkhorn")
             self.sinkhorn_net.to(hparams.device)
 
+        torch.cuda.empty_cache()
+
     def parameters(self, recurse: bool = True):
         parameters = list(self.unmixing.parameters(recurse))
 
@@ -86,7 +88,7 @@ class ContrastiveLearningModel(nn.Module):
         ) = self._configure_output_normalization()
 
         if self.hparams.use_flows is True:
-            unmixing = MaskMAF(
+            self.unmixing = MaskMAF(
                 hparams.latent_dim,
                 hparams.latent_dim * 40,
                 5,
@@ -96,11 +98,11 @@ class ContrastiveLearningModel(nn.Module):
                 learnable=hparams.learnable_mask,
             )
 
-            unmixing.confidence.to(hparams.device)
+            self.unmixing.confidence.to(hparams.device)
 
         elif self.hparams.use_ar_mlp is True:
 
-            unmixing = ARBottleneckNet(
+            self.unmixing = ARBottleneckNet(
                 hparams.latent_dim,
                 [
                     1,
@@ -123,7 +125,7 @@ class ContrastiveLearningModel(nn.Module):
             )
 
         else:
-            unmixing = encoders.get_mlp(
+            self.unmixing = encoders.get_mlp(
                 n_in=hparams.latent_dim,
                 n_out=hparams.latent_dim,
                 layers=[
@@ -140,9 +142,9 @@ class ContrastiveLearningModel(nn.Module):
             )
 
         if self.hparams.verbose is True:
-            print(f"{unmixing=}")
+            print(f"{self.unmixing.detach()=}")
 
-        self.unmixing = unmixing.to(hparams.device)
+        self.unmixing = self.unmixing.to(hparams.device)
 
     def _setup_loss(self):
         hparams = self.hparams

@@ -84,7 +84,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
         if hparams.use_sem is False:
             # create MLP
             ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
-            mixing = invertible_network_utils.construct_invertible_mlp(
+            self.mixing = invertible_network_utils.construct_invertible_mlp(
                 n=hparams.latent_dim,
                 n_layers=hparams.latent_dim_mixing_layer,
                 act_fct=hparams.act_fct,
@@ -98,7 +98,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
         else:
             print("Using SEM as mixing")
             if self.hparams.nonlin_sem is False:
-                mixing = LinearSEM(
+                self.mixing = LinearSEM(
                     num_vars=hparams.latent_dim,
                     permute=hparams.permute,
                     variant=hparams.variant,
@@ -106,7 +106,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     force_uniform=hparams.force_uniform,
                 )
             else:
-                mixing = NonLinearSEM(
+                self.mixing = NonLinearSEM(
                     num_vars=hparams.latent_dim,
                     permute=hparams.permute,
                     variant=hparams.variant,
@@ -114,13 +114,14 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     force_uniform=hparams.force_uniform,
                 )
 
-            print(f"{mixing.weight=}")
+            print(f"{self.mixing.weight=}")
 
         # make it non-trainable
-        for p in mixing.parameters():
+        for p in self.mixing.parameters():
             p.requires_grad = False
 
-        self.mixing = mixing.to(hparams.device)
+        self.mixing = self.mixing.to(hparams.device)
+        torch.cuda.empty_cache()
 
     def _calc_dep_mat(self) -> None:
         if self.hparams.use_dep_mat is True:
@@ -143,6 +144,8 @@ class ContrastiveDataModule(pl.LightningDataModule):
             self.indirect_causes, self.paths = indirect_causes(self.unmixing_jacobian)
 
             self.orderings = causal_orderings(self.mixing_jacobian)
+
+            torch.cuda.empty_cache()
 
     def setup(self, stage: Optional[str] = None):
         self._setup_mixing()
