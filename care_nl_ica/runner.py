@@ -114,13 +114,6 @@ class ContrastiveICAModule(pl.LightningModule):
 
     def on_epoch_end(self) -> None:
         self._set_bottleneck_with_qr_estimate()
-        from pprint import pprint
-
-        pprint(torch.cuda.memory_stats())
-        pprint(torch.cuda.memory_reserved())
-        pprint(torch.cuda.memory_cached())
-        pprint(torch.cuda.memory_allocated())
-
         torch.cuda.empty_cache()
 
     def _set_bottleneck_with_qr_estimate(self):

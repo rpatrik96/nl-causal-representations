@@ -26,9 +26,9 @@ parameters:
   model.start_step:
     value: 1400
   data.latent_dim:
-    value: 10
+    value: 20
   model.lr:
-    values: [3e-5, 1e-4, 3e-4, 1e-3, 3e-3]
+    values: [3e-4, 1e-3, 3e-3]
 
 
 
