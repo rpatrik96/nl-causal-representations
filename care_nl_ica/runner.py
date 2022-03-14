@@ -106,6 +106,7 @@ class ContrastiveICAModule(pl.LightningModule):
         )
 
     def on_train_start(self) -> None:
+        torch.cuda.empty_cache()
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log({f"thresholds": self.jac_prec_recall.thresholds})
 
