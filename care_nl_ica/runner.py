@@ -53,7 +53,7 @@ class ContrastiveICAModule(pl.LightningModule):
         use_bias=False,
         normalize_latents: bool = True,
         log_latent_rec=False,
-        num_thresholds: int = 10,
+        num_thresholds: int = 20,
         log_freq=500,
     ):
         """
@@ -96,7 +96,7 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
-        self.qr_success: bool = False
+        self.qr_success: bool = False  # if self.hparams.qr != 0.0 else True
 
         self._configure_metrics()
 
@@ -149,11 +149,11 @@ class ContrastiveICAModule(pl.LightningModule):
         sources, mixtures, reconstructions, losses = self._forward(batch)
         self.log(f"{panel_name}/losses", losses.log_dict())
 
-        self.dep_mat = self._calc_and_log_matrices(mixtures, sources)
+        self.dep_mat = self._calc_and_log_matrices(mixtures, sources).detach()
 
         """Precision-Recall"""
         self.jac_prec_recall.update(
-            self.dep_mat.detach(), self.trainer.datamodule.unmixing_jacobian
+            self.dep_mat, self.trainer.datamodule.unmixing_jacobian
         )
         precisions, recalls, thresholds = self.jac_prec_recall.compute()
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:

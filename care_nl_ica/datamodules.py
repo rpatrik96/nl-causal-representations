@@ -79,39 +79,37 @@ class ContrastiveDataModule(pl.LightningDataModule):
         self.save_hyperparameters()
 
     def _setup_mixing(self):
-        hparams = self.hparams
-
-        if hparams.use_sem is False:
+        if self.hparams.use_sem is False:
             # create MLP
             ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
             self.mixing = invertible_network_utils.construct_invertible_mlp(
-                n=hparams.latent_dim,
-                n_layers=hparams.latent_dim_mixing_layer,
-                act_fct=hparams.act_fct,
+                n=self.hparams.latent_dim,
+                n_layers=self.hparams.latent_dim_mixing_layer,
+                act_fct=self.hparams.act_fct,
                 cond_thresh_ratio=0.001,
                 n_iter_cond_thresh=25000,
                 lower_triangular=True,
-                weight_matrix_init=hparams.data_gen_mode,
+                weight_matrix_init=self.hparams.data_gen_mode,
                 sparsity=True,
-                variant=torch.from_numpy(np.array([hparams.variant])),
+                variant=torch.from_numpy(np.array([self.hparams.variant])),
             )
         else:
             print("Using SEM as mixing")
             if self.hparams.nonlin_sem is False:
                 self.mixing = LinearSEM(
-                    num_vars=hparams.latent_dim,
-                    permute=hparams.permute,
-                    variant=hparams.variant,
-                    force_chain=hparams.force_chain,
-                    force_uniform=hparams.force_uniform,
+                    num_vars=self.hparams.latent_dim,
+                    permute=self.hparams.permute,
+                    variant=self.hparams.variant,
+                    force_chain=self.hparams.force_chain,
+                    force_uniform=self.hparams.force_uniform,
                 )
             else:
                 self.mixing = NonLinearSEM(
-                    num_vars=hparams.latent_dim,
-                    permute=hparams.permute,
-                    variant=hparams.variant,
-                    force_chain=hparams.force_chain,
-                    force_uniform=hparams.force_uniform,
+                    num_vars=self.hparams.latent_dim,
+                    permute=self.hparams.permute,
+                    variant=self.hparams.variant,
+                    force_chain=self.hparams.force_chain,
+                    force_uniform=self.hparams.force_uniform,
                 )
 
             print(f"{self.mixing.weight=}")
@@ -120,24 +118,26 @@ class ContrastiveDataModule(pl.LightningDataModule):
         for p in self.mixing.parameters():
             p.requires_grad = False
 
-        self.mixing = self.mixing.to(hparams.device)
+        self.mixing = self.mixing.to(self.hparams.device)
         torch.cuda.empty_cache()
 
     def _calc_dep_mat(self) -> None:
         if self.hparams.use_dep_mat is True:
             # draw a sample from the latent space (marginal only)
             z = next(iter(self.train_dataloader()))[0][0, :]
-            dep_mat = calc_jacobian(self.mixing, z, normalize=False).mean(0)
-
             # save the decoder jacobian including the permutation
-            self.mixing_jacobian_permuted = dep_mat.detach()
+            self.mixing_jacobian_permuted = self.mixing_jacobian = (
+                calc_jacobian(self.mixing, z, normalize=False).mean(0).detach()
+            )
+
             if self.hparams.permute is True:
                 # print(f"{dep_mat=}")
                 # set_trace()
-                dep_mat = dep_mat[torch.argsort(self.mixing.permute_indices), :]
+                self.mixing_jacobian = self.mixing_jacobian[
+                    torch.argsort(self.mixing.permute_indices), :
+                ]
 
-            self.mixing_jacobian = dep_mat.detach()
-            self.unmixing_jacobian = torch.tril(dep_mat.detach().inverse())
+            self.unmixing_jacobian = torch.tril(self.mixing_jacobian.inverse())
 
             print(f"{self.unmixing_jacobian=}")
 
@@ -155,17 +155,19 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
         self._calc_dep_mat()
 
+        self.dl = DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+
     def train_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+        return self.dl
 
     def val_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+        return self.dl
 
     def test_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+        return self.dl
 
     def predict_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+        return self.dl
 
     @property
     def data_to_log(self):
