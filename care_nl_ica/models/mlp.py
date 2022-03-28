@@ -13,6 +13,7 @@ from care_nl_ica.models.sparsity import SparseBudgetNet
 FeatureList = List[int]
 
 
+
 class LinearSEM(nn.Module):
     def __init__(
         self,
@@ -23,7 +24,6 @@ class LinearSEM(nn.Module):
         force_uniform: bool = False,
     ):
         super().__init__()
-
         self.variant = variant
         self.num_vars = num_vars
 
@@ -49,10 +49,11 @@ class LinearSEM(nn.Module):
             self.mask = torch.tril(torch.ones_like(self.weight))
 
             zeros_in_chain = torch.tril(torch.ones_like(self.weight), -2)
-            self.mask[zeros_in_chain == 1] = 0
+            self.mask[zeros_in_chain == 1] = 0        
 
         self.mask.requires_grad = False
         print(f"{self.mask=}")
+        
 
         self._setup_permutation(permute)
 
@@ -62,8 +63,9 @@ class LinearSEM(nn.Module):
             self.permute_indices = torch.randperm(self.num_vars)
         else:
             if self.variant < (fac := math.factorial(self.num_vars)):
-                permutations = list(itertools.permutations(range(self.num_vars)))
-                self.permute_indices = torch.tensor(permutations[self.variant])
+                permutations = itertools.permutations(range(self.num_vars))
+                self.permute_indices = torch.tensor(list(itertools.islice(permutations, self.variant, self.variant + 1))[0])
+                print(f"{self.permute_indices=}")
             else:
                 raise ValueError(f"{self.variant=} should be smaller than {fac}")
 

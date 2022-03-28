@@ -51,7 +51,6 @@ cli = MyLightningCLI(
     save_config_callback=None,
     run=True,
     parser_kwargs={
-        "parse_as_dict": False,
-        "default_config_files": ["configs/config.yaml"],
+        "parse_as_dict": False
     },
 )

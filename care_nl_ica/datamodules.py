@@ -152,10 +152,11 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
         # generate data
         self.dataset = ContrastiveDataset(self.hparams, self.mixing)
-
+        self.dl = DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+        
         self._calc_dep_mat()
 
-        self.dl = DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+        
 
     def train_dataloader(self):
         return self.dl
