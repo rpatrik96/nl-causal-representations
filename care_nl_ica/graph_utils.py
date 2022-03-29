@@ -82,15 +82,6 @@ def false_negative_paths(
     )
 
 
-# todo: create a sweep over thresholds?
-def false_positive_curve():
-    pass
-
-
-def false_negative_curve():
-    pass
-
-
 def causal_orderings(gt_jacobian_encoder) -> list:
     """
     The function calculates the possible causal orderings based on the adjacency matrix
