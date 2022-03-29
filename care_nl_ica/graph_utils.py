@@ -35,7 +35,7 @@ def graph_paths(direct_causes: torch.Tensor) -> dict:
         if matrix_power.sum() == 0:
             break
 
-        paths[i] = matrix_power
+        paths[str(i)] = matrix_power
         matrix_power = matrix_power @ direct_causes
 
     return paths
