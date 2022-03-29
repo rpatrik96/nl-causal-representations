@@ -139,9 +139,7 @@ class JacobianBinnedPrecisionRecall(Metric):
 
         if isinstance(num_thresholds, int):
             self.num_thresholds = num_thresholds
-            thresholds = (
-                torch.logspace(0, 1.0, self.num_thresholds, base=log_base) / log_base
-            )
+            thresholds = torch.logspace(-5, 0, self.num_thresholds, base=log_base)
             self.register_buffer("thresholds", thresholds)
         elif thresholds is not None:
             if not isinstance(thresholds, (list, torch.Tensor)):
