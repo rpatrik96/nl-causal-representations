@@ -138,6 +138,6 @@ def causal_orderings(gt_jacobian_encoder) -> list:
 
             idx_range.append(list(range(smallest_idx[i], biggest_idx[i] + 1)))
 
-    orderings = [x for x in list(itertools.product(*idx_range)) if len(set(x)) == dim]
+    orderings = [x for x in itertools.product(*idx_range) if len(set(x)) == dim]
 
     return orderings

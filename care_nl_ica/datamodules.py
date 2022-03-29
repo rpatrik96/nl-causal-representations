@@ -112,7 +112,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     force_uniform=self.hparams.force_uniform,
                 )
 
-            print(f"{self.mixing.weight=}")
+            # print(f"{self.mixing.weight=}")
 
         # make it non-trainable
         for p in self.mixing.parameters():
@@ -139,7 +139,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
             self.unmixing_jacobian = torch.tril(self.mixing_jacobian.inverse())
 
-            print(f"{self.unmixing_jacobian=}")
+            # print(f"{self.unmixing_jacobian=}")
 
             self.indirect_causes, self.paths = indirect_causes(self.unmixing_jacobian)
 
