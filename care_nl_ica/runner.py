@@ -21,20 +21,6 @@ from care_nl_ica.models.model import ContrastiveLearningModel
 
 from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
 
-import pynvml
-
-
-def get_cuda_stats(where):
-    pynvml.nvmlInit()
-    handle = pynvml.nvmlDeviceGetHandleByIndex(int(0))
-    info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-
-    print(where)
-
-    print(f"total    : {info.total//1024**2}")
-    print(f"free     : {info.free//1024**2}")
-    print(f"used     : {info.used//1024**2}")
-
 
 class ContrastiveICAModule(pl.LightningModule):
     def __init__(

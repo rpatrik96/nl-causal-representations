@@ -20,3 +20,4 @@ jsonargparse[signatures]
 hydra-core~=1.1.1
 pre-commit
 omegaconf~=2.1.1
+pynvml

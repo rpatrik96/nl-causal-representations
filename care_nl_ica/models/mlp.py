@@ -31,7 +31,7 @@ class LinearSEM(nn.Module):
         if force_uniform is True:
             print("---------Forcing uniform weights---------")
             self.weight = nn.Parameter(torch.tril(torch.ones(num_vars, num_vars)))
-        print(f"{self.weight=}")
+        print(f"{self.weight=:.2f}")
 
         self.mask = (
             (
@@ -61,13 +61,15 @@ class LinearSEM(nn.Module):
             self.permute_indices = torch.randperm(self.num_vars)
         else:
             if self.variant < (fac := math.factorial(self.num_vars)):
-                permutations = itertools.permutations(range(self.num_vars))
                 self.permute_indices = torch.tensor(
                     list(
-                        itertools.islice(permutations, self.variant, self.variant + 1)
+                        itertools.islice(
+                            itertools.permutations(range(self.num_vars)),
+                            self.variant,
+                            self.variant + 1,
+                        )
                     )[0]
                 )
-                print(f"{self.permute_indices=}")
             else:
                 raise ValueError(f"{self.variant=} should be smaller than {fac}")
 
@@ -77,8 +79,7 @@ class LinearSEM(nn.Module):
             else (lambda x: x[:, self.permute_indices])
         )
 
-        print(f"Using permutation with indices {self.permute_indices}")
-        print(f"{self.permutation_matrix=}")
+        print(f"{self.permute_indices=}")
 
     @property
     def permutation_matrix(self) -> torch.Tensor:
