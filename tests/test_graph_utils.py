@@ -68,7 +68,3 @@ def test_false_negative_paths(three_dim_chain: torch.Tensor, weighted):
         )
         == fn
     )
-
-
-def test_causal_orderings(three_dim_chain: torch.Tensor):
-    assert causal_orderings(three_dim_chain) == [(0, 1, 2)]
