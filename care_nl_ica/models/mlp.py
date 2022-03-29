@@ -31,7 +31,7 @@ class LinearSEM(nn.Module):
         if force_uniform is True:
             print("---------Forcing uniform weights---------")
             self.weight = nn.Parameter(torch.tril(torch.ones(num_vars, num_vars)))
-        print(f"{self.weight=:.2f}")
+        print(f"{self.weight=}")
 
         self.mask = (
             (
