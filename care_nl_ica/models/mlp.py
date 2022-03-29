@@ -49,10 +49,10 @@ class LinearSEM(nn.Module):
 
             zeros_in_chain = torch.tril(torch.ones_like(self.weight), -2)
             self.mask[zeros_in_chain == 1] = 0
-        else:
-            # ensure that the first column is not masked,
-            # so the causal ordering will be unique
-            self.mask[:, 0] = 1
+        # else:
+        #     # ensure that the first column is not masked,
+        #     # so the causal ordering will be unique
+        #     self.mask[:, 0] = 1
 
         self.mask.requires_grad = False
         print(f"{self.mask=}")
