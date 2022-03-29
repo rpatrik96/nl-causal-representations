@@ -14,7 +14,7 @@ from care_nl_ica.models.mlp import LinearSEM, NonLinearSEM
 
 from care_nl_ica.utils import SpaceType, DataGenType
 
-from care_nl_ica.utils import get_cuda_stats
+
 
 
 class ContrastiveDataModule(pl.LightningDataModule):
@@ -147,17 +147,13 @@ class ContrastiveDataModule(pl.LightningDataModule):
             torch.cuda.empty_cache()
 
     def setup(self, stage: Optional[str] = None):
-        get_cuda_stats("before mixing setup")
         self._setup_mixing()
-        get_cuda_stats("before after setup")
 
         # generate data
         self.dataset = ContrastiveDataset(self.hparams, self.mixing)
         self.dl = DataLoader(self.dataset, batch_size=self.hparams.batch_size)
 
-        get_cuda_stats("before calc_dep_mat")
         self._calc_dep_mat()
-        get_cuda_stats("after calc_dep_mat")
 
     def train_dataloader(self):
         return self.dl
