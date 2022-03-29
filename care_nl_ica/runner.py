@@ -23,6 +23,7 @@ from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
 
 import pynvml
 
+
 def get_cuda_stats(where):
     pynvml.nvmlInit()
     handle = pynvml.nvmlDeviceGetHandleByIndex(int(0))
@@ -30,9 +31,10 @@ def get_cuda_stats(where):
 
     print(where)
 
-    print(f'total    : {info.total//1024**2}')
-    print(f'free     : {info.free//1024**2}')
-    print(f'used     : {info.used//1024**2}')
+    print(f"total    : {info.total//1024**2}")
+    print(f"free     : {info.free//1024**2}")
+    print(f"used     : {info.used//1024**2}")
+
 
 class ContrastiveICAModule(pl.LightningModule):
     def __init__(
@@ -217,7 +219,10 @@ class ContrastiveICAModule(pl.LightningModule):
         )
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
+            # self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
+            self.logger.experiment.summary[
+                "Unmixing/unmixing_jacobian"
+            ] = dep_mat.detach()
 
             if self.hparams.sinkhorn is True:
                 self.logger.experiment.log(

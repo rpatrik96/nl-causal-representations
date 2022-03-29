@@ -50,7 +50,5 @@ cli = MyLightningCLI(
     ContrastiveDataModule,
     save_config_callback=None,
     run=True,
-    parser_kwargs={
-        "parse_as_dict": False
-    },
+    parser_kwargs={"parse_as_dict": False},
 )
