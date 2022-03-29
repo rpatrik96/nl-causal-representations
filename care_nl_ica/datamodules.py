@@ -1,6 +1,5 @@
 from typing import Optional
 
-from care_nl_ica.graph_utils import causal_orderings
 
 import numpy as np
 import pytorch_lightning as pl
@@ -145,8 +144,6 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
             self.indirect_causes, self.paths = indirect_causes(self.unmixing_jacobian)
 
-            self.orderings = causal_orderings(self.mixing_jacobian)
-
             torch.cuda.empty_cache()
 
     def setup(self, stage: Optional[str] = None):
@@ -181,6 +178,5 @@ class ContrastiveDataModule(pl.LightningDataModule):
             f"Mixing/unmixing_jacobian": self.unmixing_jacobian,
             f"Mixing/indirect_causes": self.indirect_causes,
             f"Mixing/paths": self.paths,
-            f"Mixing/orderings": self.orderings,
             f"Mixing/permute_indices": self.mixing.permute_indices,
         }
