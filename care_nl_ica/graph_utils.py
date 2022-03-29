@@ -104,16 +104,22 @@ def causal_orderings(gt_jacobian_encoder) -> list:
         # this gives the smallest index of variable "i" in the causal ordering
         nonzero_in_row = nonzero_indices[nonzero_indices[:, 0] == i, :]
 
-        smallest_idx.append(
-            0 if (tmp := nonzero_in_row[0][1]) == i else smallest_idx[tmp] + 1
-        )
+        # 1. when the first non-zero element is on the main diagonal, then the variable has no parents
+        # 2. when the 0th element is nonzero, then i is the smallest index
+        # 3. otherwise, pick the first parent's smallest index and add 1
+        if (tmp := nonzero_in_row[0][1]) == i:
+            smallest_idx.append(0)
+        elif tmp == 0:
+            smallest_idx.append(i)
+        else:
+            smallest_idx.append(smallest_idx[tmp] + 1)
 
         # select nonzero indices for the current columns
         # and take the row index of the first element
         # this gives the biggest index of variable "i" in the causal ordering
         nonzero_in_col = nonzero_indices[nonzero_indices[:, 1] == i, :]
 
-        biggest_idx.append(nonzero_in_col[0][0])
+        biggest_idx.append(nonzero_in_col[0][0].item())
 
         # this means that there is only 1 appearance of variable i,
         # so it can be everywhere in the causal ordering
