@@ -96,7 +96,7 @@ def jacobian_to_tril_and_perm(dep_mat, qr: bool = True):
     """
     if qr is True:
         Q, R = dep_mat.T.qr()
-        inv_permutation = Q
+        inv_permutation = Q.T
         unmixing_tril_weight = R.T
     else:
         unmixing_tril_weight = (dep_mat @ dep_mat.T).cholesky()
