@@ -225,7 +225,9 @@ class ContrastiveICAModule(pl.LightningModule):
                 # log the bottleneck weights
                 if hasattr(self.model.unmixing, "ar_bottleneck") is True:
                     self.logger.experiment.log(
-                        {"ar_bottleneck": self.model.unmixing.ar_bottleneck.detach()}
+                        {
+                            "ar_bottleneck": self.model.unmixing.ar_bottleneck.assembled_weight.detach()
+                        }
                     )
 
         return dep_mat
@@ -366,4 +368,8 @@ class ContrastiveICAModule(pl.LightningModule):
 
     def on_fit_end(self) -> None:
         print(f"{self.hard_permutation=}")
-        print(f"{self.dep_mat=}")
+        # log the bottleneck weights
+        if hasattr(self.model.unmixing, "ar_bottleneck") is True:
+            print(
+                f"ar_bottleneck={self.model.unmixing.ar_bottleneck.assembled_weight.detach()}"
+            )
