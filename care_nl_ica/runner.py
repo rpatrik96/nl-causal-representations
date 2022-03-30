@@ -365,4 +365,5 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.logger.experiment.summary[key] = val
 
     def on_fit_end(self) -> None:
-        pass
+        print(f"{self.hard_permutation=}")
+        print(f"{self.dep_mat=}")
