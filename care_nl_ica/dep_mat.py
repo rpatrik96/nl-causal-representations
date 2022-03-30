@@ -1,42 +1,60 @@
 import torch
 import torch.nn as nn
+from functorch import vmap, jacrev, jacfwd
 from torch.autograd.functional import jacobian
 
 
 def calc_jacobian(
-    model: nn.Module, latents: torch.Tensor, normalize: bool = False, eps: float = 1e-8
+    model: nn.Module,
+    latents: torch.Tensor,
+    normalize: bool = False,
+    eps: float = 1e-8,
+    vectorize=True,
+    reverse_ad=True,
 ) -> torch.Tensor:
     """
     Calculate the Jacobian more efficiently than ` torch.autograd.functional.jacobian`
+    :param reverse_ad: use reverse mode auto-differentiation (e.g., PReLU only supports this)
+    :param vectorize: use functorch vectorization
     :param model: the model to calculate the Jacobian of
     :param latents: the inputs for evaluating the model
     :param normalize: flag to rescale the Jacobian to have unit norm
     :param eps: the epsilon to use for numerical stability
     :return: B x n_out x n_in
     """
-
-    jacob = []
-    input_vars = latents.clone().requires_grad_(True)
-
     # set to eval mode but remember original state
     in_training: bool = model.training
     model.eval()  # otherwise we will get 0 gradients
     with torch.set_grad_enabled(True):
+        jacob = []
+        input_vars = latents.clone().requires_grad_(True)
+
         output_vars = model(input_vars)
+        if not vectorize:
 
-        for i in range(output_vars.shape[1]):
-            jacob.append(
-                torch.autograd.grad(
-                    output_vars[:, i : i + 1],
-                    input_vars,
-                    create_graph=True,
-                    grad_outputs=torch.ones(output_vars[:, i : i + 1].shape).to(
-                        output_vars.device
-                    ),
-                )[0]
-            )
+            for i in range(output_vars.shape[1]):
+                jacob.append(
+                    torch.autograd.grad(
+                        output_vars[:, i : i + 1],
+                        input_vars,
+                        create_graph=True,
+                        grad_outputs=torch.ones(output_vars[:, i : i + 1].shape).to(
+                            output_vars.device
+                        ),
+                    )[0]
+                )
 
-        jacobian = torch.stack(jacob, 1)
+            jacobian = torch.stack(jacob, 1)
+        else:
+            if reverse_ad is True:
+                jac_fn = jacrev
+            else:
+                jac_fn = jacfwd
+
+            sample_jacobian = jac_fn(model.forward, argnums=0)
+            jacobian = vmap(
+                lambda x: sample_jacobian(torch.unsqueeze(x, 0)), in_dims=0
+            )(input_vars).squeeze()
 
     if normalize is True:
         # normalize the Jacobian by making it volume preserving
