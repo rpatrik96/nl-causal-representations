@@ -9,7 +9,7 @@ def calc_jacobian(
     latents: torch.Tensor,
     normalize: bool = False,
     eps: float = 1e-8,
-    vectorize=True,
+    vectorize=False,
     reverse_ad=True,
 ) -> torch.Tensor:
     """
