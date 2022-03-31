@@ -134,6 +134,11 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.unmixing_weight_qr_estimate, self.hard_permutation
             )
 
+            if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+                self.logger.experiment.summary[
+                    "Val/permutation"
+                ] = self.hard_permutation
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
 
@@ -297,10 +302,7 @@ class ContrastiveICAModule(pl.LightningModule):
 
                 # loss options
 
-                if (
-                    self.model.training is False
-                    and isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True
-                ):
+                if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
                     self.logger.experiment.summary["Val/Q"] = inv_perm.detach()
                     print(f"Val/Q={inv_perm.detach()}")
 
