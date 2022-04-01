@@ -96,6 +96,7 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
+        self.hard_permutation = None
         self.qr_success: bool = False  # if self.hparams.qr != 0.0 else True
 
         self._configure_metrics()
@@ -208,6 +209,14 @@ class ContrastiveICAModule(pl.LightningModule):
         dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
             self.model, sources[0], mixtures[0]
         )
+
+        # the jacobian of the unmixing needs to be transformed, as
+        # to get a lower-triangular matix, we need to differentiate
+        # wrt (Q@mixtures), but `jacobians` gets mixtures
+        if self.hard_permutation is not None:
+            dep_mat = dep_mat @ self.hard_permutation.T
+            if numerical_jacobian is not None:
+                numerical_jacobian = numerical_jacobian @ self.hard_permutation.T
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             # self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
