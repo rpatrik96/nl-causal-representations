@@ -55,9 +55,11 @@ class ContrastiveICAModule(pl.LightningModule):
         log_latent_rec=False,
         num_thresholds: int = 30,
         log_freq=500,
+        use_bottleneck: bool = False,
     ):
         """
 
+        :param use_bottleneck: use the bottleneck instead of the Jacobian
         :param log_freq: gradient/weight log frequency for W&B, None turns it off
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
         :param log_latent_rec: Log the latents and their reconstructions
@@ -90,6 +92,16 @@ class ContrastiveICAModule(pl.LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
+
+        if self.hparams.latent_dim >= 15:
+            print("The Jacobian cannot be calculated due to out-of-memory issues...")
+            if self.hparams.use_ar_mlp is False:
+                raise RuntimeError(
+                    "...and there is no alternative for a vanilla MLP. Terminating..."
+                )
+            else:
+                print("Using the bottleneck instead")
+                self.hparams.use_bottleneck = True
 
         self.model: ContrastiveLearningModel = ContrastiveLearningModel(
             self.hparams
@@ -214,43 +226,54 @@ class ContrastiveICAModule(pl.LightningModule):
         return losses.total_loss
 
     def _calc_and_log_matrices(self, mixtures, sources):
-        dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
-            self.model, sources[0], mixtures[0]
-        )
 
-        # the jacobian of the unmixing needs to be transformed, as
-        # to get a lower-triangular matix, we need to differentiate
-        # wrt (Q@mixtures), but `jacobians` gets mixtures
-        if self.hard_permutation is not None:
-            dep_mat = dep_mat @ self.hard_permutation.T
-            if numerical_jacobian is not None:
-                numerical_jacobian = numerical_jacobian @ self.hard_permutation.T
+        if self.hparams.use_bottleneck is False:
+            dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
+                self.model, sources[0], mixtures[0]
+            )
 
-        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            # self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
-            self.logger.experiment.summary[
-                "Unmixing/unmixing_jacobian"
-            ] = dep_mat.detach()
-            print(f"Unmixing/unmixing_jacobian={dep_mat.detach()}")
+            # the jacobian of the unmixing needs to be transformed, as
+            # to get a lower-triangular matix, we need to differentiate
+            # wrt (Q@mixtures), but `jacobians` gets mixtures
+            if self.hard_permutation is not None:
+                dep_mat = dep_mat @ self.hard_permutation.T
+                if numerical_jacobian is not None:
+                    numerical_jacobian = numerical_jacobian @ self.hard_permutation.T
 
-            if self.hparams.sinkhorn is True:
-                self.logger.experiment.log(
-                    {"sinkhorn": self.model.sinkhorn.doubly_stochastic_matrix.detach()}
-                )
+            if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+                # self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
+                self.logger.experiment.summary[
+                    "Unmixing/unmixing_jacobian"
+                ] = dep_mat.detach()
+                print(f"Unmixing/unmixing_jacobian={dep_mat.detach()}")
 
-            if self.hparams.verbose is True:
-                self.logger.experiment.log({"enc_dec_jacobian": enc_dec_jac.detach()})
-                self.logger.experiment.log(
-                    {"numerical_jacobian": numerical_jacobian.detach()}
-                )
-
-                # log the bottleneck weights
-                if hasattr(self.model.unmixing, "ar_bottleneck") is True:
+                if self.hparams.sinkhorn is True:
                     self.logger.experiment.log(
                         {
-                            "ar_bottleneck": self.model.unmixing.ar_bottleneck.assembled_weight.detach()
+                            "sinkhorn": self.model.sinkhorn.doubly_stochastic_matrix.detach()
                         }
                     )
+
+                if self.hparams.verbose is True:
+                    self.logger.experiment.log(
+                        {"enc_dec_jacobian": enc_dec_jac.detach()}
+                    )
+                    self.logger.experiment.log(
+                        {"numerical_jacobian": numerical_jacobian.detach()}
+                    )
+
+                    # log the bottleneck weights
+                    if hasattr(self.model.unmixing, "ar_bottleneck") is True:
+                        self.logger.experiment.log(
+                            {
+                                "ar_bottleneck": self.model.unmixing.ar_bottleneck.assembled_weight.detach()
+                            }
+                        )
+        else:
+            if self.hparams.use_ar_mlp is True:
+                dep_mat = self.model.unmixing.ar_bottleneck.assembled_weight
+            else:
+                raise ValueError("Jacobian is not calculated for vanilla MLPs...")
 
         return dep_mat
 
