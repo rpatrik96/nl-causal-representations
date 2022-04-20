@@ -151,7 +151,9 @@ class ContrastiveICAModule(pl.LightningModule):
                 correct_order := torch.all(
                     self.hard_permutation
                     @ self.trainer.datamodule.mixing.permutation_matrix
-                    == torch.eye(self.hparams.latent_dim)
+                    == torch.eye(
+                        self.hparams.latent_dim, device=self.hard_permutation.device
+                    )
                 ).item()
             ) is True:
                 print("Correct order identified")
