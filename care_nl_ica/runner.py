@@ -146,14 +146,17 @@ class ContrastiveICAModule(pl.LightningModule):
             self.model.unmixing.ar_bottleneck.make_triangular_with_permute(
                 self.unmixing_weight_qr_estimate, self.hard_permutation
             )
-            self.log(
-                "Val/correct_order",
-                torch.all(
+
+            if (
+                correct_order := torch.all(
                     self.hard_permutation
                     @ self.trainer.datamodule.mixing.permutation_matrix
                     == torch.eye(self.hparams.latent_dim)
-                ).item(),
-            )
+                ).item()
+            ) is True:
+                print("Correct order identified")
+
+            self.log("Val/correct_order", float(correct_order))
 
             if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
                 self.logger.experiment.summary[
