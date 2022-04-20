@@ -9,6 +9,8 @@ command:
   - "configs/model/ar_non_tri.yaml"
   - "--config"
   - "configs/data/permute.yaml"
+  - "--config"
+  - "configs/data/uniform_weights.yaml"
   - ${args}
 method: grid
 metric:
@@ -22,9 +24,9 @@ parameters:
   model.qr:
     value: 3e-1
   model.start_step:
-    value: 1400
+    value: 4000
   data.latent_dim:
-    values: [3,5,10]
+    value: 5
 
 
 
