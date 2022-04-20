@@ -24,7 +24,7 @@ parameters:
   trainer.max_epochs:
     value: 15000
   data.variant:
-    value: 3
+    value: 5
   model.qr:
     value: 3e-1
   model.use_bottleneck:
