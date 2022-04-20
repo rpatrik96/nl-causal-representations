@@ -6,7 +6,6 @@ from care_nl_ica.graph_utils import (
     graph_paths,
     false_positive_paths,
     false_negative_paths,
-    causal_orderings,
 )
 
 
