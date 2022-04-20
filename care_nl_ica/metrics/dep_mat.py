@@ -173,8 +173,8 @@ class JacobianBinnedPrecisionRecall(Metric):
 
         preds = preds.abs()
 
-        # if (pred_max := preds.max()) != 1.0:
-        #     preds /= pred_max
+        if (pred_max := preds.max()) != 1.0:
+            preds /= pred_max
 
         target = target.bool()
         # Iterate one threshold at a time to conserve memory
