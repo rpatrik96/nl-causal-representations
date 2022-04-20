@@ -15,8 +15,6 @@ from care_nl_ica.models.mlp import LinearSEM, NonLinearSEM
 from care_nl_ica.utils import SpaceType, DataGenType
 
 
-
-
 class ContrastiveDataModule(pl.LightningDataModule):
     def __init__(
         self,
