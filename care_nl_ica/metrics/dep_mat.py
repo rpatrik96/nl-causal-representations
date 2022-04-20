@@ -95,7 +95,7 @@ def jacobian_to_tril_and_perm(dep_mat, qr: bool = True):
     :return:
     """
     if qr is True:
-        Q, R = dep_mat.T.qr()
+        Q, R = torch.linalg.qr(dep_mat.T)
         inv_permutation = Q.T
         unmixing_tril_weight = R.T
     else:
