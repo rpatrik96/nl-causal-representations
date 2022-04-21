@@ -25,14 +25,16 @@ parameters:
     value: 15000
   data.variant:
     value: 5
+  data.force_uniform:
+    values: [true, false]
   model.qr:
-    value: 3e-1
+    values: [3e-1, 3e-2, 3e-3]
   model.use_bottleneck:
     value: true
   model.start_step:
-    value: 5000
+    values: [1500,3000,4500]
   data.latent_dim:
-    values: [3,5,10,14]
+    value: 3
 
 
 
