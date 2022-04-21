@@ -26,7 +26,7 @@ parameters:
   model.qr:
     value: 3e-1
   model.start_step:
-    value: 1400
+    value: 5000
   model.use_bottleneck:
     value: true
   data.latent_dim:
