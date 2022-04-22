@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 # from care_nl_ica.args import parse_args
-from care_nl_ica.datamodules import ContrastiveDataModule
+from care_nl_ica.data.datamodules import ContrastiveDataModule
 from care_nl_ica.dataset import ContrastiveDataset
 
 arg_matrix = namedtuple("arg_matrix", ["latent_dim", "use_ar_mlp"])

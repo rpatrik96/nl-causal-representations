@@ -31,7 +31,7 @@ def main(cfg: DictConfig):
     install_package()
 
     from pytorch_lightning import Trainer, seed_everything
-    from care_nl_ica.datamodules import ContrastiveDataModule
+    from care_nl_ica.data.datamodules import ContrastiveDataModule
     from care_nl_ica.runner import ContrastiveICAModule
 
     seed_everything(cfg.seed_everything)

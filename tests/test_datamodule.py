@@ -1,4 +1,4 @@
-from care_nl_ica.datamodules import ContrastiveDataModule
+from care_nl_ica.data.datamodules import ContrastiveDataModule
 import torch
 
 

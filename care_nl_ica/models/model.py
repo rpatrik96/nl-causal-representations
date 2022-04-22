@@ -156,7 +156,6 @@ class ContrastiveLearningModel(nn.Module):
 
     def _configure_output_normalization(self):
         hparams = self.hparams
-        output_normalization = None
         output_normalization_kwargs = None
         if hparams.normalization == "learnable_box":
             output_normalization = "learnable_box"
