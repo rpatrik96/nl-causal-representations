@@ -25,12 +25,12 @@ class ContrastiveICAModule(pl.LightningModule):
         use_ar_mlp: bool = True,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         qr: float = 0.0,
-        triangularity_loss: float = 0.0,
         entropy: float = 0.0,
         l1: float = 0.0,
         budget: float = 0.0,
         learnable_mask: bool = False,
         sinkhorn: bool = False,
+        triangular: bool = False,
         verbose: bool = False,
         p: float = 1,
         tau: float = 1.0,
@@ -62,12 +62,12 @@ class ContrastiveICAModule(pl.LightningModule):
         :param use_ar_mlp: Use the AR MLP unmixing
         :param device: device
         :param qr: QR loss on the bottleneck matrix
-        :param triangularity_loss: triangularity loss on the correlation matrix
         :param entropy: Entropy regularizer coefficient on the Sinkhorn weights
         :param l1: L1 regularization coefficient
         :param budget: Constrain the non-zero elements on the bottleneck
         :param learnable_mask: makes the masks in the flow learnable
         :param sinkhorn: Use the Sinkhorn network
+        :param triangular: Force the AR MLP bottleneck to be triangular
         :param verbose: Print out details, more logging
         :param p: Exponent of the assumed model Lp Exponential distribution
         :param tau: Print out details, more extensive logging
