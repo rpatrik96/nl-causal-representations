@@ -103,7 +103,6 @@ class ContrastiveLearningModel(nn.Module):
                     1,
                 ],
                 hparams.use_bias,
-                hparams.normalization == "fixed_box",
                 residual=False,
                 sinkhorn=hparams.sinkhorn,
                 triangular=self.hparams.triangular,

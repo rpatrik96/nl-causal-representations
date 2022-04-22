@@ -194,7 +194,6 @@ class ARBottleneckNet(nn.Module):
         pre_layer_feats: FeatureList,
         post_layer_feats: FeatureList,
         bias: bool = True,
-        normalize: bool = False,
         residual: bool = False,
         sinkhorn=False,
         triangular=True,
@@ -210,12 +209,6 @@ class ARBottleneckNet(nn.Module):
 
         self.ar_bottleneck = ARMLP(
             self.num_vars, residual=residual, triangular=triangular, budget=budget
-        )
-
-        self.scaling = (
-            lambda x: x
-            if normalize is False
-            else ls.SoftclipLayer(self.num_vars, 1, True)
         )
 
         self.sinkhorn = SinkhornNet(self.num_vars, 5, 1e-3)
@@ -279,13 +272,10 @@ class ARBottleneckNet(nn.Module):
             self.post_layers = self._layer_generator(self.post_layer_feats)
 
     def forward(self, x):
-        return self.scaling(
-            torch.squeeze(
-                self.post_layers(
-                    self.ar_bottleneck(self.permutation(self.pre_layers(x)))
-                )
-            )
+        return torch.squeeze(
+            self.post_layers(self.ar_bottleneck(self.permutation(self.pre_layers(x))))
         )
+
         # return self.ar_bottleneck(x.T).T
 
     def to(self, device):
