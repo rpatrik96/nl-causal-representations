@@ -40,7 +40,6 @@ class ContrastiveICAModule(pl.LightningModule):
         sphere_r: float = 1.0,
         normalization: str = "",
         start_step=None,
-        cholesky_permutation: bool = False,
         use_flows=False,
         use_bias=False,
         normalize_latents: bool = True,
@@ -324,7 +323,7 @@ class ContrastiveICAModule(pl.LightningModule):
 
                 # inv_perm is incentivized to be the permutation for the causal ordering
                 inv_perm, self.unmixing_weight_qr_estimate = jacobian_to_tril_and_perm(
-                    J, self.hparams.cholesky_permutation is False
+                    J, qr=True
                 )
 
                 """

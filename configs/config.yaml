@@ -81,7 +81,6 @@ model:
   alpha: 0.5
   normalization: ''
   start_step: null
-  cholesky_permutation: false
   use_bias: false
   use_bottleneck: false
 data:
