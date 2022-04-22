@@ -126,7 +126,7 @@ class NonLinearSEM(LinearSEM):
             force_uniform=force_uniform,
         )
 
-        self.slopes = torch.rand(num_vars).clip(0.1, 1)
+        self.slopes = torch.rand(num_vars).clip(0.25, 1)
         print(f"{self.slopes=}")
         self.relus = [
             lambda x: torch.nn.functional.leaky_relu(x, negative_slope=s)
