@@ -11,7 +11,6 @@ class Losses:
     sinkhorn_entropy: float = 0.0
     bottleneck_l1: float = 0.0
     sparsity_budget: float = 0.0
-    triangularity: float = 0.0
     qr: float = 0.0
 
     @property
@@ -31,7 +30,6 @@ class Losses:
             "sinkhorn_entropy": self.sinkhorn_entropy,
             "bottleneck_l1": self.bottleneck_l1,
             "sparsity_budget": self.sparsity_budget,
-            "triangularity": self.triangularity,
             "qr": self.qr,
             "total": self.total_loss,
         }

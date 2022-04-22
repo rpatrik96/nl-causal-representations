@@ -38,7 +38,6 @@ class ContrastiveICAModule(pl.LightningModule):
         use_batch_norm: bool = False,
         learnable_mask: bool = False,
         sinkhorn: bool = False,
-        triangular: bool = False,
         verbose: bool = False,
         p: float = 1,
         tau: float = 1.0,
@@ -79,7 +78,6 @@ class ContrastiveICAModule(pl.LightningModule):
         :param use_batch_norm: Use batchnorm layers in the Flow unmixing
         :param learnable_mask: makes the masks in the flow learnable
         :param sinkhorn: Use the Sinkhorn network
-        :param triangular: Force the AR MLP bottleneck to be triangular
         :param verbose: Print out details, more logging
         :param p: Exponent of the assumed model Lp Exponential distribution
         :param tau: Print out details, more extensive logging
@@ -304,7 +302,6 @@ class ContrastiveICAModule(pl.LightningModule):
             sinkhorn_entropy=self.model.sinkhorn_entropy_loss(),
             bottleneck_l1=self.model.bottleneck_l1_loss(),
             sparsity_budget=self.model.budget_loss(),
-            triangularity=self.triangularity_loss(*sources, *reconstructions),
             qr=self.qr(),
         )
 
@@ -357,33 +354,6 @@ class ContrastiveICAModule(pl.LightningModule):
                     self.hard_permutation, self.qr_success = check_permutation(inv_perm)
 
                 loss = self.hparams.qr * permutation_loss(inv_perm, matrix_power=False)
-
-        return loss
-
-    def triangularity_loss(self, n1, n2_con_n1, n3, n1_rec, n2_con_n1_rec, n3_rec):
-
-        loss = 0.0
-        if self.hparams.triangularity_loss != 0.0 and (
-            self.hparams.start_step is None
-            or (
-                self.hparams.start_step is not None
-                and self.logger.global_step >= self.hparams.start_step
-            )
-        ):
-            pearson_n1 = corr_matrix(self.model.decoder(n1).T, n1_rec.T)
-            pearson_n2_con_n1 = corr_matrix(
-                self.model.decoder(n2_con_n1).T, n2_con_n1_rec.T
-            )
-            pearson_n3 = corr_matrix(self.model.decoder(n3).T, n3_rec.T)
-
-            loss = (
-                self.hparams.triangularity_loss
-                * (
-                    frobenius_diagonality(pearson_n1.abs())
-                    + frobenius_diagonality(pearson_n2_con_n1.abs())
-                    + frobenius_diagonality(pearson_n3.abs())
-                ).mean()
-            )
 
         return loss
 

@@ -132,9 +132,6 @@ def add_tags(args):
     if args.model.l1 != 0.0:
         args.tags.append(f"L1")
 
-    if args.model.triangularity_loss != 0.0:
-        args.tags.append(f"triangularity")
-
     if args.model.entropy != 0.0:
         args.tags.append(f"entropy")
 
