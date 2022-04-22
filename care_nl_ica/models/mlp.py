@@ -187,43 +187,6 @@ class FeatureMLP(nn.Module):
         return self
 
 
-class PermutationNet(nn.Module):
-    def __init__(self, num_vars):
-        super().__init__()
-        self.num_vars = num_vars
-        self.weight = nn.Parameter(
-            torch.randn(
-                num_vars,
-            )
-        )
-        self.softmax = nn.Softmax(0)
-
-        self.i = 0
-
-    def forward(self, x):
-        self.i += 1
-        if self.i % 250 == 0:
-            print(f"{self.weight=}")
-
-        sorted, indices = self.weight.sort()
-        perm = torch.zeros(self.num_vars, self.num_vars, device=self.weight.device)
-        perm[list(range(self.num_vars)), indices] = sorted
-        perm /= perm.sum(0)
-
-        return perm @ x
-
-    def to(self, device):
-        """
-        Move the model to the specified device.
-
-        :param device: The device to move the model to.
-        """
-        super().to(device)
-        self.weight = self.weight.to(device)
-
-        return self
-
-
 class ARBottleneckNet(nn.Module):
     def __init__(
         self,
@@ -256,7 +219,6 @@ class ARBottleneckNet(nn.Module):
         )
 
         self.sinkhorn = SinkhornNet(self.num_vars, 5, 1e-3)
-        self.perm_net = PermutationNet(self.num_vars)
 
         self.inv_permutation = torch.arange(self.num_vars)
 
@@ -341,7 +303,6 @@ class ARBottleneckNet(nn.Module):
         self.ar_bottleneck = self.ar_bottleneck.to(device)
         self.sinkhorn = self.sinkhorn.to(device)
         self.inv_permutation = self.inv_permutation.to(device)
-        self.perm_net = self.perm_net.to(device)
 
         return self
 
