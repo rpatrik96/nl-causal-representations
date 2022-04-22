@@ -10,7 +10,7 @@ from care_nl_ica.cl_ica import invertible_network_utils
 from care_nl_ica.dataset import ContrastiveDataset
 from care_nl_ica.dep_mat import calc_jacobian
 from care_nl_ica.graph_utils import indirect_causes
-from care_nl_ica.models.mlp import LinearSEM, NonLinearSEM
+from care_nl_ica.data.sem import LinearSEM, NonLinearSEM
 
 from care_nl_ica.utils import SpaceType, DataGenType
 
