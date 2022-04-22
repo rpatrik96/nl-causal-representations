@@ -40,11 +40,13 @@ class ContrastiveDataModule(pl.LightningDataModule):
         use_dep_mat: bool = True,
         force_chain: bool = False,
         force_uniform: bool = False,
+        diag_weight=0.0,
         **kwargs,
     ):
 
         """
 
+        :param diag_weight: weight for adding torch.eye to the SEM weights
         :param force_chain: make the graph to a chain
         :param force_uniform: make the mixing weights the same
         :param n_mixing_layer: Number of layers in nonlinear mixing network
@@ -101,6 +103,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     variant=self.hparams.variant,
                     force_chain=self.hparams.force_chain,
                     force_uniform=self.hparams.force_uniform,
+                    diag_weight=self.hparams.diag_weight,
                 )
             else:
                 self.mixing = NonLinearSEM(
@@ -109,6 +112,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     variant=self.hparams.variant,
                     force_chain=self.hparams.force_chain,
                     force_uniform=self.hparams.force_uniform,
+                    diag_weight=self.hparams.diag_weight,
                 )
 
             # print(f"{self.mixing.weight=}")

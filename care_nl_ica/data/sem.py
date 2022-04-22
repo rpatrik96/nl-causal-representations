@@ -13,13 +13,18 @@ class LinearSEM(nn.Module):
         variant: int = -1,
         force_chain: bool = False,
         force_uniform: bool = False,
+        diag_weight: float = 0.0,
     ):
         super().__init__()
         self.variant = variant
         self.num_vars = num_vars
 
         # weight init
-        self.weight = nn.Parameter(torch.tril(nn.Linear(num_vars, num_vars).weight))
+        self.weight = nn.Parameter(
+            torch.tril(
+                nn.Linear(num_vars, num_vars).weight + diag_weight * torch.eye(num_vars)
+            )
+        )
         if force_uniform is True:
             print("---------Forcing uniform weights---------")
             self.weight = nn.Parameter(torch.tril(torch.ones(num_vars, num_vars)))
@@ -117,6 +122,7 @@ class NonLinearSEM(LinearSEM):
         variant=-1,
         force_chain: bool = False,
         force_uniform: bool = False,
+        diag_weight: float = 0.0,
     ):
         super().__init__(
             num_vars=num_vars,
@@ -124,6 +130,7 @@ class NonLinearSEM(LinearSEM):
             variant=variant,
             force_chain=force_chain,
             force_uniform=force_uniform,
+            diag_weight=diag_weight,
         )
 
         self.slopes = torch.rand(num_vars).clip(0.25, 1)

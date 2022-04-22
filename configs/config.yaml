@@ -107,6 +107,7 @@ data:
   val_transforms: null
   test_transforms: null
   dims: null
+  diag_weight: 0.0
 notes: null
 tags: null
 ckpt_path: null
