@@ -34,8 +34,6 @@ class ContrastiveICAModule(pl.LightningModule):
         entropy: float = 0.0,
         l1: float = 0.0,
         budget: float = 0.0,
-        use_reverse: bool = False,
-        use_batch_norm: bool = False,
         learnable_mask: bool = False,
         sinkhorn: bool = False,
         verbose: bool = False,
@@ -74,8 +72,6 @@ class ContrastiveICAModule(pl.LightningModule):
         :param entropy: Entropy regularizer coefficient on the Sinkhorn weights
         :param l1: L1 regularization coefficient
         :param budget: Constrain the non-zero elements on the bottleneck
-        :param use_reverse: Use reverse layers in teh flow unmixing
-        :param use_batch_norm: Use batchnorm layers in the Flow unmixing
         :param learnable_mask: makes the masks in the flow learnable
         :param sinkhorn: Use the Sinkhorn network
         :param verbose: Print out details, more logging

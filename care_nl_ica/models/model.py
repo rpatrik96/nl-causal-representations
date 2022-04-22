@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from care_nl_ica.cl_ica import encoders, losses
-from care_nl_ica.models.masked_flows import MaskMAF
 from care_nl_ica.models.mlp import ARBottleneckNet
 
 
@@ -87,20 +86,7 @@ class ContrastiveLearningModel(nn.Module):
             output_normalization_kwargs,
         ) = self._configure_output_normalization()
 
-        if self.hparams.use_flows is True:
-            self.unmixing = MaskMAF(
-                hparams.latent_dim,
-                hparams.latent_dim * 40,
-                5,
-                F.relu,
-                use_reverse=hparams.use_reverse,
-                use_batch_norm=hparams.use_batch_norm,
-                learnable=hparams.learnable_mask,
-            )
-
-            self.unmixing.confidence.to(hparams.device)
-
-        elif self.hparams.use_ar_mlp is True:
+        if self.hparams.use_ar_mlp is True:
 
             self.unmixing = ARBottleneckNet(
                 hparams.latent_dim,

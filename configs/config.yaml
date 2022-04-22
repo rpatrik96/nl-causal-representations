@@ -72,8 +72,6 @@ model:
   entropy: 0.0
   l1: 0.0
   budget: 0.0
-  use_reverse: false
-  use_batch_norm: false
   learnable_mask: false
   sinkhorn: false
   triangular: false
@@ -84,7 +82,6 @@ model:
   normalization: ''
   start_step: null
   cholesky_permutation: false
-  use_flows: false
   use_bias: false
   use_bottleneck: false
 data:
