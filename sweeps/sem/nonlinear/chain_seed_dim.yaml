@@ -32,7 +32,7 @@ parameters:
   model.use_bottleneck:
     value: true
   model.start_step:
-    values: [1500,3000,4500]
+    values: [6000,10000,13000]
   data.latent_dim:
     value: 3
 
