@@ -128,8 +128,9 @@ class NonLinearSEM(LinearSEM):
 
         self.slopes = torch.rand(num_vars).clip(0.25, 1)
         print(f"{self.slopes=}")
+        print("-------fixing slopes to 0.25--------")
         self.relus = [
-            lambda x: torch.nn.functional.leaky_relu(x, negative_slope=s)
+            lambda x: torch.nn.functional.leaky_relu(x, negative_slope=0.25)
             for s in self.slopes
         ]
 
