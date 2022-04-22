@@ -299,4 +299,4 @@ class ARBottleneckNet(nn.Module):
         return self
 
     def bottleneck_l1_norm(self):
-        return self.ar_bottleneck.assembled_weight.abs().l1_loss()
+        return self.ar_bottleneck.assembled_weight.abs().mean()
