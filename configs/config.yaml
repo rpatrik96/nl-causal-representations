@@ -69,7 +69,6 @@ model:
   lr: 1e-4
   use_ar_mlp: true
   qr: 0.0
-  triangularity_loss: 0.0
   entropy: 0.0
   l1: 0.0
   budget: 0.0
