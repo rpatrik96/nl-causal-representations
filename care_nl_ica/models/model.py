@@ -60,7 +60,7 @@ class ContrastiveLearningModel(nn.Module):
         loss = 0.0
         if self.hparams.l1 != 0 and self.hparams.use_ar_mlp is True:
             # add sparsity loss to the AR MLP bottleneck
-            loss = self.hparams.l1 * self.unmixing.bottleneck_l1_norm
+            loss = self.hparams.l1 * self.unmixing.bottleneck_l1_norm()
 
         return loss
 
