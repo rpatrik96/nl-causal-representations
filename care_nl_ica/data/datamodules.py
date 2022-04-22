@@ -138,6 +138,9 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
             self.unmixing_jacobian = torch.tril(self.mixing_jacobian.inverse())
 
+            self.mixing_cond = torch.linalg.cond(self.mixing_jacobian)
+            self.unmixing_cond = torch.linalg.cond(self.unmixing_jacobian)
+
             # print(f"{self.unmixing_jacobian=}")
 
             self.indirect_causes, self.paths = indirect_causes(self.unmixing_jacobian)
@@ -170,6 +173,8 @@ class ContrastiveDataModule(pl.LightningDataModule):
         return {
             f"Mixing/mixing_jacobian": self.mixing_jacobian,
             f"Mixing/unmixing_jacobian": self.unmixing_jacobian,
+            f"Mixing/mixing_cond": self.mixing_cond,
+            f"Mixing/unmixing_cond": self.unmixing_cond,
             f"Mixing/indirect_causes": self.indirect_causes,
             f"Mixing/paths": self.paths,
             f"Mixing/permute_indices": self.mixing.permute_indices,
