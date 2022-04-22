@@ -1,11 +1,10 @@
-import sys
-
 import pytorch_lightning as pl
 import torch
 import wandb
 
 from care_nl_ica.dep_mat import jacobians
 from care_nl_ica.losses.utils import Losses
+from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
 from care_nl_ica.metrics.dep_mat import (
     jacobian_to_tril_and_perm,
     permutation_loss,
@@ -14,12 +13,8 @@ from care_nl_ica.metrics.dep_mat import (
 from care_nl_ica.metrics.ica_dis import (
     calc_disent_metrics,
     DisentanglementMetrics,
-    frobenius_diagonality,
-    corr_matrix,
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
-
-from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
 
 
 class ContrastiveICAModule(pl.LightningModule):
