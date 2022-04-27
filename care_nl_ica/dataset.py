@@ -46,10 +46,6 @@ class ContrastiveDataset(torch.utils.data.IterableDataset):
         )
 
         mixtures = torch.stack(tuple(map(self.transform, sources)))
-        import bnlearn as bn
-
-        bn.import_DAG()
-        bn.import_example()
 
         return iter((sources, mixtures))
 
