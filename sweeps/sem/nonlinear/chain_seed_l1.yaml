@@ -32,11 +32,11 @@ parameters:
   model.use_bottleneck:
     value: true
   model.start_step:
-    value: 3000
+    value: 3500
   data.latent_dim:
     value: 3
-  data.diag_weight:
-    values: [1e-1, 3e-1, 1.0, 3.0]
+  model.l1:
+    values: [1e-3,1e-2,1e-1]
 
 
 
