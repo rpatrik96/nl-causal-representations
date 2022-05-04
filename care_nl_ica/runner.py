@@ -47,9 +47,13 @@ class ContrastiveICAModule(pl.LightningModule):
         num_thresholds: int = 30,
         log_freq=500,
         use_bottleneck: bool = False,
+        weight_init_fn=None,
+        gain=1.0,
     ):
         """
 
+        :param weight_init_fn: weight initialization function for the AR bottleneck
+        :param gain: gain for initialization in the AR bottleneck
         :param use_bottleneck: use the bottleneck instead of the Jacobian
         :param log_freq: gradient/weight log frequency for W&B, None turns it off
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall

@@ -92,14 +92,14 @@ class ContrastiveLearningModel(nn.Module):
                 hparams.latent_dim,
                 [
                     1,
-                    6 + hparams.latent_dim * 3*2,
-                    6 + hparams.latent_dim * 5*2,
-                    6 + hparams.latent_dim * 5*2,
+                    6 + hparams.latent_dim * 3 * 2,
+                    6 + hparams.latent_dim * 5 * 2,
+                    6 + hparams.latent_dim * 5 * 2,
                 ],
                 [
-                    6 + hparams.latent_dim * 5*2,
-                    6 + hparams.latent_dim * 5*2,
-                    6 + hparams.latent_dim * 3*2,
+                    6 + hparams.latent_dim * 5 * 2,
+                    6 + hparams.latent_dim * 5 * 2,
+                    6 + hparams.latent_dim * 3 * 2,
                     1,
                 ],
                 hparams.use_bias,
@@ -107,6 +107,8 @@ class ContrastiveLearningModel(nn.Module):
                 sinkhorn=hparams.sinkhorn,
                 triangular=self.hparams.triangular,
                 budget=(self.hparams.budget != 0.0),
+                weight_init_fn=hparams.weight_init_fn,
+                gain=hparams.gain,
             )
 
         else:

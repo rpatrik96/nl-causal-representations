@@ -19,6 +19,8 @@ class ARMLP(nn.Module):
         num_weights: int = 5,
         triangular=True,
         budget: bool = False,
+        weight_init_fn=lambda x, gain: x * gain,
+        gain=1.0,
     ):
         super().__init__()
 
@@ -28,6 +30,9 @@ class ARMLP(nn.Module):
         self.budget = budget
         self.num_weights = num_weights
 
+        self.weight_init_fn = weight_init_fn
+        self.gain = gain
+
         if self.budget is True:
             self.budget_net = SparseBudgetNet(self.num_vars)
 
@@ -35,11 +40,15 @@ class ARMLP(nn.Module):
             [
                 nn.Parameter(
                     torch.tril(
-                        nn.Linear(num_vars, num_vars).weight,
+                        self.weight_init_fn(
+                            nn.Linear(num_vars, num_vars).weight, self.gain
+                        ),
                         0 if self.residual is False else -1,
                     )
                     if self.triangular is True
-                    else nn.Linear(num_vars, num_vars, bias=False).weight
+                    else self.weight_init_fn(
+                        nn.Linear(num_vars, num_vars, bias=False).weight, self.gain
+                    )
                 )
                 for _ in range(self.num_weights)
             ]
@@ -200,6 +209,8 @@ class ARBottleneckNet(nn.Module):
         sinkhorn=False,
         triangular=True,
         budget: bool = False,
+        weight_init_fn=None,
+        gain=1.0,
     ):
         super().__init__()
         self.num_vars = num_vars
@@ -210,7 +221,14 @@ class ARBottleneckNet(nn.Module):
         self._init_feature_layers()
 
         self.ar_bottleneck = ARMLP(
-            self.num_vars, residual=residual, triangular=triangular, budget=budget
+            self.num_vars,
+            residual=residual,
+            triangular=triangular,
+            budget=budget,
+            weight_init_fn=weight_init_fn
+            if weight_init_fn is not None
+            else lambda x, gain: x * gain,
+            gain=gain,
         )
 
         self.sinkhorn = SinkhornNet(self.num_vars, 5, 1e-3)
