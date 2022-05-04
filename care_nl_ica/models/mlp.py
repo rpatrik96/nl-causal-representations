@@ -19,7 +19,7 @@ class ARMLP(nn.Module):
         num_weights: int = 5,
         triangular=True,
         budget: bool = False,
-        weight_init_fn=lambda x, gain: x * gain,
+        weight_init_fn=None,
         gain=1.0,
     ):
         super().__init__()
@@ -30,7 +30,17 @@ class ARMLP(nn.Module):
         self.budget = budget
         self.num_weights = num_weights
 
-        self.weight_init_fn = weight_init_fn
+        if weight_init_fn is None:
+            self.weight_init_fn = lambda x, gain: x * gain
+        elif weight_init_fn == "orthogonal":
+            self.weight_init_fn = nn.init.orthogonal_
+        elif weight_init_fn == "xavier_normal":
+            self.weight_init_fn = nn.init.xavier_normal_
+        elif weight_init_fn == "xavier_uniform":
+            self.weight_init_fn = nn.init.xavier_uniform_
+        elif weight_init_fn == "sparse":
+            self.weight_init_fn = nn.init.sparse_
+
         self.gain = gain
 
         if self.budget is True:
