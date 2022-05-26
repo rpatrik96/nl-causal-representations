@@ -66,6 +66,7 @@ trainer:
   stochastic_weight_avg: false
   detect_anomaly: true
 model:
+  offline: true
   lr: 1e-4
   use_ar_mlp: true
   qr: 0.0
@@ -83,6 +84,7 @@ model:
   start_step: null
   use_bias: false
   use_bottleneck: false
+  weight_init_fn: null
 data:
   n_mixing_layer: 1
   permute: false

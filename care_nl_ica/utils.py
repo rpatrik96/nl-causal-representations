@@ -5,8 +5,6 @@ from typing import Dict, Literal
 import numpy as np
 import torch
 
-import pynvml
-
 
 def unpack_item_list(lst):
     if isinstance(lst, tuple):
@@ -142,6 +140,8 @@ def add_tags(args):
 
 
 def get_cuda_stats(where):
+    import pynvml
+
     pynvml.nvmlInit()
     handle = pynvml.nvmlDeviceGetHandleByIndex(int(0))
     info = pynvml.nvmlDeviceGetMemoryInfo(handle)

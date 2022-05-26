@@ -1,3 +1,6 @@
+import subprocess
+from os.path import dirname
+
 import pytorch_lightning as pl
 import torch
 import wandb
@@ -49,9 +52,11 @@ class ContrastiveICAModule(pl.LightningModule):
         use_bottleneck: bool = False,
         weight_init_fn=None,
         gain=1.0,
+        offline: bool = False,
     ):
         """
 
+        :param offline: offline W&B run (sync at the end)
         :param weight_init_fn: weight initialization function for the AR bottleneck
         :param gain: gain for initialization in the AR bottleneck
         :param use_bottleneck: use the bottleneck instead of the Jacobian
@@ -387,6 +392,16 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.logger.experiment.summary[key] = val
 
     def on_fit_end(self) -> None:
+
+        if self.hparams.offline is True:
+            # Syncing W&B at the end
+            # 1. save sync dir (after marking a run finished, the W&B object changes (is teared down?)
+            sync_dir = dirname(self.logger.experiment.dir)
+            # 2. mark run complete
+            wandb.finish()
+            # 3. call the sync command for the run directory
+            subprocess.check_call(["wandb", "sync", sync_dir])
+
         print(f"{self.hard_permutation=}")
         # log the bottleneck weights
         if hasattr(self.model.unmixing, "ar_bottleneck") is True:

@@ -41,14 +41,18 @@ class MyLightningCLI(LightningCLI):
                 "entity"
             ] = "causal-representation-learning"
 
+            if self.config[self.subcommand].model.offline is True:
+                self.trainer.logger.__dict__["_wandb_init"]["mode"] = "offline"
+
             # todo: maybe set run in the CLI to false and call watch before?
             self.trainer.logger.watch(self.model, log="all", log_freq=250)
 
 
-cli = MyLightningCLI(
-    ContrastiveICAModule,
-    ContrastiveDataModule,
-    save_config_callback=None,
-    run=True,
-    parser_kwargs={"parse_as_dict": False},
-)
+if __name__ == "__main__":
+    cli = MyLightningCLI(
+        ContrastiveICAModule,
+        ContrastiveDataModule,
+        save_config_callback=None,
+        run=True,
+        parser_kwargs={"parse_as_dict": False},
+    )
