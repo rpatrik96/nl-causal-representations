@@ -5,12 +5,6 @@ command:
   - fit
   - "--config"
   - "configs/config.yaml"
-  - "--config"
-  - "configs/model/ar_non_tri.yaml"
-  - "--config"
-  - "configs/data/permute.yaml"
-  - "--config"
-  - "configs/data/nl_sem.yaml"
   - ${args}
 method: grid
 metric:
@@ -21,6 +15,10 @@ parameters:
     values: [42,64, 982] #, 5748, 23567] # 64 is the magic seed
   trainer.max_epochs:
     value: 10000
+  model.use_ar_mlp:
+    value: true
+  model.triangular:
+    value: false
   data.variant:
     value: 4
   data.force_uniform:
@@ -31,6 +29,10 @@ parameters:
     value: 3e-1
   model.use_bottleneck:
     value: true
+  data.nonlin_sem:
+    value: true
+  data.permute:
+    value: true
   model.start_step:
     value: 2500
   data.latent_dim:
@@ -38,9 +40,9 @@ parameters:
   data.diag_weight:
     value: 0
   model.gain:
-    values: [1., 10., 1e-1] # 10 was the best
+    values: 10 #[1., 10., 1e-1] # 10 was the best
   model.weight_init_fn:
-    values: [orthogonal, xavier_uniform, sparse] # does not matter, so choose orthogonal
+    value: orthogonal # does not matter, so choose orthogonal
 
 
 
