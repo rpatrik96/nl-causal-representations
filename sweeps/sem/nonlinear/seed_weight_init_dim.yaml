@@ -38,9 +38,9 @@ parameters:
   data.diag_weight:
     value: 0
   model.gain:
-    values: [1., 10., 1e-1]
+    values: [1., 10., 1e-1] # 10 was the best
   model.weight_init_fn:
-    values: [orthogonal, xavier_uniform, sparse]
+    values: [orthogonal, xavier_uniform, sparse] # does not matter, so choose orthogonal
 
 
 
