@@ -90,16 +90,9 @@ class LinearSEM(nn.Module):
         return m
 
     def forward(self, x):
-        z = torch.zeros_like(x)
         w = torch.tril(self.weight * self.mask)
 
-        for i in range(self.num_vars):
-            z[:, i] = w[i, i] * x[:, i]
-
-            if i != 0:
-                z[:, i] = z[:, i] + z[:, :i] @ w[i, :i]
-
-        return self.permutation(z)
+        return self.permutation((w @ x.T).T)
 
     def to(self, device):
         """

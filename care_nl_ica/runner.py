@@ -172,7 +172,9 @@ class ContrastiveICAModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         panel_name = "Val"
         sources, mixtures, reconstructions, losses = self._forward(batch)
-        self.log(f"{panel_name}/losses", losses.log_dict())
+        self.log(
+            f"{panel_name}/losses", losses.log_dict(), on_epoch=True, on_step=False
+        )
 
         self.dep_mat = self._calc_and_log_matrices(mixtures, sources).detach()
 
@@ -195,10 +197,15 @@ class ContrastiveICAModule(pl.LightningModule):
         )
 
         # for sweeps
-        self.log("val_loss", losses.total_loss)
-        self.log("val_mcc", disent_metrics.perm_score)
+        self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
+        self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
 
-        self.log(f"{panel_name}/disent", disent_metrics.log_dict())
+        self.log(
+            f"{panel_name}/disent",
+            disent_metrics.log_dict(),
+            on_epoch=True,
+            on_step=False,
+        )
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log(

@@ -235,9 +235,7 @@ class ARBottleneckNet(nn.Module):
             residual=residual,
             triangular=triangular,
             budget=budget,
-            weight_init_fn=weight_init_fn
-            if weight_init_fn is not None
-            else lambda x, gain: x * gain,
+            weight_init_fn=weight_init_fn,
             gain=gain,
         )
 
