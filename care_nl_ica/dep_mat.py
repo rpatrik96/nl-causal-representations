@@ -65,7 +65,9 @@ def calc_jacobian(
         # jacobian /= norm_factor.reshape(1, 1, -1)
 
         # normalize range to [0;1]
-        dim_range = (output_vars.max(dim=0)[0] - output_vars.min(dim=0)[0]).abs()
+        dim_range = (
+            (output_vars.max(dim=0)[0] - output_vars.min(dim=0)[0]).abs().reshape(-1, 1)
+        )
 
         jacobian /= dim_range + eps
 
