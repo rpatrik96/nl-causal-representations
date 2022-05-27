@@ -3,6 +3,7 @@ import random
 from typing import Dict, Literal
 
 import numpy as np
+import pip
 import torch
 
 
@@ -151,3 +152,20 @@ def get_cuda_stats(where):
     print(f"total    : {info.total//1024**2}")
     print(f"free     : {info.free//1024**2}")
     print(f"used     : {info.used//1024**2}")
+
+
+def install_package():
+    """
+    Install the current package to ensure that imports work.
+    """
+    try:
+        import care_nl_ica
+    except:
+        print("Package not installed, installing...")
+        pip.main(
+            [
+                "install",
+                f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}",
+                "--upgrade",
+            ]
+        )

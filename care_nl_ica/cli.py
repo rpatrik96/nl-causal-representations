@@ -1,7 +1,7 @@
 from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.utilities.cli import LightningCLI
 
-from care_nl_ica.utils import add_tags
+from care_nl_ica.utils import add_tags, install_package
 from care_nl_ica.data.datamodules import ContrastiveDataModule
 from care_nl_ica.runner import ContrastiveICAModule
 
@@ -51,6 +51,7 @@ class MyLightningCLI(LightningCLI):
 
 
 if __name__ == "__main__":
+    install_package()
     cli = MyLightningCLI(
         ContrastiveICAModule,
         ContrastiveDataModule,

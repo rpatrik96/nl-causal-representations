@@ -1,25 +1,4 @@
-import os
-
-import pip
-
-
-def install_package():
-    """
-    Install the current package to ensure that imports work.
-    """
-    try:
-        import care_nl_ica
-    except:
-        print("Package not installed, installing...")
-        pip.main(
-            [
-                "install",
-                f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}",
-                "--upgrade",
-            ]
-        )
-
-
+from care_nl_ica.utils import install_package
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from argparse import Namespace
