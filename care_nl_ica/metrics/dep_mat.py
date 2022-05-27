@@ -107,9 +107,9 @@ def jacobian_to_tril_and_perm(dep_mat, qr: bool = True):
 
 def check_permutation(candidate: torch.tensor, threshold: float = 0.95):
     hard_permutation = (candidate.abs() > threshold).float()
-    success = permutation_loss(hard_permutation, False) == 0.0
+    success = (permutation_loss(hard_permutation, False) == 0.0).item()
 
-    return hard_permutation, success.item()
+    return hard_permutation if success is True else None, success
 
 
 from typing import Any, Dict, List, Optional, Tuple, Union
