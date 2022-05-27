@@ -406,10 +406,3 @@ class ContrastiveICAModule(pl.LightningModule):
             wandb.finish()
             # 3. call the sync command for the run directory
             subprocess.check_call(["wandb", "sync", sync_dir])
-
-        print(f"{self.hard_permutation=}")
-        # log the bottleneck weights
-        if hasattr(self.model.unmixing, "ar_bottleneck") is True:
-            print(
-                f"ar_bottleneck={self.model.unmixing.ar_bottleneck.assembled_weight.detach()}"
-            )
