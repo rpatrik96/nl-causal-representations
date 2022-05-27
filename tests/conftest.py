@@ -5,7 +5,6 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-# from care_nl_ica.args import parse_args
 from care_nl_ica.data.datamodules import ContrastiveDataModule
 from care_nl_ica.dataset import ContrastiveDataset
 
