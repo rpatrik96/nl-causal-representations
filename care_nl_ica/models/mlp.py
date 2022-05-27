@@ -68,8 +68,8 @@ class ARMLP(nn.Module):
 
         # structure injection
         self.transform = transform if transform is not None else lambda w: w
-        self.permutation = lambda x: self.permutation_matrix @ x
-        self.permutation_matrix = torch.eye(self.num_vars)
+        self.permutation = lambda x: x[self.permutation_matrix, :]
+        self.permutation_matrix = torch.arange(self.num_vars)
         self.struct_mask = torch.ones_like(self.weight[0], requires_grad=False)
 
     @property
@@ -103,7 +103,7 @@ class ARMLP(nn.Module):
         )
 
         self.assembled_weight = tri_weight
-        self.permutation_matrix = permute
+        self.permutation_matrix = permute.max(1)[-1]
 
     @assembled_weight.setter
     def assembled_weight(self, value):
