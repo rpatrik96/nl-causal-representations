@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from functorch import vmap, jacrev, jacfwd
+
 from torch.autograd.functional import jacobian
 
 
@@ -46,6 +46,8 @@ def calc_jacobian(
 
             jacobian = torch.stack(jacob, 1)
         else:
+            from functorch import vmap, jacrev, jacfwd
+
             if reverse_ad is True:
                 jac_fn = jacrev
             else:
