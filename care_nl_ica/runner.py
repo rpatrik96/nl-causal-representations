@@ -146,10 +146,9 @@ class ContrastiveICAModule(pl.LightningModule):
 
             if (
                 correct_order := torch.all(
-                    self.hard_permutation
-                    @ self.trainer.datamodule.mixing.permutation_matrix.to(
-                        self.hard_permutation.device
-                    )
+                    self.hard_permutation[
+                        self.trainer.datamodule.mixing.permute_indices, :
+                    ]
                     == torch.eye(
                         self.hparams.latent_dim, device=self.hard_permutation.device
                     )
