@@ -391,6 +391,12 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.logger.experiment.summary[key] = val
 
     def on_fit_end(self) -> None:
+        print(f"{self.hard_permutation=}")
+        # log the bottleneck weights
+        if hasattr(self.model.unmixing, "ar_bottleneck") is True:
+            print(
+                f"ar_bottleneck={self.model.unmixing.ar_bottleneck.assembled_weight.detach()}"
+            )
 
         if self.hparams.offline is True:
             # Syncing W&B at the end
