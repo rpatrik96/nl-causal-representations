@@ -256,7 +256,7 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.logger.experiment.summary[
                     "Unmixing/unmixing_jacobian"
                 ] = dep_mat.detach()
-                print(f"Unmixing/unmixing_jacobian={dep_mat.detach()}")
+                # print(f"Unmixing/unmixing_jacobian={dep_mat.detach()}")
 
                 if self.hparams.sinkhorn is True:
                     self.logger.experiment.log(
@@ -354,7 +354,7 @@ class ContrastiveICAModule(pl.LightningModule):
 
                 if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
                     self.logger.experiment.summary["Val/Q"] = inv_perm.detach()
-                    print(f"Val/Q={inv_perm.detach()}")
+                    # print(f"Val/Q={inv_perm.detach()}")
 
                 if self.hparams.use_ar_mlp is True:
                     self.hard_permutation, self.qr_success = check_permutation(inv_perm)
