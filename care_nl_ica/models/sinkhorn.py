@@ -64,42 +64,52 @@ class SinkhornNet(nn.Module):
 
 if __name__ == "__main__":
     NUM_DIM = 3
-    s = SinkhornNet(NUM_DIM, 20, 3e-4)
-    optim = torch.optim.Adam(s.parameters(), lr=1e-3)
-    permute_indices = [1, 2, 0]
+    s = SinkhornNet(NUM_DIM, 20, 1e-4)
+    s2 = SinkhornNet(NUM_DIM, 20, 1e-4)
+    optim = torch.optim.Adam(list(s.parameters()) + list(s2.parameters()), lr=1e-4)
+    permute_indices = [2, 0, 1]
 
     permute_mat = torch.zeros(NUM_DIM, NUM_DIM)
     permute_mat[list(range(NUM_DIM)), permute_indices] = 1
 
     # generate chain
-    weight = torch.tril(torch.ones_like(permute_mat), -2)
-    mask = torch.tril(torch.ones_like(weight))
-    zeros_in_chain = torch.tril(torch.ones_like(weight), -2)
-    mask[zeros_in_chain == 1] = 0
+    # weight = torch.tril(torch.ones_like(permute_mat), -2)
+    # mask = torch.tril(torch.ones_like(weight))
+    # zeros_in_chain = torch.tril(torch.ones_like(weight), -2)
+    # mask[zeros_in_chain == 1] = 0
 
     # J
-    mixing = torch.tril(torch.randn(NUM_DIM, NUM_DIM)) * mask
-    J_permuted = mixing @ permute_mat
+    # mixing = torch.tril(torch.randn(NUM_DIM, NUM_DIM)) * mask
+    # J_permuted = mixing @ permute_mat
     J_permuted = torch.tensor(
         [
-            [6.1357e-08, 7.5739e-01, -6.5171e-01],
-            [-1.2773e00, 1.0414e-01, 7.0249e-01],
-            [1.3200e00, 5.1018e-02, 3.5439e-02],
+            [-1.8755, 0.00046791, 0.734563],
+            [0.0003417, 0.73327672, -1.2309],
+            [-0.00432, 1.8387, 0.00018102],
         ]
     )
     print(f"{J_permuted=}")
 
-    for i in range(2000):
+    for i in range(6000):
 
         optim.zero_grad()
-        loss = torch.triu(J_permuted.float() @ s.doubly_stochastic_matrix, 1).norm()
+        matrix = (
+            s2.doubly_stochastic_matrix
+            @ J_permuted.float()
+            @ s.doubly_stochastic_matrix
+        )
+        # loss = 10*torch.triu(matrix, 1).abs().sum() #
+        loss = -torch.tril(matrix, 0).abs().sum() * 10
 
         loss.backward()
 
-        if i % 500 == 0:
-            print(s.doubly_stochastic_matrix.detach())
+        if i % 1000 == 0:
+            print(f"{loss.item():.3f}")
+        #     print(s.doubly_stochastic_matrix.detach())
 
         optim.step()
 
-    print(f"{permute_mat.T=}")
+    # print(f"{permute_mat.T=}")
     print(f"S={s.doubly_stochastic_matrix.detach()}")
+    print(f"S2={s2.doubly_stochastic_matrix.detach()}")
+    print(s2.doubly_stochastic_matrix @ J_permuted.float() @ s.doubly_stochastic_matrix)
