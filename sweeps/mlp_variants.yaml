@@ -1,0 +1,33 @@
+command:
+  - ${env}
+  - python3
+  - care_nl_ica/cli.py
+  - fit
+  - "--config"
+  - "configs/config.yaml"
+  - ${args}
+method: grid
+metric:
+  goal: minimize
+  name: val_loss
+parameters:
+  seed_everything:
+    values: [42, 64, 982 5748, 23567]
+  model.offline:
+    value: true
+  model.use_ar_mlp:
+    value: false
+  model.triangular:
+    value: false
+  data.variant:
+    values: [0,1,2,3,4,5]
+  data.latent_dim:
+    value: 3
+  data.nonlin_sem:
+    values: [false, true]
+  data.permute:
+    value: true
+
+
+
+
