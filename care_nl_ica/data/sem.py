@@ -21,9 +21,9 @@ class LinearSEM(nn.Module):
 
         # weight init
         inv_weight = torch.tril(
-            nn.Linear(num_vars, num_vars).weight
+            # torch.randn((num_vars, num_vars)).tril() + diag_weight * torch.eye(num_vars)
+            torch.rand((num_vars, num_vars)).tril()
             + diag_weight * torch.eye(num_vars)
-            # torch.rand((num_vars, num_vars)).tril() + diag_weight * torch.eye(num_vars)
         )
 
         if force_uniform is True:
