@@ -17,3 +17,4 @@ pre-commit
 omegaconf~=2.1.1
 pynvml~=11.4.1
 functorch~=0.1.0
+tueplots
