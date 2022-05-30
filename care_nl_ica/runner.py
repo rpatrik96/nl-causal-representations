@@ -251,11 +251,15 @@ class ContrastiveICAModule(pl.LightningModule):
                     numerical_jacobian = numerical_jacobian @ self.hard_permutation.T
 
             if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-                # self.logger.experiment.log({"Unmixing/unmixing_jacobian": dep_mat.detach()})
                 self.logger.experiment.summary[
                     "Unmixing/unmixing_jacobian"
                 ] = dep_mat.detach()
-                # print(f"Unmixing/unmixing_jacobian={dep_mat.detach()}")
+
+                # log the bottleneck weights
+                if hasattr(self.model.unmixing, "ar_bottleneck") is True:
+                    self.logger.experiment.summary[
+                        "ar_bottleneck"
+                    ] = self.model.unmixing.ar_bottleneck.assembled_weight.detach()
 
                 if self.hparams.sinkhorn is True:
                     self.logger.experiment.log(
@@ -271,14 +275,6 @@ class ContrastiveICAModule(pl.LightningModule):
                     self.logger.experiment.log(
                         {"numerical_jacobian": numerical_jacobian.detach()}
                     )
-
-                    # log the bottleneck weights
-                    if hasattr(self.model.unmixing, "ar_bottleneck") is True:
-                        self.logger.experiment.log(
-                            {
-                                "ar_bottleneck": self.model.unmixing.ar_bottleneck.assembled_weight.detach()
-                            }
-                        )
         else:
             if self.hparams.use_ar_mlp is True:
                 dep_mat = self.model.unmixing.ar_bottleneck.assembled_weight
@@ -353,7 +349,6 @@ class ContrastiveICAModule(pl.LightningModule):
 
                 if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
                     self.logger.experiment.summary["Val/Q"] = inv_perm.detach()
-                    # print(f"Val/Q={inv_perm.detach()}")
 
                 if self.hparams.use_ar_mlp is True:
                     self.hard_permutation, self.qr_success = check_permutation(inv_perm)
