@@ -20,39 +20,39 @@ class LinearSEM(nn.Module):
         self.num_vars = num_vars
 
         # weight init
-        self.weight = nn.Parameter(
-            torch.tril(
-                nn.Linear(num_vars, num_vars).weight + diag_weight * torch.eye(num_vars)
-            )
+        inv_weight = torch.tril(
+            nn.Linear(num_vars, num_vars).weight
+            + diag_weight * torch.eye(num_vars)
+            # torch.rand((num_vars, num_vars)).tril() + diag_weight * torch.eye(num_vars)
         )
+
         if force_uniform is True:
             print("---------Forcing uniform weights---------")
-            self.weight = nn.Parameter(torch.tril(torch.ones(num_vars, num_vars)))
-        print(f"{self.weight=}")
-
-        self.mask = (
-            (
-                torch.tril(torch.bernoulli(1.0 * torch.ones_like(self.weight)), 1)
-                + torch.eye(num_vars)
-            )
-            .bool()
-            .float()
-        )
+            inv_weight = torch.tril(torch.ones(num_vars, num_vars))
 
         # construct a chain
         if force_chain is True:
             print("-------Forcing chain-------")
-            self.mask = torch.tril(torch.ones_like(self.weight))
+            mask = torch.tril(torch.ones_like(inv_weight))
 
-            zeros_in_chain = torch.tril(torch.ones_like(self.weight), -2)
-            self.mask[zeros_in_chain == 1] = 0
-        # else:
-        #     # ensure that the first column is not masked,
-        #     # so the causal ordering will be unique 0-> this is not enough
-        #     self.mask[:, 0] = 1
+            zeros_in_chain = torch.tril(torch.ones_like(inv_weight), -2)
+            mask[zeros_in_chain == 1] = 0
+        else:
+            mask = (
+                (
+                    torch.tril(torch.bernoulli(1.0 * torch.ones_like(inv_weight)), 1)
+                    + torch.eye(num_vars)
+                )
+                .bool()
+                .float()
+            )
 
-        self.mask.requires_grad = False
-        print(f"{self.mask=}")
+        inv_weight *= mask
+
+        print(f"{inv_weight=}")
+
+        self.weight = inv_weight.inverse().tril()
+        print(f"{self.weight=}")
 
         self._setup_permutation(permute)
 
@@ -90,9 +90,8 @@ class LinearSEM(nn.Module):
         return m
 
     def forward(self, x):
-        w = torch.tril(self.weight * self.mask)
 
-        return self.permutation((w @ x.T).T)
+        return self.permutation((self.weight @ x.T).T)
 
     def to(self, device):
         """
@@ -102,7 +101,7 @@ class LinearSEM(nn.Module):
         """
         super().to(device)
         self.weight = self.weight.to(device)
-        self.mask = self.mask.to(device)
+        # self.mask = self.mask.to(device)
 
         return self
 
@@ -137,7 +136,7 @@ class NonLinearSEM(LinearSEM):
     def forward(self, x):
 
         z = torch.zeros_like(x)
-        w = torch.tril(self.weight * self.mask)
+        w = self.weight
 
         for i in range(self.num_vars):
             if i != 0:
