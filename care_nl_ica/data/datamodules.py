@@ -85,7 +85,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
             ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
             self.mixing = invertible_network_utils.construct_invertible_mlp(
                 n=self.hparams.latent_dim,
-                n_layers=self.hparams.latent_dim_mixing_layer,
+                n_layers=self.hparams.n_mixing_layer,
                 act_fct=self.hparams.act_fct,
                 cond_thresh_ratio=0.001,
                 n_iter_cond_thresh=25000,
