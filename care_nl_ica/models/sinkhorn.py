@@ -62,6 +62,57 @@ class SinkhornNet(nn.Module):
         return self
 
 
+def learn_permutation(
+    true_jac,
+    est_jac,
+    permute_indices,
+    num_steps=3000,
+    tril_weight=10.0,
+    triu_weigth=10.0,
+    diag_weight=0.0,
+    lr=1e-3,
+):
+    print("----------------------------------")
+
+    est_jac = torch.from_numpy(est_jac).float()
+    num_dim = est_jac.shape[0]
+    s_dag = SinkhornNet(num_dim, 20, 1e-4)
+    s_ica = SinkhornNet(num_dim, 20, 1e-4)
+    optim = torch.optim.Adam(list(s_dag.parameters()) + list(s_ica.parameters()), lr=lr)
+
+    for i in range(num_steps):
+
+        optim.zero_grad()
+        matrix = (
+            s_ica.doubly_stochastic_matrix
+            @ est_jac.abs()
+            @ s_dag.doubly_stochastic_matrix
+        )
+        loss_l = -tril_weight * torch.tril(matrix, 0).abs().sum()
+        loss_u = triu_weigth * torch.triu(matrix, 1).abs().sum()
+        loss_diag = diag_weight * (1.0 / matrix.diag()).sum()
+
+        loss = loss_l + loss_u + loss_diag
+
+        loss.backward()
+
+        if i % 500 == 0:
+            correct_order = torch.all(
+                s_dag.doubly_stochastic_matrix.max(1)[1]
+                == torch.tensor(permute_indices)
+            ).item()
+            if correct_order is True:
+                print("Correct order identified")
+                return True
+
+        optim.step()
+    print(f"{true_jac=}")
+    print(s_ica.doubly_stochastic_matrix @ est_jac @ s_dag.doubly_stochastic_matrix)
+    print(f"S_DAG={s_dag.doubly_stochastic_matrix.detach()}")
+    print(f"S_ICA={s_ica.doubly_stochastic_matrix.detach()}")
+    return False
+
+
 if __name__ == "__main__":
 
     from care_nl_ica.losses.dep_mat import permutation_loss
@@ -111,12 +162,12 @@ if __name__ == "__main__":
         ]
     ).abs()
     #
-    J = 1.0 - J_permuted.bool().float() + 1e-5
+    # J = 1.0 - J_permuted.bool().float() + 1e-5
     #
     # J= J_permuted
     #
-    JJ = J
-    col_order = []
+    # JJ = J
+    # col_order = []
     # for col in range (dim):
     #     if (dim-col) in JJ.sum(0):
     #         col_order.append(torch.arange(dim)[(dim-col) == JJ.sum(0)][0])
@@ -142,12 +193,12 @@ if __name__ == "__main__":
         )
         loss_u = 10 * torch.triu(matrix, 1).abs().sum()  #
         loss_l = -torch.tril(matrix, 0).abs().sum() * 10
-        loss = loss_l + loss_u
+        # loss = loss_l + loss_u
 
         # loss_order = (torch.tensor([0,1,2]) - (J_permuted@ s.doubly_stochastic_matrix).sum(0)).sum()
         # loss_ica_perm = (torch.tensor([2,1,0]) - (s2.doubly_stochastic_matrix@J_permuted).sum(1)).sum()
         # loss = loss_order #+ loss_ica_perm
-        loss = (1.0 / matrix.diag()).sum() + loss_l  # +loss_u
+        loss = (1.0 / matrix.diag()).sum() + loss_l + loss_u
 
         # loss += 10*(permutation_loss(s.doubly_stochastic_matrix) +permutation_loss(s2.doubly_stochastic_matrix))
 
