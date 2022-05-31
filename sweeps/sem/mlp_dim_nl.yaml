@@ -22,7 +22,7 @@ parameters:
   model.triangular:
     value: false
   data.variant:
-    value: 3
+    value: 0
   data.latent_dim:
     values: [3,5, 8, 10]
   data.use_sem:
