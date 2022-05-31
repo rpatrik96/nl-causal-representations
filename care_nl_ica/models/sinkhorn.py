@@ -71,13 +71,34 @@ def learn_permutation(
     triu_weigth=10.0,
     diag_weight=0.0,
     lr=1e-3,
+    verbose=False,
+    drop_smallest=False,
+    threshold=None,
+    binary=False,
 ):
-    print("----------------------------------")
 
     est_jac = torch.from_numpy(est_jac).float()
-    num_dim = est_jac.shape[0]
-    s_dag = SinkhornNet(num_dim, 20, 1e-4)
-    s_ica = SinkhornNet(num_dim, 20, 1e-4)
+    dim = est_jac.shape[0]
+
+    if drop_smallest is True:
+        zero_idx = (
+            est_jac.abs()
+            .view(
+                -1,
+            )
+            .sort()[1][: dim * (dim - 1) // 2]
+        )
+        est_jac.view(
+            -1,
+        )[zero_idx] = 0
+
+    if threshold is not None:
+        est_jac[est_jac.abs() < threshold] = 0
+
+    if binary is True:
+        est_jac = est_jac.bool().float()
+    s_dag = SinkhornNet(dim, 20, 1e-4)
+    s_ica = SinkhornNet(dim, 20, 1e-4)
     optim = torch.optim.Adam(list(s_dag.parameters()) + list(s_ica.parameters()), lr=lr)
 
     for i in range(num_steps):
@@ -87,29 +108,40 @@ def learn_permutation(
             s_ica.doubly_stochastic_matrix
             @ est_jac.abs()
             @ s_dag.doubly_stochastic_matrix
-        )
+        ).abs()
         loss_l = -tril_weight * torch.tril(matrix, 0).abs().sum()
         loss_u = triu_weigth * torch.triu(matrix, 1).abs().sum()
         loss_diag = diag_weight * (1.0 / matrix.diag()).sum()
+        # loss_diag = -diag_weight * (matrix.diag()).sum()
 
         loss = loss_l + loss_u + loss_diag
 
         loss.backward()
 
-        if i % 500 == 0:
+        if i % 250 == 0:
             correct_order = torch.all(
                 s_dag.doubly_stochastic_matrix.max(1)[1]
                 == torch.tensor(permute_indices)
             ).item()
             if correct_order is True:
-                print("Correct order identified")
+                if verbose is True:
+                    print("Correct order identified")
                 return True
 
         optim.step()
-    print(f"{true_jac=}")
-    print(s_ica.doubly_stochastic_matrix @ est_jac @ s_dag.doubly_stochastic_matrix)
-    print(f"S_DAG={s_dag.doubly_stochastic_matrix.detach()}")
-    print(f"S_ICA={s_ica.doubly_stochastic_matrix.detach()}")
+    if verbose is True:
+        print("----------------------------------")
+        print(f"{true_jac=}")
+        print(f"{est_jac=}")
+        print(
+            (
+                s_ica.doubly_stochastic_matrix
+                @ est_jac
+                @ s_dag.doubly_stochastic_matrix
+            ).detach()
+        )
+        print(f"S_DAG={s_dag.doubly_stochastic_matrix.detach()}")
+        print(f"S_ICA={s_ica.doubly_stochastic_matrix.detach()}")
     return False
 
 
