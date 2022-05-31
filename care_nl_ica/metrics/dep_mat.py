@@ -165,13 +165,16 @@ class JacobianBinnedPrecisionRecall(Metric):
             preds: (n_samples,) tensor
             target: (n_samples, ) tensor
         """
-        preds, target = preds.reshape(-1,), target.reshape(
-            -1,
+        preds, target = (
+            preds.reshape(
+                -1,
+            ).abs(),
+            target.reshape(
+                -1,
+            ).abs(),
         )
 
         assert preds.shape == target.shape
-
-        preds = preds.abs()
 
         if (pred_max := preds.max()) != 1.0:
             preds /= pred_max
