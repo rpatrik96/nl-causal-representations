@@ -133,7 +133,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 calc_jacobian(self.mixing, z, normalize=False).mean(0).detach()
             )
 
-            if self.hparams.permute is True:
+            if self.hparams.permute is True and self.hparams.use_sem is True:
                 # print(f"{dep_mat=}")
                 # set_trace()
                 self.mixing_jacobian = self.mixing_jacobian[
@@ -181,5 +181,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
             f"Mixing/unmixing_cond": self.unmixing_cond,
             f"Mixing/indirect_causes": self.indirect_causes,
             f"Mixing/paths": self.paths,
-            f"Mixing/permute_indices": self.mixing.permute_indices,
+            f"Mixing/permute_indices": torch.arange(self.hparams.latent_dim)
+            if self.hparams.use_sem is False
+            else self.mixing.permute_indices,
         }
