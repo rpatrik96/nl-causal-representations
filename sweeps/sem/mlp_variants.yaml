@@ -12,7 +12,7 @@ metric:
   name: val_loss
 parameters:
   seed_everything:
-    values: [42, 64, 982 5748, 23567]
+    values: [42, 64, 982, 5748, 23567]
   model.offline:
     value: true
   model.use_ar_mlp:
@@ -27,6 +27,7 @@ parameters:
     values: [false, true]
   data.permute:
     value: true
+
 
 
 
