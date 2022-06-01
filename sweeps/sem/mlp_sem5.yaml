@@ -22,13 +22,13 @@ parameters:
   model.triangular:
     value: false
   data.variant:
-    value: 0
+    values: [0,5,31,75, 97, 119]
   data.latent_dim:
-    values: [3,5] #, 8, 10]
+    value: 5
   data.use_sem:
     value: true
   data.nonlin_sem:
-    value: true
+    values: [false, true]
   data.permute:
     value: true
   data.offset:
