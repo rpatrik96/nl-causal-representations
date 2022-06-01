@@ -138,14 +138,16 @@ class NonLinearSEM(LinearSEM):
         ]
 
     def forward(self, x):
+        # z = torch.zeros_like(x)
+        # w = self.weight
 
-        z = torch.zeros_like(x)
-        w = self.weight
+        # mix  =
+        #
+        # for i in range(self.num_vars):
+        #     z[:,i] = self.relus[i]
+        # if i != 0:
+        #     z[:, i] = self.relus[i](w[i, i] * x[:, i] + z[:, :i] @ w[i, :i])
+        # else:
+        #     z[:, i] = w[i, i] * self.relus[i](x[:, i])
 
-        for i in range(self.num_vars):
-            if i != 0:
-                z[:, i] = self.relus[i](w[i, i] * x[:, i] + z[:, :i] @ w[i, :i])
-            else:
-                z[:, i] = w[i, i] * self.relus[i](x[:, i])
-
-        return self.permutation(z)
+        return self.permutation(self.relus[0]((self.weight @ x.T).T))
