@@ -90,15 +90,15 @@ class ContrastiveICAModule(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        if self.hparams.latent_dim >= 15:
-            print("The Jacobian cannot be calculated due to out-of-memory issues...")
-            if self.hparams.use_ar_mlp is False:
-                raise RuntimeError(
-                    "...and there is no alternative for a vanilla MLP. Terminating..."
-                )
-            else:
-                print("Using the bottleneck instead")
-                self.hparams.use_bottleneck = True
+        # if self.hparams.latent_dim >= 15:
+        #     print("The Jacobian cannot be calculated due to out-of-memory issues...")
+        #     if self.hparams.use_ar_mlp is False:
+        #         raise RuntimeError(
+        #             "...and there is no alternative for a vanilla MLP. Terminating..."
+        #         )
+        #     else:
+        #         print("Using the bottleneck instead")
+        #         self.hparams.use_bottleneck = True
 
         self.model: ContrastiveLearningModel = ContrastiveLearningModel(
             self.hparams
@@ -386,6 +386,15 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.logger.experiment.summary[key] = val
 
     def on_fit_end(self) -> None:
+
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            table = wandb.Table(
+                data=[self.dep_mat.reshape(1, -1).tolist()], columns=["dep_mat"]
+            )
+            self.logger.experiment.log({f"dep_mat_table": table})
+
+            # table.get_column("dep_mat", "numpy")
+
         print(f"{self.hard_permutation=}")
         # log the bottleneck weights
         if hasattr(self.model.unmixing, "ar_bottleneck") is True:
