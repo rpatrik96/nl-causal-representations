@@ -14,6 +14,7 @@ class LinearSEM(nn.Module):
         force_chain: bool = False,
         force_uniform: bool = False,
         diag_weight: float = 0.0,
+        offset: float = 1.0,
     ):
         super().__init__()
         self.variant = variant
@@ -23,6 +24,7 @@ class LinearSEM(nn.Module):
         inv_weight = torch.tril(
             # torch.randn((num_vars, num_vars)).tril() + diag_weight * torch.eye(num_vars)
             torch.rand((num_vars, num_vars)).tril()
+            + offset * torch.ones((num_vars, num_vars))
             + diag_weight * torch.eye(num_vars)
         )
 
@@ -115,6 +117,7 @@ class NonLinearSEM(LinearSEM):
         force_chain: bool = False,
         force_uniform: bool = False,
         diag_weight: float = 0.0,
+        offset: float = 1.0,
     ):
         super().__init__(
             num_vars=num_vars,
@@ -123,6 +126,7 @@ class NonLinearSEM(LinearSEM):
             force_chain=force_chain,
             force_uniform=force_uniform,
             diag_weight=diag_weight,
+            offset=offset,
         )
 
         self.slopes = torch.rand(num_vars).clip(0.25, 1)

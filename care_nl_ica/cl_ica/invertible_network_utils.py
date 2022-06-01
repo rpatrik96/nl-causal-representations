@@ -29,6 +29,7 @@ def construct_invertible_mlp(
     lower_triangular=True,
     sparsity=True,
     variant=None,
+    offset=0,
 ):
     """
     Create an (approximately) invertible mixing network based on an MLP.
@@ -42,6 +43,7 @@ def construct_invertible_mlp(
             (based on the condition number) can be violated in each layer.
         weight_matrix_init: How to initialize the weight matrices.
         act_fct: Activation function for hidden layers.
+        :param offset:
     """
 
     class SmoothLeakyReLU(nn.Module):
@@ -105,6 +107,10 @@ def construct_invertible_mlp(
                 )
             elif weight_matrix_init == "rvs":
                 weight_matrix = ortho_group.rvs(n)
+
+                if offset != 0.0:
+                    scaling = offset * np.eye(n)
+                    weight_matrix = scaling @ weight_matrix
             if lower_triangular:
                 if sparsity:
                     _, tril_mask = createARmask(n, variant)

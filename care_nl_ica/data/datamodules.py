@@ -41,11 +41,13 @@ class ContrastiveDataModule(pl.LightningDataModule):
         force_chain: bool = False,
         force_uniform: bool = False,
         diag_weight=0.0,
+        offset=0,
         **kwargs,
     ):
 
         """
 
+        :param offset: constant to add to weights in SEM
         :param diag_weight: weight for adding torch.eye to the SEM weights
         :param force_chain: make the graph to a chain
         :param force_uniform: make the mixing weights the same
@@ -86,13 +88,14 @@ class ContrastiveDataModule(pl.LightningDataModule):
             self.mixing = invertible_network_utils.construct_invertible_mlp(
                 n=self.hparams.latent_dim,
                 n_layers=self.hparams.n_mixing_layer,
-                act_fct=self.hparams.act_fct,
-                cond_thresh_ratio=0.001,
                 n_iter_cond_thresh=25000,
-                lower_triangular=True,
+                cond_thresh_ratio=0.001,
                 weight_matrix_init=self.hparams.data_gen_mode,
+                act_fct=self.hparams.act_fct,
+                lower_triangular=True,
                 sparsity=True,
                 variant=torch.from_numpy(np.array([self.hparams.variant])),
+                offset=self.hparams.offset,
             )
         else:
             print("Using SEM as mixing")
@@ -104,6 +107,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     force_chain=self.hparams.force_chain,
                     force_uniform=self.hparams.force_uniform,
                     diag_weight=self.hparams.diag_weight,
+                    offset=self.hparams.offset,
                 )
             else:
                 self.mixing = NonLinearSEM(
@@ -113,6 +117,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     force_chain=self.hparams.force_chain,
                     force_uniform=self.hparams.force_uniform,
                     diag_weight=self.hparams.diag_weight,
+                    offset=self.hparams.offset,
                 )
 
             # print(f"{self.mixing.weight=}")
