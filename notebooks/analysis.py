@@ -9,7 +9,7 @@ RED = "#D0021B"
 
 def sweep2df(sweep_runs, filename, save=False, load=False):
     csv_name = f"{filename}.csv"
-    npy_name = f"{filename}.npy"
+    npy_name = f"{filename}"
     if load is True and isfile(csv_name) is True and isfile(npy_name) is True:
         print(f"\t Loading {filename}...")
         npy_data = np.load(npy_name)
