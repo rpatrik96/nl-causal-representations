@@ -42,11 +42,15 @@ class ContrastiveDataModule(pl.LightningDataModule):
         force_uniform: bool = False,
         diag_weight=0.0,
         offset=0,
+        mask_prob=0.0,
+        mlp_sparsity=False,
         **kwargs,
     ):
 
         """
 
+        :param mlp_sparsity: whether the invertible MLP has a sparsity mask
+        :param mask_prob: probability to delete edges in the SEM
         :param offset: constant to add to weights in SEM
         :param diag_weight: weight for adding torch.eye to the SEM weights
         :param force_chain: make the graph to a chain
@@ -93,8 +97,10 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 weight_matrix_init=self.hparams.data_gen_mode,
                 act_fct=self.hparams.act_fct,
                 lower_triangular=True,
-                sparsity=False,
-                variant=torch.from_numpy(np.array([self.hparams.variant])),
+                sparsity=self.hparams.mlp_sparsity,
+                variant=None
+                if self.hparams.variant is None
+                else torch.from_numpy(np.array([self.hparams.variant])),
                 offset=self.hparams.offset,
             )
         else:
@@ -108,6 +114,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     force_uniform=self.hparams.force_uniform,
                     diag_weight=self.hparams.diag_weight,
                     offset=self.hparams.offset,
+                    mask_prob=self.hparams.mask_prob,
                 )
             else:
                 self.mixing = NonLinearSEM(
@@ -118,6 +125,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     force_uniform=self.hparams.force_uniform,
                     diag_weight=self.hparams.diag_weight,
                     offset=self.hparams.offset,
+                    mask_prob=self.hparams.mask_prob,
                 )
 
             # print(f"{self.mixing.weight=}")

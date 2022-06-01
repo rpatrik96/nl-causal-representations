@@ -15,6 +15,7 @@ class LinearSEM(nn.Module):
         force_uniform: bool = False,
         diag_weight: float = 0.0,
         offset: float = 1.0,
+        mask_prob=1.0,
     ):
         super().__init__()
         self.variant = variant
@@ -33,17 +34,19 @@ class LinearSEM(nn.Module):
             inv_weight = torch.tril(torch.ones(num_vars, num_vars))
 
         # construct a chain
-        if force_chain is True:
-            print("-------Forcing chain-------")
+        if force_chain is True or mask_prob != 0.0:
             mask = torch.tril(torch.ones_like(inv_weight))
 
             zeros_in_chain = torch.tril(torch.ones_like(inv_weight), -2)
             mask[zeros_in_chain == 1] = 0
-        else:
+
+        if mask_prob != 0.0:
             mask = (
                 (
-                    torch.tril(torch.bernoulli(1.0 * torch.ones_like(inv_weight)), 1)
-                    + torch.eye(num_vars)
+                    mask
+                    + torch.tril(
+                        torch.bernoulli(mask_prob * torch.ones_like(inv_weight)), 1
+                    )
                 )
                 .bool()
                 .float()
@@ -118,6 +121,7 @@ class NonLinearSEM(LinearSEM):
         force_uniform: bool = False,
         diag_weight: float = 0.0,
         offset: float = 1.0,
+        mask_prob=0.0,
     ):
         super().__init__(
             num_vars=num_vars,
@@ -127,6 +131,7 @@ class NonLinearSEM(LinearSEM):
             force_uniform=force_uniform,
             diag_weight=diag_weight,
             offset=offset,
+            mask_prob=mask_prob,
         )
 
         self.slopes = torch.rand(num_vars).clip(0.25, 1)

@@ -114,6 +114,14 @@ def construct_invertible_mlp(
             if lower_triangular:
                 if sparsity:
                     _, tril_mask = createARmask(n, variant)
+
+                    """Make the causal ordering unique"""
+                    # A chain has a unique ordering, so if
+                    chain_mask = np.tril(np.ones_like(tril_mask))
+                    zeros_in_chain = np.tril(np.ones_like(tril_mask), -2)
+                    chain_mask[zeros_in_chain == 1] = 0
+                    tril_mask = (tril_mask + chain_mask).bool().float()
+
                     weight_matrix = tril_mask * weight_matrix
                 else:
                     weight_matrix = np.tril(weight_matrix)
