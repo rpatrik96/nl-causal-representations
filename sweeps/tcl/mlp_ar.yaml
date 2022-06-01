@@ -13,6 +13,8 @@ metric:
 parameters:
   seed_everything:
     values: [42, 64, 982, 5748, 23567]
+  trainer.max_epochs:
+    value: 35000
   model.offline:
     value: true
   model.use_ar_mlp:
@@ -20,13 +22,13 @@ parameters:
   model.triangular:
     value: false
   data.variant:
-    values: [0,1,2,3,4,5]
-  data.latent_dim:
     value: 3
-  data.nonlin_sem:
-    values: [false, true]
-  data.permute:
-    value: true
+  data.latent_dim:
+    values: [3, 5, 8, 10]
+  data.use_sem:
+    value: false
+  data.offset:
+    value: 1
 
 
 
