@@ -3,7 +3,7 @@ trainer:
   overfit_batches: 0.0
   check_val_every_n_epoch: 200
   fast_dev_run: false
-  max_epochs: 25000
+  max_epochs: 5500
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -27,12 +27,13 @@ data:
   latent_dim: 3
   diag_weight: 0.4
   permute: true
-  variant: 4
+  variant: 5
   force_uniform: false
+  force_chain: true
 model:
-  start_step: 6500
-  gain: 10
-  qr: 0.6
+  start_step: 4500
+  gain: 1
+  qr: 0.4
   use_ar_mlp: true
   triangular: false
-  lr: 3e-4
+  lr: 1e-3

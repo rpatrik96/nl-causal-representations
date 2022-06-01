@@ -24,13 +24,15 @@ parameters:
   data.variant:
     value: 0
   data.latent_dim:
-    values: [3,5, 8, 10]
+    values: [3,5] #, 8, 10]
   data.use_sem:
     value: true
   data.nonlin_sem:
     value: false
   data.permute:
     value: true
+  data.offset:
+    value: 1
 
 
 
