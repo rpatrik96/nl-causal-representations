@@ -62,6 +62,9 @@ class SinkhornNet(nn.Module):
         return self
 
 
+from scipy.spatial.distance import hamming
+
+
 def learn_permutation(
     true_jac,
     est_jac,
@@ -75,6 +78,7 @@ def learn_permutation(
     drop_smallest=False,
     threshold=None,
     binary=False,
+    hamming_threshold=2e-2,
 ):
 
     est_jac = torch.from_numpy(est_jac).float()
@@ -125,8 +129,22 @@ def learn_permutation(
             ).item()
             if correct_order is True:
                 if verbose is True:
+                    # print(true_jac)
+                    # print(matrix)
+                    # print(true_jac.reshape(-1,), matrix.detach().abs().reshape(-1,) > hamming_threshold)
                     print("Correct order identified")
-                return True
+                return True, hamming(
+                    true_jac.reshape(
+                        -1,
+                    )
+                    > hamming_threshold,
+                    matrix.detach()
+                    .abs()
+                    .reshape(
+                        -1,
+                    )
+                    > hamming_threshold,
+                )
 
         optim.step()
     if verbose is True:
@@ -142,7 +160,18 @@ def learn_permutation(
         )
         print(f"S_DAG={s_dag.doubly_stochastic_matrix.detach()}")
         print(f"S_ICA={s_ica.doubly_stochastic_matrix.detach()}")
-    return False
+    return False, hamming(
+        true_jac.reshape(
+            -1,
+        )
+        > hamming_threshold,
+        matrix.detach()
+        .abs()
+        .reshape(
+            -1,
+        )
+        > hamming_threshold,
+    )
 
 
 if __name__ == "__main__":
