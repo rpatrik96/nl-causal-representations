@@ -93,7 +93,7 @@ def construct_invertible_mlp(
     for i in range(n_layers):
 
         lin_layer = nn.Linear(n, n, bias=False)
-        if weight_matrix_init == "pcl" or weight_matrix_init == "rvs":
+        if weight_matrix_init in ["pcl", "rvs", "offset"]:
             if weight_matrix_init == "pcl":
                 condA = condThresh + 1
                 while condA > condThresh:
