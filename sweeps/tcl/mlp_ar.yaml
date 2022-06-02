@@ -22,11 +22,17 @@ parameters:
   model.triangular:
     value: false
   data.variant:
-    value: 3
+    value: none
   data.latent_dim:
-    values: [3, 5, 8, 10]
+    value: 6
   data.use_sem:
     value: false
+  data.n_mixing_layer:
+    values: [1,2,3,4,5]
+  data.data_gen_mode:
+    value: offset
+  data.mlp_sparsity:
+    value: true
   data.offset:
     value: 1
 
