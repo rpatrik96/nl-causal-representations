@@ -395,7 +395,7 @@ class ContrastiveICAModule(pl.LightningModule):
 
             table = wandb.Table(
                 data=[
-                    self.trainer.datamodule.mixing.unmixing_jacobian.reshape(
+                    self.trainer.datamodule.unmixing_jacobian.reshape(
                         1, -1
                     ).tolist()
                 ],
