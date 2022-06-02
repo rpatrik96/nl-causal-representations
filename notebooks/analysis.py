@@ -53,9 +53,19 @@ def sweep2df(sweep_runs, filename, save=False, load=False):
 
                 true_unmixing_jacobians.append(
                     np.array(summary["Mixing/unmixing_jacobian"])
+                    if dim <= 5
+                    else run.logged_artifacts()[0]
+                    .get("dep_mat_table")
+                    .get_column("dep_mat", "numpy")
+                    .reshape(dim, dim)
                 )
                 est_unmixing_jacobians.append(
                     np.array(summary["Unmixing/unmixing_jacobian"])
+                    if dim <= 5
+                    else run.logged_artifacts()[0]
+                    .get("gt_unmixing_jacobian_table")
+                    .get_column("gt_unmixing_jacobian", "numpy")
+                    .reshape(dim, dim)
                 )
                 permute_indices.append(summary["Mixing/permute_indices"])
 

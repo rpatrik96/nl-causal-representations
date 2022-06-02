@@ -393,7 +393,15 @@ class ContrastiveICAModule(pl.LightningModule):
             )
             self.logger.experiment.log({f"dep_mat_table": table})
 
-            # table.get_column("dep_mat", "numpy")
+            table = wandb.Table(
+                data=[
+                    self.trainer.datamodule.mixing.unmixing_jacobian.reshape(
+                        1, -1
+                    ).tolist()
+                ],
+                columns=["gt_unmixing_jacobian"],
+            )
+            self.logger.experiment.log({f"gt_unmixing_jacobian_table": table})
 
         print(f"{self.hard_permutation=}")
         # log the bottleneck weights
