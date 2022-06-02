@@ -11,7 +11,7 @@ trainer:
       init_args:
         monitor: val_loss
         mode: min
-        patience: 75
+        patience: 40
   auto_select_gpus: true
   checkpoint_callback: null
   enable_checkpointing: false
