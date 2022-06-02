@@ -89,7 +89,7 @@ OutputNormalizationType = Literal[
     "", "fixed_box", "learnable_box", "fixed_sphere", "learnable_sphere"
 ]
 SpaceType = Literal["box", "sphere", "unbounded"]
-DataGenType = Literal["rvs", "pcl"]
+DataGenType = Literal["rvs", "pcl", "offset"]
 
 
 def add_tags(args):
