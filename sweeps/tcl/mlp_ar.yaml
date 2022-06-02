@@ -14,7 +14,7 @@ parameters:
   seed_everything:
     values: [42, 64, 982, 5748, 23567]
   trainer.max_epochs:
-    value: 35000
+    value: 20000
   model.offline:
     value: true
   model.use_ar_mlp:
