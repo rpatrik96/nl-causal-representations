@@ -40,19 +40,19 @@ class LinearSEM(nn.Module):
             zeros_in_chain = torch.tril(torch.ones_like(inv_weight), -2)
             mask[zeros_in_chain == 1] = 0
 
-        if mask_prob != 0.0:
-            mask = (
-                (
-                    mask
-                    + torch.tril(
-                        torch.bernoulli(mask_prob * torch.ones_like(inv_weight)), 1
+            if mask_prob != 0.0:
+                mask = (
+                    (
+                        mask
+                        + torch.tril(
+                            torch.bernoulli(mask_prob * torch.ones_like(inv_weight)), 1
+                        )
                     )
+                    .bool()
+                    .float()
                 )
-                .bool()
-                .float()
-            )
 
-        inv_weight *= mask
+            inv_weight *= mask
 
         print(f"{inv_weight=}")
 
