@@ -80,12 +80,44 @@ def learn_permutation(
     binary=False,
     hamming_threshold=2e-2,
     dag_permute: bool = True,
+    eps=1e-8,
 ):
-
     est_jac = torch.from_numpy(est_jac).float()
     true_jac = torch.from_numpy(true_jac).float()
     # print(est_jac)
     dim = est_jac.shape[0]
+    j_hamming = lambda gt, est: hamming(
+        gt.abs().reshape(
+            -1,
+        )
+        > hamming_threshold,
+        est.detach()
+        .abs()
+        .reshape(
+            -1,
+        )
+        > hamming_threshold,
+    )
+    j_acc = (
+        lambda gt, est: (
+            (
+                gt.abs().reshape(
+                    -1,
+                )
+                > eps
+            )
+            == (
+                est.detach()
+                .abs()
+                .reshape(
+                    -1,
+                )
+                > hamming_threshold
+            )
+        )
+        .float()
+        .mean()
+    )
 
     if drop_smallest is True:
         zero_idx = (
@@ -127,7 +159,7 @@ def learn_permutation(
                 matrix = s_ica.doubly_stochastic_matrix @ est_jac.abs()
             loss_l = -tril_weight * torch.tril(matrix, 0).abs().sum()
             loss_u = triu_weigth * torch.triu(matrix, 1).abs().sum()
-            loss_diag = diag_weight * (1.0 / (matrix.diag() + 1e-8)).sum()
+            loss_diag = diag_weight * (1.0 / (matrix.diag() + eps)).sum()
             # loss_diag = -diag_weight * (matrix.diag()).sum()
 
             loss = loss_l + loss_u + loss_diag
@@ -146,39 +178,7 @@ def learn_permutation(
                         # print(matrix)
                         # print(true_jac.reshape(-1,), matrix.detach().abs().reshape(-1,) > hamming_threshold)
                         print("Correct order identified")
-                    return (
-                        True,
-                        hamming(
-                            true_jac.abs().reshape(
-                                -1,
-                            )
-                            > hamming_threshold,
-                            matrix.detach()
-                            .abs()
-                            .reshape(
-                                -1,
-                            )
-                            > hamming_threshold,
-                        ),
-                        (
-                            (
-                                true_jac.abs().reshape(
-                                    -1,
-                                )
-                                > 1e-8
-                            )
-                            == (
-                                matrix.detach()
-                                .abs()
-                                .reshape(
-                                    -1,
-                                )
-                                > hamming_threshold
-                            )
-                        )
-                        .float()
-                        .mean(),
-                    )
+                    return (True, j_hamming(true_jac, matrix), j_acc(true_jac, matrix))
 
             optim.step()
     if verbose is True:
@@ -198,44 +198,10 @@ def learn_permutation(
         if dag_permute is True:
             print(f"S_DAG={s_dag.doubly_stochastic_matrix.detach()}")
         print(f"S_ICA={s_ica.doubly_stochastic_matrix.detach()}")
-    return (
-        False,
-        hamming(
-            true_jac.abs().reshape(
-                -1,
-            )
-            > 1e-8,
-            matrix.detach()
-            .abs()
-            .reshape(
-                -1,
-            )
-            > hamming_threshold,
-        ),
-        (
-            (
-                true_jac.abs().reshape(
-                    -1,
-                )
-                > hamming_threshold
-            )
-            == (
-                matrix.detach()
-                .abs()
-                .reshape(
-                    -1,
-                )
-                > hamming_threshold
-            )
-        )
-        .float()
-        .mean(),
-    )
+    return (False, j_hamming(true_jac, matrix), j_acc(true_jac, matrix))
 
 
 if __name__ == "__main__":
-
-    from care_nl_ica.losses.dep_mat import permutation_loss
 
     NUM_DIM = 3
     s = SinkhornNet(NUM_DIM, 20, 1e-4)
@@ -299,8 +265,6 @@ if __name__ == "__main__":
     #     if (dim - i) in JJ.sum(0):
     #         col_order.append(JJ.sum(0).tolist().index(dim-i))
 
-    from scipy.optimize import linear_sum_assignment
-
     print(f"{J_permuted=}")
 
     for i in range(3000):
@@ -326,7 +290,7 @@ if __name__ == "__main__":
 
         if i % 1000 == 0:
             print(
-                f"{loss.item():.3f}, {torch.all(s.doubly_stochastic_matrix.max(1)[1]==torch.tensor(permute_indices))}"
+                f"{loss.item():.3f}, {torch.all(s.doubly_stochastic_matrix.max(1)[1] == torch.tensor(permute_indices))}"
             )
             #     print(s.doubly_stochastic_matrix.detach())
             print(matrix)
