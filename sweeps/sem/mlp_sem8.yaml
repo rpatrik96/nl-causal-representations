@@ -12,7 +12,7 @@ metric:
   name: val_loss
 parameters:
   trainer.max_epochs:
-    value: 30000
+    value: 25000
   seed_everything:
     values: [42, 64, 982, 5748, 23567]
   model.offline:
