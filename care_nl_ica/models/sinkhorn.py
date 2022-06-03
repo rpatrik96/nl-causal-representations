@@ -79,9 +79,12 @@ def learn_permutation(
     threshold=None,
     binary=False,
     hamming_threshold=2e-2,
+    dag_permute: bool = True,
 ):
 
     est_jac = torch.from_numpy(est_jac).float()
+    true_jac = torch.from_numpy(true_jac).float()
+    # print(est_jac)
     dim = est_jac.shape[0]
 
     if drop_smallest is True:
@@ -103,74 +106,130 @@ def learn_permutation(
         est_jac = est_jac.bool().float()
     s_dag = SinkhornNet(dim, 20, 1e-4)
     s_ica = SinkhornNet(dim, 20, 1e-4)
-    optim = torch.optim.Adam(list(s_dag.parameters()) + list(s_ica.parameters()), lr=lr)
+    if dag_permute is True:
+        optim = torch.optim.Adam(
+            list(s_dag.parameters()) + list(s_ica.parameters()), lr=lr
+        )
+    else:
+        optim = torch.optim.Adam(s_ica.parameters(), lr=lr)
+    if True or dag_permute is True:
+        for i in range(num_steps):
+            # print(f"S_ICA={s_ica.doubly_stochastic_matrix.detach()}")
 
-    for i in range(num_steps):
-
-        optim.zero_grad()
-        matrix = (
-            s_ica.doubly_stochastic_matrix
-            @ est_jac.abs()
-            @ s_dag.doubly_stochastic_matrix
-        ).abs()
-        loss_l = -tril_weight * torch.tril(matrix, 0).abs().sum()
-        loss_u = triu_weigth * torch.triu(matrix, 1).abs().sum()
-        loss_diag = diag_weight * (1.0 / matrix.diag()).sum()
-        # loss_diag = -diag_weight * (matrix.diag()).sum()
-
-        loss = loss_l + loss_u + loss_diag
-
-        loss.backward()
-
-        if i % 250 == 0:
-            correct_order = torch.all(
-                s_dag.doubly_stochastic_matrix.max(1)[1]
-                == torch.tensor(permute_indices)
-            ).item()
-            if correct_order is True:
-                if verbose is True:
-                    # print(true_jac)
-                    # print(matrix)
-                    # print(true_jac.reshape(-1,), matrix.detach().abs().reshape(-1,) > hamming_threshold)
-                    print("Correct order identified")
-                return True, hamming(
-                    true_jac.reshape(
-                        -1,
-                    )
-                    > hamming_threshold,
-                    matrix.detach()
-                    .abs()
-                    .reshape(
-                        -1,
-                    )
-                    > hamming_threshold,
+            optim.zero_grad()
+            if dag_permute is True:
+                matrix = (
+                    s_ica.doubly_stochastic_matrix
+                    @ est_jac.abs()
+                    @ s_dag.doubly_stochastic_matrix
                 )
+            else:
+                matrix = s_ica.doubly_stochastic_matrix @ est_jac.abs()
+            loss_l = -tril_weight * torch.tril(matrix, 0).abs().sum()
+            loss_u = triu_weigth * torch.triu(matrix, 1).abs().sum()
+            loss_diag = diag_weight * (1.0 / (matrix.diag() + 1e-8)).sum()
+            # loss_diag = -diag_weight * (matrix.diag()).sum()
 
-        optim.step()
+            loss = loss_l + loss_u + loss_diag
+            # print(f"{loss=}")
+
+            loss.backward()
+
+            if i % 250 == 0 and dag_permute is True:
+                correct_order = torch.all(
+                    s_dag.doubly_stochastic_matrix.max(1)[1]
+                    == torch.tensor(permute_indices)
+                ).item()
+                if correct_order is True:
+                    if verbose is True:
+                        # print(true_jac)
+                        # print(matrix)
+                        # print(true_jac.reshape(-1,), matrix.detach().abs().reshape(-1,) > hamming_threshold)
+                        print("Correct order identified")
+                    return (
+                        True,
+                        hamming(
+                            true_jac.abs().reshape(
+                                -1,
+                            )
+                            > hamming_threshold,
+                            matrix.detach()
+                            .abs()
+                            .reshape(
+                                -1,
+                            )
+                            > hamming_threshold,
+                        ),
+                        (
+                            (
+                                true_jac.abs().reshape(
+                                    -1,
+                                )
+                                > 1e-8
+                            )
+                            == (
+                                matrix.detach()
+                                .abs()
+                                .reshape(
+                                    -1,
+                                )
+                                > hamming_threshold
+                            )
+                        )
+                        .float()
+                        .mean(),
+                    )
+
+            optim.step()
     if verbose is True:
         print("----------------------------------")
         print(f"{true_jac=}")
         print(f"{est_jac=}")
-        print(
-            (
+        if dag_permute is True:
+            matrix = (
                 s_ica.doubly_stochastic_matrix
                 @ est_jac
                 @ s_dag.doubly_stochastic_matrix
             ).detach()
-        )
-        print(f"S_DAG={s_dag.doubly_stochastic_matrix.detach()}")
+        else:
+            matrix = (s_ica.doubly_stochastic_matrix @ est_jac).detach()
+            # matrix = est_jac[torch.argsort(est_jac.sum(1).long()-1), :]
+        print(matrix)
+        if dag_permute is True:
+            print(f"S_DAG={s_dag.doubly_stochastic_matrix.detach()}")
         print(f"S_ICA={s_ica.doubly_stochastic_matrix.detach()}")
-    return False, hamming(
-        true_jac.reshape(
-            -1,
+    return (
+        False,
+        hamming(
+            true_jac.abs().reshape(
+                -1,
+            )
+            > 1e-8,
+            matrix.detach()
+            .abs()
+            .reshape(
+                -1,
+            )
+            > hamming_threshold,
+        ),
+        (
+            (
+                true_jac.abs().reshape(
+                    -1,
+                )
+                > hamming_threshold
+            )
+            == (
+                matrix.detach()
+                .abs()
+                .reshape(
+                    -1,
+                )
+                > hamming_threshold
+            )
         )
-        > hamming_threshold,
-        matrix.detach()
-        .abs()
-        .reshape(
-            -1,
-        )
-        > hamming_threshold,
+        .float()
+        .mean(),
     )
 
 
