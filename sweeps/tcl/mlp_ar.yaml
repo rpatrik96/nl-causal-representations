@@ -34,7 +34,7 @@ parameters:
   data.mlp_sparsity:
     value: true
   data.offset:
-    value: 1
+    value: 3
 
 
 
