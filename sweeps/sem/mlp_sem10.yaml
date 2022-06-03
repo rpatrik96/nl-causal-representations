@@ -24,7 +24,7 @@ parameters:
   data.variant:
     values: [0,657894, 1257846, 1875424, 2645120, 3628600]
   data.latent_dim:
-    value: 8
+    value: 10
   data.use_sem:
     value: true
   data.nonlin_sem:
