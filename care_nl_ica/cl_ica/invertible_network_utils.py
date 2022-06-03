@@ -112,7 +112,9 @@ def construct_invertible_mlp(
                     scaling = offset * np.eye(n)
                     weight_matrix = scaling @ weight_matrix
             elif weight_matrix_init == "offset":
-                weight_matrix = np.random.uniform(0, 1, (n, n)) + (0.32 * n**2)
+                weight_matrix = np.random.uniform(0, 1, (n, n)) + (
+                    offset if offset != 0.0 else (0.32 * n**2)
+                )
             if lower_triangular:
                 if sparsity:
                     _, tril_mask = createARmask(n, variant)
