@@ -22,6 +22,7 @@ trainer:
   benchmark: false
   deterministic: true
   detect_anomaly: true
+  plugins: null
 data:
   batch_size: 512
   latent_dim: 3

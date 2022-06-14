@@ -1,5 +1,9 @@
 seed_everything: 42
 trainer:
+  plugins:
+    class_path: pytorch_lightning.plugins.environments.SLURMEnvironment
+    init_args:
+      auto_requeue: true
   logger:
     class_path: pytorch_lightning.loggers.WandbLogger
     init_args:
@@ -58,7 +62,6 @@ trainer:
   replace_sampler_ddp: true
   auto_scale_batch_size: false
   prepare_data_per_node: null
-  plugins: null
   amp_backend: native
   amp_level: null
   move_metrics_to_cpu: false
