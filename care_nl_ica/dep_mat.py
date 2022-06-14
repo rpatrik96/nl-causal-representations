@@ -140,13 +140,21 @@ def calc_dependency_matrix(encoder: nn.Module, latents: torch.Tensor) -> torch.T
 
 def jacobians(unmixing, sources, mixtures, eps=1e-6, calc_numerical: bool = False):
     # calculate the dependency matrix
-    dep_mat = calc_jacobian(
-        unmixing, mixtures.clone(), normalize=unmixing.hparams.normalize_latents
-    ).max(0)[0]
+    dep_mat = (
+        calc_jacobian(
+            unmixing, mixtures.clone(), normalize=unmixing.hparams.normalize_latents
+        )
+        .abs()
+        .max(0)[0]
+    )
 
-    jac_enc_dec = calc_jacobian(
-        unmixing, sources.clone(), normalize=unmixing.hparams.normalize_latents
-    ).max(0)[0]
+    jac_enc_dec = (
+        calc_jacobian(
+            unmixing, sources.clone(), normalize=unmixing.hparams.normalize_latents
+        )
+        .abs()
+        .max(0)[0]
+    )
 
     # 3/b calculate the numerical jacobian
     # calculate numerical jacobian
