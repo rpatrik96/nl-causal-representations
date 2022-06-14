@@ -142,7 +142,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
             z = next(iter(self.train_dataloader()))[0][0, :]
             # save the decoder jacobian including the permutation
             self.mixing_jacobian_permuted = self.mixing_jacobian = (
-                calc_jacobian(self.mixing, z, normalize=False).mean(0).detach()
+                calc_jacobian(self.mixing, z, normalize=False).max(0)[0].detach()
             )
 
             if self.hparams.permute is True and self.hparams.use_sem is True:
