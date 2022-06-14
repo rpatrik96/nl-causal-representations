@@ -45,7 +45,7 @@ def calc_jacobian(
                         grad_outputs=torch.ones(output_vars[:, i : i + 1].shape).to(
                             output_vars.device
                         ),
-                    )[0]
+                    )[0].detach()
                 )
 
             jacobian = torch.stack(jacob, 1)
