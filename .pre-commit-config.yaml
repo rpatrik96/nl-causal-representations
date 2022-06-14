@@ -10,3 +10,9 @@ repos:
         # pre-commit's default_language_version, see
         # https://pre-commit.com/#top_level-default_language_version
         language_version: python3.8
+  - repo: local
+    hooks:
+    - id: tests
+      name: Unit tests
+      language: system
+      entry: bash -c "source activate venv"; pytest tests
