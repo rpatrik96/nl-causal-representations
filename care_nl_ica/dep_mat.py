@@ -145,7 +145,7 @@ def jacobians(unmixing, sources, mixtures, eps=1e-6, calc_numerical: bool = Fals
             unmixing, mixtures.clone(), normalize=unmixing.hparams.normalize_latents
         )
         .abs()
-        .max(0)[0]
+        .mean(0)
     )
 
     jac_enc_dec = (
@@ -153,7 +153,7 @@ def jacobians(unmixing, sources, mixtures, eps=1e-6, calc_numerical: bool = Fals
             unmixing, sources.clone(), normalize=unmixing.hparams.normalize_latents
         )
         .abs()
-        .max(0)[0]
+        .mean(0)
     )
 
     # 3/b calculate the numerical jacobian
