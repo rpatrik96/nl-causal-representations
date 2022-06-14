@@ -1,0 +1,5 @@
+trainer:
+  profiler:
+    class_path: pytorch_lightning.profiler.PyTorchProfiler
+    init_args:
+      profile_memory: true
