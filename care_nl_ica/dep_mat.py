@@ -11,9 +11,13 @@ def calc_jacobian(
     eps: float = 1e-8,
     vectorize=False,
     reverse_ad=True,
+    norm_range=True,
+    norm_diagonal=False,
 ) -> torch.Tensor:
     """
     Calculate the Jacobian more efficiently than ` torch.autograd.functional.jacobian`
+    :param norm_range:
+    :param norm_diagonal:
     :param reverse_ad: use reverse mode auto-differentiation (e.g., PReLU only supports this)
     :param vectorize: use functorch vectorization
     :param model: the model to calculate the Jacobian of
@@ -65,13 +69,18 @@ def calc_jacobian(
         # normalize to make variance to 1
         # norm_factor = (output_vars.std(dim=0) + 1e-8)
         # jacobian /= norm_factor.reshape(1, 1, -1)
+        if norm_range is True:
+            # normalize range to [0;1]
+            dim_range = (
+                (output_vars.max(dim=0)[0] - output_vars.min(dim=0)[0])
+                .abs()
+                .reshape(-1, 1)
+            )
 
-        # normalize range to [0;1]
-        dim_range = (
-            (output_vars.max(dim=0)[0] - output_vars.min(dim=0)[0]).abs().reshape(-1, 1)
-        )
-
-        jacobian /= dim_range + eps
+            jacobian /= dim_range + eps
+        elif norm_diagonal is True:
+            assert (dim := jacobian.shape[1]) == jacobian.shape[2]
+            jacobian /= jacobian[:, (r := torch.arange(dim)), r].unsqueeze(-1) + eps
 
     # set back to original mode
     if in_training is True:
@@ -133,11 +142,11 @@ def jacobians(unmixing, sources, mixtures, eps=1e-6, calc_numerical: bool = Fals
     # calculate the dependency matrix
     dep_mat = calc_jacobian(
         unmixing, mixtures.clone(), normalize=unmixing.hparams.normalize_latents
-    ).mean(0)
+    ).max(0)[0]
 
     jac_enc_dec = calc_jacobian(
         unmixing, sources.clone(), normalize=unmixing.hparams.normalize_latents
-    ).mean(0)
+    ).max(0)[0]
 
     # 3/b calculate the numerical jacobian
     # calculate numerical jacobian
