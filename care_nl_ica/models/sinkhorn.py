@@ -81,9 +81,13 @@ def learn_permutation(
     hamming_threshold=2e-2,
     dag_permute: bool = True,
     eps=1e-8,
+    row_normalize: bool = False,
 ):
     est_jac = torch.from_numpy(est_jac).float()
     true_jac = torch.from_numpy(true_jac).float()
+
+    if row_normalize is True:
+        est_jac /= est_jac.norm(dim=1).reshape(-1, 1)
     # print(est_jac)
     dim = est_jac.shape[0]
     j_hamming = lambda gt, est: hamming(
