@@ -90,16 +90,6 @@ class ContrastiveICAModule(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        # if self.hparams.latent_dim >= 15:
-        #     print("The Jacobian cannot be calculated due to out-of-memory issues...")
-        #     if self.hparams.use_ar_mlp is False:
-        #         raise RuntimeError(
-        #             "...and there is no alternative for a vanilla MLP. Terminating..."
-        #         )
-        #     else:
-        #         print("Using the bottleneck instead")
-        #         self.hparams.use_bottleneck = True
-
         self.model: ContrastiveLearningModel = ContrastiveLearningModel(
             self.hparams
         ).to(self.hparams.device)
@@ -395,9 +385,7 @@ class ContrastiveICAModule(pl.LightningModule):
 
             table = wandb.Table(
                 data=[
-                    self.trainer.datamodule.unmixing_jacobian.reshape(
-                        1, -1
-                    ).tolist()
+                    self.trainer.datamodule.unmixing_jacobian.reshape(1, -1).tolist()
                 ],
                 columns=["gt_unmixing_jacobian"],
             )
