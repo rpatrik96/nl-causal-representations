@@ -33,8 +33,4 @@ data:
   force_chain: true
 model:
   start_step: 4500
-  gain: 1
-  qr: 0.4
-  use_ar_mlp: true
-  triangular: false
   lr: 1e-3

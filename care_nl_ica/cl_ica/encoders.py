@@ -1,8 +1,9 @@
-from torch import nn
-import care_nl_ica.cl_ica.layers as ls
 from typing import List, Union
+
+from torch import nn
 from typing_extensions import Literal
 
+import care_nl_ica.cl_ica.layers as ls
 
 __all__ = ["get_mlp"]
 
@@ -20,7 +21,6 @@ def get_mlp(
         Literal["learnable_box"],
     ] = None,
     output_normalization_kwargs=None,
-    sinkhorn=False,
 ):
     """
     Creates an MLP.
@@ -35,11 +35,6 @@ def get_mlp(
         output_normalization_kwargs: Arguments passed to the output normalization, e.g., the radius for the sphere.
     """
     modules: List[nn.Module] = []
-
-    if sinkhorn is True:
-        from sinkhorn import SinkhornNet
-
-        modules.append(SinkhornNet(n_in, 15, 1e-3))
 
     def add_module(n_layer_in: int, n_layer_out: int, last_layer: bool = False):
         modules.append(nn.Linear(n_layer_in, n_layer_out))
