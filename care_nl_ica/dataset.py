@@ -1,4 +1,6 @@
+import numpy as np
 import torch
+from torch.utils.data import Dataset
 from torch.utils.data import Dataset
 
 from care_nl_ica.cl_ica import latent_spaces, spaces
@@ -7,12 +9,6 @@ from care_nl_ica.prob_utils import (
     setup_conditional,
     sample_marginal_and_conditional,
 )
-
-
-import torch
-from torch.utils.data import Dataset
-
-import numpy as np
 
 
 class ConditionalDataset(Dataset):
@@ -49,9 +45,14 @@ class ConditionalDataset(Dataset):
         labels = self.labels[t_idx]
         sources = self.sources[t_idx]
 
+        # only for IGCL (y_torch in the original repo)
+        true_logits = torch.cat(
+            [torch.ones([self.batch_size]), torch.zeros([self.batch_size])]
+        )
+
         if self.transform is not None:
             obs = self.transform(obs)
-        return obs, labels, sources
+        return obs, labels, sources, true_logits
 
 
 class ContrastiveDataset(torch.utils.data.IterableDataset):
