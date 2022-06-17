@@ -55,16 +55,6 @@ class ContrastiveLearningModel(nn.Module):
         hparams = self.hparams
 
         if hparams.p:
-            """
-            loss = losses.LpSimCLRLoss(
-                p=args.p, tau=args.tau, simclr_compatibility_mode=False, alpha=args.alpha, simclr_denominator=True
-            )
-            """
-            """
-            loss = losses.LpSimCLRLoss(
-                p=args.p, tau=args.tau, simclr_compatibility_mode=True, alpha=args.alpha, simclr_denominator=False
-            )
-            """
             self.loss = losses.LpSimCLRLoss(
                 p=hparams.p, tau=hparams.tau, simclr_compatibility_mode=True
             )

@@ -8,11 +8,7 @@ import wandb
 from care_nl_ica.dep_mat import jacobians
 from care_nl_ica.losses.utils import ContrastiveLosses
 from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
-from care_nl_ica.metrics.dep_mat import (
-    jacobian_to_tril_and_perm,
-    permutation_loss,
-    check_permutation,
-)
+
 from care_nl_ica.metrics.ica_dis import (
     calc_disent_metrics,
     DisentanglementMetrics,

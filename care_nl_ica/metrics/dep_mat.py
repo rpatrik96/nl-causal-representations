@@ -4,7 +4,6 @@ from typing import Dict
 import torch
 from torchmetrics import Metric
 
-from care_nl_ica.losses.dep_mat import permutation_loss
 from care_nl_ica.metrics.ica_dis import amari_distance
 
 
@@ -15,7 +14,6 @@ class JacobianMetrics:
     optimal_threshold: float
     sparsity_accuracy: float
     amari_distance: float
-    permutation_quality: float
 
     def log_dict(self, panel_name) -> Dict[str, float]:
         return {
@@ -23,7 +21,6 @@ class JacobianMetrics:
             f"{panel_name}/jacobian/thresholded_norm_diff": self.thresholded_norm_diff,
             f"{panel_name}/jacobian/optimal_threshold": self.optimal_threshold,
             f"{panel_name}/jacobian/sparsity_accuracy": self.sparsity_accuracy,
-            f"{panel_name}/jacobian/permutation_quality": self.permutation_quality,
             f"{panel_name}/jacobian/amari_distance": self.amari_distance,
         }
 
@@ -35,7 +32,6 @@ def calc_jacobian_metrics(
     gt_jacobian_mixing_permuted,
     threshold: float = 1e-3,
 ) -> JacobianMetrics:
-
     if dep_mat.min() < 0:
         warn(
             "The prediction has negative values, taking the absolute value...",
@@ -72,44 +68,9 @@ def calc_jacobian_metrics(
         optimal_threshold,
         sparsity_accuracy,
         amari_distance(dep_mat, gt_jacobian_mixing_permuted),
-        permutation_loss(
-            jacobian_to_tril_and_perm(dep_mat, qr=True)[0], matrix_power=True
-        ),
     )
 
     return metrics
-
-
-def jacobian_to_tril_and_perm(dep_mat, qr: bool = True):
-    """
-    The Jacobian of the learned network J should be W@P to invert the causal data generation process (SEM),
-    where W is the inverse of the mixing matrix, and P is a permutation matrix
-    (inverting the ordering back to its correct ordering).
-
-    In this case, J:=WP (the data generation process has P^T@inv(W) ), and it should be (lower) triangular.
-    Thus, we can proceed as follows:
-    1. Calculate the Cholesky decomposition of JJ^T = WPP^TW^T = WW^T -> resulting in W
-    2. Left-multiply J with W^-1 to get P
-
-    :param dep_mat:
-    :return:
-    """
-    if qr is True:
-        Q, R = torch.linalg.qr(dep_mat.T)
-        inv_permutation = Q.T
-        unmixing_tril_weight = R.T
-    else:
-        unmixing_tril_weight = (dep_mat @ dep_mat.T).cholesky()
-        inv_permutation = unmixing_tril_weight.inverse() @ dep_mat
-
-    return inv_permutation, unmixing_tril_weight
-
-
-def check_permutation(candidate: torch.tensor, threshold: float = 0.95):
-    hard_permutation = (candidate.abs() > threshold).float()
-    success = (permutation_loss(hard_permutation, False) == 0.0).item()
-
-    return hard_permutation if success is True else None, success
 
 
 from typing import Any, Dict, List, Optional, Tuple, Union
