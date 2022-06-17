@@ -48,37 +48,3 @@ class ContrastiveDataset(torch.utils.data.IterableDataset):
         mixtures = torch.stack(tuple(map(self.transform, sources)))
 
         return iter((sources, mixtures))
-
-
-# from cdt.data import load_dataset
-#
-#
-# class CDTDataset(Dataset):
-#     def __init__(self, hparams, dataset="sachs"):
-#         super().__init__()
-#         self.hparams = hparams
-#
-#         if dataset not in (
-#             datasets := [
-#                 "sachs",
-#                 "dream4-1",
-#                 "dream4-2",
-#                 "dream4-3",
-#                 "dream4-4",
-#                 "dream4-5",
-#             ]
-#         ):
-#             raise ValueError(f"{dataset=}, but should be in {datasets}")
-#
-#         data, graph = load_dataset(dataset)
-#
-#         self.data = torch.Tensor(data.to_numpy(), device=self.hparams.device)
-#
-#     def dim(self):
-#         return self.data.shape[1]
-#
-#     def __len__(self):
-#         return self.data.shape[0]
-#
-#     def __getitem__(self, idx):
-#         return self.data[idx, :], self.data[idx, :]

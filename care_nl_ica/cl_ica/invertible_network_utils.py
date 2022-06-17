@@ -18,7 +18,9 @@ def construct_invertible_mlp(
     n_layers: int = 2,
     n_iter_cond_thresh: int = 10000,
     cond_thresh_ratio: float = 0.25,
-    weight_matrix_init: Union[Literal["pcl"], Literal["rvs"]] = "pcl",
+    weight_matrix_init: Union[
+        Literal["pcl"], Literal["rvs"], Literal["offset"]
+    ] = "pcl",
     act_fct: Union[
         Literal["relu"],
         Literal["leaky_relu"],
