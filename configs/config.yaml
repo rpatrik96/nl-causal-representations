@@ -71,14 +71,7 @@ trainer:
 model:
   offline: true
   lr: 1e-4
-  use_ar_mlp: true
-  qr: 0.0
-  entropy: 0.0
-  l1: 0.0
-  budget: 0.0
-  learnable_mask: false
-  sinkhorn: false
-  triangular: false
+  use_ar_mlp: false
   verbose: false
   p: 1.0
   tau: 1.0
@@ -86,8 +79,6 @@ model:
   normalization: ''
   start_step: null
   use_bias: false
-  use_bottleneck: false
-  weight_init_fn: null
 data:
   n_mixing_layer: 1
   permute: false

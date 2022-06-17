@@ -109,33 +109,14 @@ def add_tags(args):
     else:
         args.tags.append("linear")
 
-    if args.model.sinkhorn is True:
-        args.tags.append("sinkhorn")
-
     if args.data.permute is True:
         args.tags.append("permute")
 
     if args.model.use_ar_mlp is False:
         args.tags.append("mlp")
-    else:
-        args.tags.append("bottleneck")
-        if args.model.triangular is True:
-            args.tags.append("triangular")
-
-    if args.model.use_flows is True:
-        args.tags.append("flows")
 
     if args.model.normalize_latents is True:
         args.tags.append("normalization")
-
-    if args.model.l1 != 0.0:
-        args.tags.append(f"L1")
-
-    if args.model.entropy != 0.0:
-        args.tags.append(f"entropy")
-
-    if args.model.qr != 0.0:
-        args.tags.append(f"QR")
 
     return list(set(args.tags))
 
@@ -149,9 +130,9 @@ def get_cuda_stats(where):
 
     print(where)
 
-    print(f"total    : {info.total//1024**2}")
-    print(f"free     : {info.free//1024**2}")
-    print(f"used     : {info.used//1024**2}")
+    print(f"total    : {info.total // 1024 ** 2}")
+    print(f"free     : {info.free // 1024 ** 2}")
+    print(f"used     : {info.used // 1024 ** 2}")
 
 
 def install_package():

@@ -6,7 +6,7 @@ import torch
 import wandb
 
 from care_nl_ica.dep_mat import jacobians
-from care_nl_ica.losses.utils import Losses
+from care_nl_ica.losses.utils import ContrastiveLosses
 from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
 from care_nl_ica.metrics.dep_mat import (
     jacobian_to_tril_and_perm,
@@ -27,13 +27,6 @@ class ContrastiveICAModule(pl.LightningModule):
         latent_dim: int = 3,
         use_ar_mlp: bool = True,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
-        qr: float = 0.0,
-        entropy: float = 0.0,
-        l1: float = 0.0,
-        budget: float = 0.0,
-        learnable_mask: bool = False,
-        sinkhorn: bool = False,
-        triangular: bool = False,
         verbose: bool = False,
         p: float = 1,
         tau: float = 1.0,
@@ -43,40 +36,25 @@ class ContrastiveICAModule(pl.LightningModule):
         sphere_r: float = 1.0,
         normalization: str = "",
         start_step=None,
-        use_flows=False,
         use_bias=False,
         normalize_latents: bool = True,
         log_latent_rec=False,
         num_thresholds: int = 30,
         log_freq=500,
-        use_bottleneck: bool = False,
-        weight_init_fn=None,
-        gain=1.0,
         offline: bool = False,
     ):
         """
 
         :param offline: offline W&B run (sync at the end)
-        :param weight_init_fn: weight initialization function for the AR bottleneck
-        :param gain: gain for initialization in the AR bottleneck
-        :param use_bottleneck: use the bottleneck instead of the Jacobian
         :param log_freq: gradient/weight log frequency for W&B, None turns it off
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
         :param log_latent_rec: Log the latents and their reconstructions
         :param normalize_latents: normalize the latents to [0;1] (for the Jacobian calculation)
         :param use_bias: Use bias in the network
-        :param use_flows: Use a Flow unmixing
         :param lr: learning rate
         :param latent_dim: latent dimension
         :param use_ar_mlp: Use the AR MLP unmixing
         :param device: device
-        :param qr: QR loss on the bottleneck matrix
-        :param entropy: Entropy regularizer coefficient on the Sinkhorn weights
-        :param l1: L1 regularization coefficient
-        :param budget: Constrain the non-zero elements on the bottleneck
-        :param learnable_mask: makes the masks in the flow learnable
-        :param sinkhorn: Use the Sinkhorn network
-        :param triangular: Force the AR MLP bottleneck to be triangular
         :param verbose: Print out details, more logging
         :param p: Exponent of the assumed model Lp Exponential distribution
         :param tau: Print out details, more extensive logging
@@ -95,8 +73,6 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
-        self.hard_permutation = None
-        self.qr_success: bool = False  # if self.hparams.qr != 0.0 else True
 
         self._configure_metrics()
 
@@ -112,46 +88,6 @@ class ContrastiveICAModule(pl.LightningModule):
 
             if self.hparams.log_freq is not None:
                 self.logger.watch(self.model, log="all", log_freq=self.hparams.log_freq)
-
-    def on_epoch_end(self) -> None:
-        self._set_bottleneck_with_qr_estimate()
-        torch.cuda.empty_cache()
-
-    def _set_bottleneck_with_qr_estimate(self):
-        if (
-            self.qr_success is True
-            and self.hparams.qr != 0.0
-            and (
-                self.hparams.start_step is None
-                or (
-                    self.hparams.start_step is not None
-                    and self.global_step >= self.hparams.start_step
-                )
-            )
-        ):
-            self.hparams.qr = 0.0
-            self.model.unmixing.ar_bottleneck.make_triangular_with_permute(
-                self.unmixing_weight_qr_estimate, self.hard_permutation
-            )
-
-            if (
-                correct_order := torch.all(
-                    self.hard_permutation[
-                        self.trainer.datamodule.mixing.permute_indices, :
-                    ]
-                    == torch.eye(
-                        self.hparams.latent_dim, device=self.hard_permutation.device
-                    )
-                ).item()
-            ) is True:
-                print("Correct order identified")
-
-            self.log("Val/correct_order", float(correct_order))
-
-            if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-                self.logger.experiment.summary[
-                    "Val/permutation"
-                ] = self.hard_permutation
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
@@ -227,49 +163,20 @@ class ContrastiveICAModule(pl.LightningModule):
 
     def _calc_and_log_matrices(self, mixtures, sources):
 
-        if self.hparams.use_bottleneck is False:
-            dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
-                self.model, sources[0], mixtures[0]
-            )
+        dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
+            self.model, sources[0], mixtures[0]
+        )
 
-            # the jacobian of the unmixing needs to be transformed, as
-            # to get a lower-triangular matix, we need to differentiate
-            # wrt (Q@mixtures), but `jacobians` gets mixtures
-            if self.hard_permutation is not None:
-                dep_mat = dep_mat @ self.hard_permutation.T
-                if numerical_jacobian is not None:
-                    numerical_jacobian = numerical_jacobian @ self.hard_permutation.T
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.summary[
+                "Unmixing/unmixing_jacobian"
+            ] = dep_mat.detach()
 
-            if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-                self.logger.experiment.summary[
-                    "Unmixing/unmixing_jacobian"
-                ] = dep_mat.detach()
-
-                # log the bottleneck weights
-                if hasattr(self.model.unmixing, "ar_bottleneck") is True:
-                    self.logger.experiment.summary[
-                        "ar_bottleneck"
-                    ] = self.model.unmixing.ar_bottleneck.assembled_weight.detach()
-
-                if self.hparams.sinkhorn is True:
-                    self.logger.experiment.log(
-                        {
-                            "sinkhorn": self.model.sinkhorn.doubly_stochastic_matrix.detach()
-                        }
-                    )
-
-                if self.hparams.verbose is True:
-                    self.logger.experiment.log(
-                        {"enc_dec_jacobian": enc_dec_jac.detach()}
-                    )
-                    self.logger.experiment.log(
-                        {"numerical_jacobian": numerical_jacobian.detach()}
-                    )
-        else:
-            if self.hparams.use_ar_mlp is True:
-                dep_mat = self.model.unmixing.ar_bottleneck.assembled_weight
-            else:
-                raise ValueError("Jacobian is not calculated for vanilla MLPs...")
+            if self.hparams.verbose is True:
+                self.logger.experiment.log({"enc_dec_jacobian": enc_dec_jac.detach()})
+                self.logger.experiment.log(
+                    {"numerical_jacobian": numerical_jacobian.detach()}
+                )
 
         return dep_mat
 
@@ -286,66 +193,13 @@ class ContrastiveICAModule(pl.LightningModule):
         # estimate entropy (i.e., the baseline of the loss)
         entropy_estimate, _, _ = self.model.loss(*sources, *sources)
 
-        losses = Losses(
+        losses = ContrastiveLosses(
             cl_pos=loss_pos_mean,
             cl_neg=loss_neg_mean,
             cl_entropy=entropy_estimate,
-            sinkhorn_entropy=self.model.sinkhorn_entropy_loss(),
-            bottleneck_l1=self.model.bottleneck_l1_loss(),
-            sparsity_budget=self.model.budget_loss(),
-            qr=self.qr(),
         )
 
         return sources, mixtures, reconstructions, losses
-
-    def qr(self):
-
-        loss = 0.0
-        if self.hparams.qr != 0.0 and (
-            self.hparams.start_step is None
-            or (
-                self.hparams.start_step is not None
-                and self.global_step >= self.hparams.start_step
-            )
-        ):
-
-            if self.dep_mat is not None:
-
-                if self.hparams.use_ar_mlp is False:
-                    J = self.dep_mat
-                else:
-                    if self.hparams.sinkhorn is False:
-                        J = self.model.unmixing.ar_bottleneck.assembled_weight
-                    else:
-                        J = (
-                            self.model.unmixing.ar_bottleneck.assembled_weight
-                            @ self.model.sinkhorn.doubly_stochastic_matrix
-                        )
-
-                # inv_perm is incentivized to be the permutation for the causal ordering
-                inv_perm, self.unmixing_weight_qr_estimate = jacobian_to_tril_and_perm(
-                    J, qr=True
-                )
-
-                """
-                The first step is to ensure that the inv_perm in the QR decomposition of the transposed(bottleneck) is 
-                **a permutation** matrix.
-
-                The second step is to ensure that the permutation matrix is the identity. If we got a permutation matrix
-                in the first step, then we could use inv_perm.T to multiply the observations. 
-                """
-
-                # loss options
-
-                if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-                    self.logger.experiment.summary["Val/Q"] = inv_perm.detach()
-
-                if self.hparams.use_ar_mlp is True:
-                    self.hard_permutation, self.qr_success = check_permutation(inv_perm)
-
-                loss = self.hparams.qr * permutation_loss(inv_perm, matrix_power=False)
-
-        return loss
 
     def log_scatter_latent_rec(self, latent, rec, name: str):
 
@@ -390,13 +244,6 @@ class ContrastiveICAModule(pl.LightningModule):
                 columns=["gt_unmixing_jacobian"],
             )
             self.logger.experiment.log({f"gt_unmixing_jacobian_table": table})
-
-        print(f"{self.hard_permutation=}")
-        # log the bottleneck weights
-        if hasattr(self.model.unmixing, "ar_bottleneck") is True:
-            print(
-                f"ar_bottleneck={self.model.unmixing.ar_bottleneck.assembled_weight.detach()}"
-            )
 
         if self.hparams.offline is True:
             # Syncing W&B at the end
