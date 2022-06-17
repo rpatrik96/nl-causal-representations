@@ -36,6 +36,8 @@ def test_triangularity_jacobian(
     :param model: model to test
     :return:
     """
+    if model.hparams.use_ar_mlp is False:
+        return True
 
     # draw a sample from the latent space (marginal only)
     z = next(iter(dataloader))[0, :]
@@ -72,6 +74,8 @@ def test_triangularity_naive(model: ContrastiveLearningModel):
     :param model: model to test
     :return:
     """
+    if model.hparams.use_ar_mlp is False:
+        return True
 
     # constants
     batch_size = 1
