@@ -17,8 +17,7 @@ from argparse import Namespace
 
 @pytest.fixture(
     params=[
-        arg_matrix(latent_dim=3, use_ar_mlp=True),
-        arg_matrix(latent_dim=3, use_ar_mlp=True),
+        arg_matrix(latent_dim=3, use_ar_mlp=False),
     ]
 )
 def args(request):
@@ -31,7 +30,6 @@ def args(request):
             f"data.latent_dim={request.param.latent_dim}",
             "data.use_sem=true",
             "data.nonlin_sem=true",
-            "model.triangular=true",
         ],
     )
 
