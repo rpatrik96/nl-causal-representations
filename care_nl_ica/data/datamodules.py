@@ -1,18 +1,219 @@
 from typing import Optional
 
-
 import numpy as np
 import pytorch_lightning as pl
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.utils.data import random_split
 
+from IIA.subfunc.generate_artificial_data import generate_artificial_data, apply_mlp
+from IIA.subfunc.preprocessing import pca
 from care_nl_ica.cl_ica import invertible_network_utils
-from care_nl_ica.dataset import ContrastiveDataset
+from care_nl_ica.data.sem import LinearSEM, NonLinearSEM
+from care_nl_ica.dataset import ContrastiveDataset, ConditionalDataset
 from care_nl_ica.dep_mat import calc_jacobian
 from care_nl_ica.graph_utils import indirect_causes
-from care_nl_ica.data.sem import LinearSEM, NonLinearSEM
-
 from care_nl_ica.utils import SpaceType, DataGenType
+
+
+class AugmentedNVARModel(nn.Module):
+    def __init__(self, mlplayers, negative_slope=0.2):
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.seq = self._setup(mlplayers)
+
+    def _setup(self, mlplayers):
+        """Convert MLP paramneters into a torch model to calculate the Jacobian"""
+        mixing_layers = []
+        for mlplayer in mlplayers:
+            _, A, b = mlplayer.values()
+            # A = A.T
+
+            # need to separate bias from the linear layer as
+            # the original code adds bias before multiplying with the weights
+            bias = BiasNet(A.shape[1])
+            bias.bias = nn.Parameter(
+                torch.from_numpy(b.astype(np.float32)).reshape(1, -1),
+                requires_grad=False,
+            )
+            mixing_layers.append(bias)
+
+            lin = nn.Linear(A.shape[0], A.shape[1], bias=False)
+            lin.weight = nn.Parameter(
+                torch.from_numpy(A.astype(np.float32)), requires_grad=False
+            )
+            mixing_layers.append(lin)
+
+            mixing_layers.append(nn.LeakyReLU(negative_slope=self.negative_slope))
+        # last layer has no ReLU
+        mixing_layers.pop()
+        return nn.Sequential(*mixing_layers)
+
+    def forward(self, input):
+        return torch.concat([self.seq(input), input[:, input.shape[1] // 2 :]], 1)
+
+
+class BiasNet(nn.Module):
+    def __init__(self, dim):
+
+        super().__init__()
+        self.dim = dim
+
+        self.bias = nn.Parameter(torch.empty(self.dim))
+
+    def forward(self, input):
+        return input + self.bias
+
+
+class IIADataModule(pl.LightningDataModule):
+    def __init__(
+        self
+        # Data generation ---------------------------------------------
+        ,
+        num_layer=3,  # number of layers of mixing-MLP
+        num_comp=20,  # number of components (dimension)
+        num_data=2**18,  # number of data points
+        num_data_test=2**15,  # number of data points
+        num_basis=64,  # number of frequencies of fourier bases
+        modulate_range=[-2, 2],
+        modulate_range2=[-2, 2],
+        ar_order=1,
+        random_seed=0,  # random seed
+        net_model="itcl",  # "itcl" or "igcl"
+        num_segment=256,  # None for IGCL
+        train_ratio=0.8,
+        negative_slope=0.2,
+        batch_size=512,
+        mix_mode="dyn",
+    ):
+        super().__init__()
+
+        self.save_hyperparameters()
+
+        self.hparams.cat_input = self.hparams.mix_mode == "dyn"
+
+        self._generate_data()
+
+    def _generate_data(self):
+        # Generate sensor signal --------------------------------------
+        x, s, y, x_test, s_test, y_test, mlplayers, _, _ = generate_artificial_data(
+            num_comp=self.hparams.num_comp,
+            num_data=self.hparams.num_data,
+            num_data_test=self.hparams.num_data_test,
+            num_layer=self.hparams.num_layer,
+            num_basis=self.hparams.num_basis,
+            modulate_range1=self.hparams.modulate_range,
+            modulate_range2=self.hparams.modulate_range2,
+            random_seed=self.hparams.random_seed,
+            mix_mode=self.hparams.mix_mode,
+        )
+
+        if self.hparams.net_model == "itcl":  # Remake label for TCL learning
+            num_segmentdata = int(
+                np.ceil(self.hparams.num_data / self.hparams.num_segment)
+            )
+            y = np.tile(
+                np.arange(self.hparams.num_segment), [num_segmentdata, 1]
+            ).T.reshape(-1)[: self.hparams.num_data]
+        # Preprocessing -----------------------------------------------
+        x, self.hparams.pca_parm = pca(x, num_comp=self.hparams.num_comp)  # PCA
+
+        return x, y, s, x_test, y_test, s_test, mlplayers
+
+    def setup(self, stage: Optional[str] = None):
+        (
+            obs,
+            labels,
+            sources,
+            obs_test,
+            labels_test,
+            sources_test,
+            mlplayers,
+        ) = self._generate_data()
+
+        self.mixing = AugmentedNVARModel(mlplayers, self.hparams.negative_slope)
+
+        # generate data
+        tr_val_dataset = ConditionalDataset(
+            obs,
+            labels,
+            sources,
+            batch_size=self.hparams.batch_size,
+            ar_order=self.hparams.ar_order,
+            transform=None
+            # the mixing is already applied in `generate_artificial_data`
+        )
+
+        # split
+        train_len = int(self.hparams.train_ratio * len(tr_val_dataset))
+        val_len = int(len(tr_val_dataset) - train_len)
+        self.ds_train, self.ds_val = random_split(tr_val_dataset, [train_len, val_len])
+
+        self.ds_test_pred = ConditionalDataset(
+            obs_test,
+            labels_test,
+            sources_test,
+            batch_size=self.hparams.batch_size,
+            ar_order=self.hparams.ar_order,
+            transform=None
+            # the mixing is already applied in `generate_artificial_data`
+        )
+        # dataloaders
+        self.dl_train = DataLoader(self.ds_train, batch_size=1)
+        self.dl_val = DataLoader(self.ds_val, batch_size=1)
+        self.dl_test_pred = DataLoader(self.ds_test_pred, batch_size=1)
+
+        self._calc_dep_mat()
+
+    def _calc_dep_mat(self) -> None:
+        # draw a sample from the latent space (marginal only)
+        sources = self.train_dataloader().dataset.dataset.sources[
+            : self.hparams.batch_size
+        ]
+        obs = torch.ones_like(sources)
+        if self.hparams.cat_input is True:
+            mixing_input = torch.concat([sources, obs], 1)
+
+        # save the decoder jacobian
+        self.mixing_jacobian = (
+            calc_jacobian(self.mixing, mixing_input, normalize=False)
+            .abs()
+            .mean(0)
+            .detach()
+        )
+
+        self.unmixing_jacobian = torch.tril(self.mixing_jacobian.inverse())
+
+        self.mixing_cond = torch.linalg.cond(self.mixing_jacobian)
+        self.unmixing_cond = torch.linalg.cond(self.unmixing_jacobian)
+
+        self.indirect_causes, self.paths = indirect_causes(self.unmixing_jacobian)
+
+        torch.cuda.empty_cache()
+
+    def train_dataloader(self):
+        return self.dl_train
+
+    def val_dataloader(self):
+        return self.dl_val
+
+    def test_dataloader(self):
+        return self.dl_test_pred
+
+    def predict_dataloader(self):
+        return self.dl_test_pred
+
+    @property
+    def data_to_log(self):
+        return {
+            f"Mixing/mixing_jacobian": self.mixing_jacobian,
+            f"Mixing/unmixing_jacobian": self.unmixing_jacobian,
+            f"Mixing/mixing_cond": self.mixing_cond,
+            f"Mixing/unmixing_cond": self.unmixing_cond,
+            f"Mixing/indirect_causes": self.indirect_causes,
+            f"Mixing/paths": self.paths,
+        }
 
 
 class ContrastiveDataModule(pl.LightningDataModule):

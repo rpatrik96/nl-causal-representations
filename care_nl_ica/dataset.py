@@ -9,6 +9,51 @@ from care_nl_ica.prob_utils import (
 )
 
 
+import torch
+from torch.utils.data import Dataset
+
+import numpy as np
+
+
+class ConditionalDataset(Dataset):
+    """
+    a Dataset object holding a tuple (x,y): observed and auxiliary variable
+    """
+
+    def __init__(
+        self, obs, labels, sources, batch_size=512, transform=None, ar_order=1
+    ):
+        self.transform = transform
+        self.batch_size = batch_size
+        self.ar_order = ar_order
+
+        self.sources = torch.from_numpy(sources.T.astype(np.float32))
+        self.obs = torch.from_numpy(obs.T.astype(np.float32))
+        self.labels = torch.from_numpy(labels).type(torch.LongTensor)
+
+    def __len__(self):
+        return self.obs.shape[0]
+
+    def __getitem__(self, index):
+        # make shuffled batch
+        t_idx = (
+            np.random.permutation(self.obs.shape[0] - self.ar_order)[: self.batch_size]
+            + self.ar_order
+        )
+        t_idx_ar = t_idx.reshape([-1, 1]) + np.arange(
+            0, -self.ar_order - 1, -1
+        ).reshape([1, -1])
+        obs = self.obs[t_idx_ar.reshape(-1), :].reshape(
+            [self.batch_size, self.ar_order + 1, -1]
+        )
+        labels = self.labels[t_idx]
+        sources = self.sources[t_idx]
+
+        if self.transform is not None:
+            obs = self.transform(obs)
+        return obs, labels, sources
+
+
 class ContrastiveDataset(torch.utils.data.IterableDataset):
     def __init__(self, hparams, transform=None):
         super().__init__()
@@ -46,7 +91,6 @@ class ContrastiveDataset(torch.utils.data.IterableDataset):
         )
 
         mixtures = torch.stack(tuple(map(self.transform, sources)))
-
         return iter((sources, mixtures))
 
 
