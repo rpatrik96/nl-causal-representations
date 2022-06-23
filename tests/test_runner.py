@@ -4,21 +4,14 @@ from care_nl_ica.data.datamodules import IIADataModule
 from care_nl_ica.runner import IIAModule
 
 
-def test_iia_itcl_module():
+def test_iia_itcl_module(itcl_datamodule):
     NUM_DATA = 2**10
     BATCH_SIZE = 64
     NET_MODEL = "itcl"
     itcl = IIAModule(net_model=NET_MODEL, num_data=NUM_DATA, batch_size=BATCH_SIZE)
 
-    dm = IIADataModule(
-        num_data=NUM_DATA,
-        num_data_test=NUM_DATA,
-        net_model=NET_MODEL,
-        batch_size=BATCH_SIZE,
-    )
-
     trainer = Trainer(fast_dev_run=True)
-    trainer.fit(model=itcl, datamodule=dm)
+    trainer.fit(model=itcl, datamodule=itcl_datamodule)
 
 
 def test_iia_igcl_module():

@@ -13,6 +13,8 @@ arg_matrix = namedtuple("arg_matrix", ["latent_dim", "use_ar_mlp"])
 from hydra import compose, initialize
 from pytorch_lightning import seed_everything
 from argparse import Namespace
+from care_nl_ica.data.datamodules import ContrastiveDataModule, IIADataModule
+import torch
 
 
 @pytest.fixture(
@@ -56,4 +58,17 @@ def dataloader(args):
 def datamodule(args):
     dm = ContrastiveDataModule.from_argparse_args(Namespace(**args.data))
     dm.setup()
+    return dm
+
+
+@pytest.fixture()
+def itcl_datamodule(num_data=2**10, batch_size=64):
+
+    dm = IIADataModule(
+        num_data=num_data,
+        num_data_test=num_data,
+        net_model="itcl",
+        batch_size=batch_size,
+    )
+
     return dm
