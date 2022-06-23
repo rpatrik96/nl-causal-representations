@@ -16,6 +16,8 @@ from argparse import Namespace
 from care_nl_ica.data.datamodules import ContrastiveDataModule, IIADataModule
 import torch
 
+from care_nl_ica.runner import IIAModule
+
 
 @pytest.fixture(
     params=[
@@ -85,3 +87,8 @@ def igcl_datamodule(num_data=2**10, batch_size=64):
     )
 
     return dm
+
+
+@pytest.fixture()
+def itcl_module(num_data=2**10, batch_size=64):
+    return IIAModule(net_model="itcl", num_data=num_data, batch_size=batch_size)
