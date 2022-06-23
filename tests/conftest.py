@@ -92,3 +92,8 @@ def igcl_datamodule(num_data=2**10, batch_size=64):
 @pytest.fixture()
 def itcl_module(num_data=2**10, batch_size=64):
     return IIAModule(net_model="itcl", num_data=num_data, batch_size=batch_size)
+
+
+@pytest.fixture()
+def igcl_module(num_data=2**10, batch_size=64):
+    return IIAModule(net_model="igcl", num_data=num_data, batch_size=batch_size)
