@@ -3,17 +3,135 @@ from os.path import dirname
 
 import pytorch_lightning as pl
 import torch
+import torch.nn as nn
+import torch.optim as optim
 import wandb
+from torchmetrics import Accuracy
 
+from IIA.igcl import igcl
+from IIA.itcl import itcl
 from care_nl_ica.dep_mat import jacobians
 from care_nl_ica.losses.utils import ContrastiveLosses
 from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
-
 from care_nl_ica.metrics.ica_dis import (
     calc_disent_metrics,
     DisentanglementMetrics,
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
+
+
+class IIAModule(pl.LightningModule):
+    def __init__(
+        self,
+        num_data=2**18,  # number of data points
+        num_layer=3,  # number of layers of mixing-MLP
+        num_comp=20,  # number of components (dimension)
+        num_basis=64,  # number of frequencies of fourier bases
+        ar_order=1,
+        initial_learning_rate=0.1,  # initial learning rate (default:0.1)
+        momentum=0.9,  # momentum parameter of SGD
+        max_steps=int(3e6),  # number of iterations (mini-batches)
+        decay_steps=int(1e6),  # decay steps (tf.train.exponential_decay)
+        decay_factor=0.1,  # decay factor (tf.train.exponential_decay)
+        batch_size=512,  # mini-batch size
+        moving_average_decay=0.999,  # moving average decay of variables to be saved
+        checkpoint_steps=int(1e7),  # interval to save checkpoint
+        summary_steps=int(1e4),  # interval to save summary
+        apply_pca=True,  # apply PCA for preprocessing or not
+        weight_decay=1e-5,  # weight decay
+        net_model="itcl",
+        num_segment=256,  # learn by IIA-TCL should be None for IGCL
+    ):
+        super().__init__()
+        self.save_hyperparameters()
+
+        # MLP ---------------------------------------------------------
+        list_hidden_nodes = [4 * self.hparams.num_comp] * (
+            self.hparams.num_layer - 1
+        ) + [self.hparams.num_comp]
+        list_hidden_nodes_z = None
+        # list of the number of nodes of each hidden layer of feature-MLP
+        # [layer1, layer2, ..., layer(num_layer)]
+
+        # define network
+        if self.hparams.net_model == "itcl":
+            self.model = itcl.Net(
+                h_sizes=list_hidden_nodes,
+                h_sizes_z=list_hidden_nodes_z,
+                ar_order=self.hparams.ar_order,
+                num_dim=self.hparams.num_comp,
+                num_class=self.hparams.num_segment,
+            )
+            self.loss = nn.CrossEntropyLoss()
+
+        elif self.hparams.net_model == "igcl":
+            self.model = igcl.NetGaussScaleMean(
+                h_sizes=list_hidden_nodes,
+                h_sizes_z=list_hidden_nodes_z,
+                ar_order=self.hparams.ar_order,
+                num_dim=self.hparams.num_comp,
+                num_data=self.hparams.num_data,
+                num_basis=self.hparams.num_basis,
+            )
+            self.loss = nn.BCEWithLogitsLoss()
+        else:
+            raise ValueError
+
+        self.configure_metrics()
+
+    def configure_metrics(self):
+        self.accuracy = Accuracy()
+
+    def configure_optimizers(self):
+        optimizer = optim.SGD(
+            self.model.parameters(),
+            lr=self.hparams.initial_learning_rate,
+            momentum=self.hparams.momentum,
+            weight_decay=self.hparams.weight_decay,
+        )
+        scheduler = optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=self.hparams.decay_steps,
+            gamma=self.hparams.decay_factor,
+        )
+        return [optimizer], [scheduler]
+
+    def training_step(self, batch):
+        obs, labels, sources, true_logits = batch
+        if self.hparams.net_model == "itcl":
+            self._itcl_training_step(obs, labels)
+        elif self.hparams.net_model == "igcl":
+            # need to overwrite as different datasets have different lengths
+            self.model.num_data = len(
+                self.trainer.datamodule.train_dataloader().dataset
+            )
+            self._igcl_training_step(obs, labels, true_logits)
+
+    def training_epoch_end(self, outputs) -> None:
+        self.log("train_acc_epoch", self.accuracy)
+
+    def _itcl_training_step(self, obs, labels):
+        logits, h, hz = self.model(obs.squeeze())
+
+        self.accuracy(logits, labels.squeeze())
+
+        return self.loss(logits, labels.squeeze())
+
+    def _igcl_training_step(self, obs, time_indices, true_logits):
+
+        logits, h, hz, _, _ = self.model(obs.squeeze(), time_indices.squeeze())
+        self.accuracy(logits, true_logits.squeeze().long())
+
+        # constraint
+        self.model.a.weight.data = self.model.a.weight.data.clamp(min=0)
+        self.model.b.weight.data = self.model.b.weight.data.clamp(min=0)
+        self.model.c.weight.data = self.model.c.weight.data.clamp(min=0)
+        self.model.d.weight.data = self.model.d.weight.data.clamp(min=0)
+        self.model.e.weight.data = self.model.e.weight.data.clamp(min=0)
+        self.model.f.weight.data = self.model.f.weight.data.clamp(min=0)
+        self.model.g.weight.data = self.model.g.weight.data.clamp(min=0)
+
+        return self.loss(logits, true_logits.squeeze())
 
 
 class ContrastiveICAModule(pl.LightningModule):
