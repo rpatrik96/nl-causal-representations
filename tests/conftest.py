@@ -2,10 +2,8 @@ from collections import namedtuple
 
 import hydra.core.global_hydra
 import pytest
-import torch
 from torch.utils.data import DataLoader
 
-from care_nl_ica.data.datamodules import ContrastiveDataModule
 from care_nl_ica.dataset import ContrastiveDataset
 
 arg_matrix = namedtuple("arg_matrix", ["latent_dim", "use_ar_mlp"])
@@ -65,7 +63,6 @@ def datamodule(args):
 
 @pytest.fixture()
 def itcl_datamodule(num_data=2**10, batch_size=64):
-
     dm = IIADataModule(
         num_data=num_data,
         num_data_test=num_data,
@@ -78,7 +75,6 @@ def itcl_datamodule(num_data=2**10, batch_size=64):
 
 @pytest.fixture()
 def igcl_datamodule(num_data=2**10, batch_size=64):
-
     dm = IIADataModule(
         num_data=num_data,
         num_data_test=num_data,
