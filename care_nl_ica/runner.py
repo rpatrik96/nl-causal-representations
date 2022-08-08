@@ -10,6 +10,7 @@ from torchmetrics import Accuracy
 
 from IIA.igcl import igcl
 from IIA.itcl import itcl
+from care_nl_ica.dep_mat import calc_jacobian
 from care_nl_ica.dep_mat import jacobians
 from care_nl_ica.losses.utils import ContrastiveLosses
 from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
@@ -18,8 +19,6 @@ from care_nl_ica.metrics.ica_dis import (
     DisentanglementMetrics,
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
-
-from care_nl_ica.dep_mat import calc_jacobian
 
 
 class ModuleBase(pl.LightningModule):
@@ -138,18 +137,30 @@ class IIAModule(ModuleBase):
         self._forward(labels, obs, true_logits)
 
     def _forward(self, labels, obs, true_logits):
+        """
+
+        :param labels:
+        :param obs:
+        :param true_logits:
+        :return: (loss, reconstructions)
+        """
         if self.hparams.net_model == "itcl":
-            self._itcl_training_step(obs, labels)
+            loss, reconstructions = self._itcl_training_step(obs, labels)
         elif self.hparams.net_model == "igcl":
             # need to overwrite as different datasets have different lengths
             self.model.num_data = len(
                 self.trainer.datamodule.train_dataloader().dataset
             )
-            self._igcl_training_step(obs, labels, true_logits)
+            loss, reconstructions = self._igcl_training_step(obs, labels, true_logits)
+
+            # this stacks `h` 2x, we only need it once
+            reconstructions = reconstructions[: reconstructions.shape[0] // 2, :]
+
+        return loss, reconstructions
 
     def validation_step(self, batch, batch_idx):
         obs, labels, sources, true_logits = batch
-        self._forward(labels, obs, true_logits)
+        loss, reconstructions = self._forward(labels, obs, true_logits)
 
         if self.hparams.net_model == "itcl":
             self.dep_mat = self._calc_and_log_matrices(obs.squeeze()).detach()
@@ -157,6 +168,31 @@ class IIAModule(ModuleBase):
             self.dep_mat = self._calc_and_log_matrices(
                 inputs=obs.squeeze(), aux_inputs=labels.float().squeeze()
             ).detach()
+
+        panel_name = "Val"
+        self.log(f"{panel_name}/loss", loss, on_epoch=True, on_step=False)
+
+        """Disentanglement"""
+        disent_metrics: DisentanglementMetrics = calc_disent_metrics(
+            sources.squeeze(), reconstructions
+        )
+
+        self.log(
+            f"{panel_name}/disent",
+            disent_metrics.log_dict(),
+            on_epoch=True,
+            on_step=False,
+        )
+
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log(
+                {
+                    f"{panel_name}/disent/non_perm_corr_mat": disent_metrics.non_perm_corr_mat
+                }
+            )
+            self.logger.experiment.log(
+                {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
+            )
 
     def _calc_and_log_matrices(self, inputs, aux_inputs=None):
 
@@ -176,7 +212,7 @@ class IIAModule(ModuleBase):
         [dim, 1, dim] contains the Jacobian of s_t w.r.t of x_{t-1}
         """
 
-        return (
+        dep_mat = (
             calc_jacobian(
                 self.model, inputs, normalize=False, output_idx=1, aux_inputs=aux_inputs
             )
@@ -185,30 +221,37 @@ class IIAModule(ModuleBase):
             .detach()
         )
 
-        # if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-        #     self.logger.experiment.summary[
-        #         "Unmixing/unmixing_jacobian"
-        #     ] = dep_mat.detach()
-        #
-        #     if self.hparams.verbose is True:
-        #         self.logger.experiment.log({"enc_dec_jacobian": enc_dec_jac.detach()})
-        #         self.logger.experiment.log(
-        #             {"numerical_jacobian": numerical_jacobian.detach()}
-        #         )
-        #
-        # return dep_mat
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.summary[
+                "Unmixing/unmixing_jacobian"
+            ] = dep_mat.detach()
+
+        return dep_mat
 
     def training_epoch_end(self, outputs) -> None:
         self.log("train_acc_epoch", self.accuracy)
 
     def _itcl_training_step(self, obs, labels):
+        """
+
+        :param obs:
+        :param labels:
+        :return: (loss, reconstructions)
+        """
         logits, h, hz = self.model(obs.squeeze())
 
         self.accuracy(logits, labels.squeeze())
 
-        return self.loss(logits, labels.squeeze())
+        return self.loss(logits, labels.squeeze()), h
 
     def _igcl_training_step(self, obs, time_indices, true_logits):
+        """
+
+        :param obs:
+        :param time_indices:
+        :param true_logits:
+        :return: (loss, reconstructions)
+        """
 
         logits, h, hz, _, _ = self.model(obs.squeeze(), time_indices.squeeze())
         self.accuracy(logits, true_logits.squeeze().long())
@@ -222,7 +265,7 @@ class IIAModule(ModuleBase):
         self.model.f.weight.data = self.model.f.weight.data.clamp(min=0)
         self.model.g.weight.data = self.model.g.weight.data.clamp(min=0)
 
-        return self.loss(logits, true_logits.squeeze())
+        return self.loss(logits, true_logits.squeeze()), h
 
 
 class ContrastiveICAModule(ModuleBase):
