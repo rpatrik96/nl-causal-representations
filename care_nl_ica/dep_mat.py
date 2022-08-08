@@ -13,9 +13,11 @@ def calc_jacobian(
     reverse_ad=True,
     norm_range=True,
     norm_diagonal=False,
+    output_idx=None,
 ) -> torch.Tensor:
     """
     Calculate the Jacobian more efficiently than ` torch.autograd.functional.jacobian`
+    :param output_idx: if model output is a tuple, choose this idx
     :param norm_range:
     :param norm_diagonal:
     :param reverse_ad: use reverse mode auto-differentiation (e.g., PReLU only supports this)
@@ -34,6 +36,10 @@ def calc_jacobian(
         input_vars = latents.clone().requires_grad_(True)
 
         output_vars = model(input_vars)
+
+        if output_idx is not None:
+            output_vars = output_vars[output_idx]
+
         if not vectorize:
 
             for i in range(output_vars.shape[1]):

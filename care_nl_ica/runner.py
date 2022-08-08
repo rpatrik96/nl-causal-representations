@@ -19,8 +19,41 @@ from care_nl_ica.metrics.ica_dis import (
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
 
+from care_nl_ica.dep_mat import calc_jacobian
 
-class IIAModule(pl.LightningModule):
+
+class ModuleBase(pl.LightningModule):
+    def _calc_and_log_matrices(self, sources, inputs):
+
+        raise NotImplementedError
+
+    def on_fit_end(self) -> None:
+
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            table = wandb.Table(
+                data=[self.dep_mat.reshape(1, -1).tolist()], columns=["dep_mat"]
+            )
+            self.logger.experiment.log({f"dep_mat_table": table})
+
+            table = wandb.Table(
+                data=[
+                    self.trainer.datamodule.unmixing_jacobian.reshape(1, -1).tolist()
+                ],
+                columns=["gt_unmixing_jacobian"],
+            )
+            self.logger.experiment.log({f"gt_unmixing_jacobian_table": table})
+
+        if self.hparams.offline is True:
+            # Syncing W&B at the end
+            # 1. save sync dir (after marking a run finished, the W&B object changes (is teared down?)
+            sync_dir = dirname(self.logger.experiment.dir)
+            # 2. mark run complete
+            wandb.finish()
+            # 3. call the sync command for the run directory
+            subprocess.check_call(["wandb", "sync", sync_dir])
+
+
+class IIAModule(ModuleBase):
     def __init__(
         self,
         num_data=2**18,  # number of data points
@@ -41,6 +74,8 @@ class IIAModule(pl.LightningModule):
         weight_decay=1e-5,  # weight decay
         net_model="itcl",
         num_segment=256,  # learn by IIA-TCL should be None for IGCL
+        normalize_latents=True,
+        offline: bool = False,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -79,6 +114,8 @@ class IIAModule(pl.LightningModule):
 
         self.configure_metrics()
 
+        self.model.hparams = self.hparams
+
     def configure_metrics(self):
         self.accuracy = Accuracy()
 
@@ -98,6 +135,9 @@ class IIAModule(pl.LightningModule):
 
     def training_step(self, batch):
         obs, labels, sources, true_logits = batch
+        self._forward(labels, obs, true_logits)
+
+    def _forward(self, labels, obs, true_logits):
         if self.hparams.net_model == "itcl":
             self._itcl_training_step(obs, labels)
         elif self.hparams.net_model == "igcl":
@@ -106,6 +146,51 @@ class IIAModule(pl.LightningModule):
                 self.trainer.datamodule.train_dataloader().dataset
             )
             self._igcl_training_step(obs, labels, true_logits)
+
+    def validation_step(self, batch, batch_idx):
+        obs, labels, sources, true_logits = batch
+        self._forward(labels, obs, true_logits)
+
+        if self.hparams.net_model == "itcl":
+
+            self.dep_mat = self._calc_and_log_matrices([obs.squeeze()]).detach()
+        elif self.hparams.net_model == "igcl":
+            self.dep_mat = self._calc_and_log_matrices((obs, labels.float())).detach()
+
+    def _calc_and_log_matrices(self, inputs):
+
+        """
+        For ITCL and IGCL, the model returns a tuple, where index=1 equals the inverse model
+        However, this inverse model ONLY includes the estimate of s_t (cf Eq 3 of the original paper), since
+        x_{t-1} does not need to be estimated.
+
+        Passing the inverse model to `calc_jacobian` will yield a matrix of [batch, dim, ts, dim], where ts equals
+        the order of the NVAR model +1 (i.e., for the standard NVAR(1) model in the paper, ts=2 = p+1,
+        where p is the order of the process)
+
+        :param inputs:
+        :return:
+        """
+
+        return (
+            calc_jacobian(self.model, *inputs, normalize=False, output_idx=1)
+            .abs()
+            .mean(0)
+            .detach()
+        )
+
+        # if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+        #     self.logger.experiment.summary[
+        #         "Unmixing/unmixing_jacobian"
+        #     ] = dep_mat.detach()
+        #
+        #     if self.hparams.verbose is True:
+        #         self.logger.experiment.log({"enc_dec_jacobian": enc_dec_jac.detach()})
+        #         self.logger.experiment.log(
+        #             {"numerical_jacobian": numerical_jacobian.detach()}
+        #         )
+        #
+        # return dep_mat
 
     def training_epoch_end(self, outputs) -> None:
         self.log("train_acc_epoch", self.accuracy)
@@ -134,7 +219,7 @@ class IIAModule(pl.LightningModule):
         return self.loss(logits, true_logits.squeeze())
 
 
-class ContrastiveICAModule(pl.LightningModule):
+class ContrastiveICAModule(ModuleBase):
     def __init__(
         self,
         lr: float = 1e-4,
@@ -220,7 +305,7 @@ class ContrastiveICAModule(pl.LightningModule):
             f"{panel_name}/losses", losses.log_dict(), on_epoch=True, on_step=False
         )
 
-        self.dep_mat = self._calc_and_log_matrices(mixtures, sources).detach()
+        self.dep_mat = self._calc_and_log_matrices((mixtures[0], sources[0])).detach()
 
         """Precision-Recall"""
         self.jac_prec_recall.update(
@@ -342,28 +427,3 @@ class ContrastiveICAModule(pl.LightningModule):
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             for key, val in self.trainer.datamodule.data_to_log.items():
                 self.logger.experiment.summary[key] = val
-
-    def on_fit_end(self) -> None:
-
-        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            table = wandb.Table(
-                data=[self.dep_mat.reshape(1, -1).tolist()], columns=["dep_mat"]
-            )
-            self.logger.experiment.log({f"dep_mat_table": table})
-
-            table = wandb.Table(
-                data=[
-                    self.trainer.datamodule.unmixing_jacobian.reshape(1, -1).tolist()
-                ],
-                columns=["gt_unmixing_jacobian"],
-            )
-            self.logger.experiment.log({f"gt_unmixing_jacobian_table": table})
-
-        if self.hparams.offline is True:
-            # Syncing W&B at the end
-            # 1. save sync dir (after marking a run finished, the W&B object changes (is teared down?)
-            sync_dir = dirname(self.logger.experiment.dir)
-            # 2. mark run complete
-            wandb.finish()
-            # 3. call the sync command for the run directory
-            subprocess.check_call(["wandb", "sync", sync_dir])
