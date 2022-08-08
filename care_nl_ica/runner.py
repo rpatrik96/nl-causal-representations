@@ -152,12 +152,13 @@ class IIAModule(ModuleBase):
         self._forward(labels, obs, true_logits)
 
         if self.hparams.net_model == "itcl":
-
-            self.dep_mat = self._calc_and_log_matrices([obs.squeeze()]).detach()
+            self.dep_mat = self._calc_and_log_matrices(obs.squeeze()).detach()
         elif self.hparams.net_model == "igcl":
-            self.dep_mat = self._calc_and_log_matrices((obs, labels.float())).detach()
+            self.dep_mat = self._calc_and_log_matrices(
+                inputs=obs.squeeze(), aux_inputs=labels.float().squeeze()
+            ).detach()
 
-    def _calc_and_log_matrices(self, inputs):
+    def _calc_and_log_matrices(self, inputs, aux_inputs=None):
 
         """
         For ITCL and IGCL, the model returns a tuple, where index=1 equals the inverse model
@@ -168,12 +169,17 @@ class IIAModule(ModuleBase):
         the order of the NVAR model +1 (i.e., for the standard NVAR(1) model in the paper, ts=2 = p+1,
         where p is the order of the process)
 
+        :param aux_inputs: the vector u (time) for IGCL
         :param inputs:
-        :return:
+        :return: mean jacobian (calculated across the batch) with dimensions [dim, ts, dim], where
+        [dim, 0, dim] contains the Jacobian of s_t w.r.t of x_t
+        [dim, 1, dim] contains the Jacobian of s_t w.r.t of x_{t-1}
         """
 
         return (
-            calc_jacobian(self.model, *inputs, normalize=False, output_idx=1)
+            calc_jacobian(
+                self.model, inputs, normalize=False, output_idx=1, aux_inputs=aux_inputs
+            )
             .abs()
             .mean(0)
             .detach()
