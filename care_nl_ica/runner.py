@@ -134,7 +134,10 @@ class IIAModule(ModuleBase):
 
     def training_step(self, batch):
         obs, labels, sources, true_logits = batch
-        self._forward(labels, obs, true_logits)
+        loss, _ = self._forward(labels, obs, true_logits)
+
+        panel_name = "Train"
+        self.log(f"{panel_name}/loss", loss, on_epoch=True, on_step=False)
 
     def _forward(self, labels, obs, true_logits):
         """
