@@ -1,7 +1,7 @@
 from pytorch_lightning.cli import LightningCLI
 from pytorch_lightning.loggers.wandb import WandbLogger
 
-from care_nl_ica.utils import install_package
+from care_nl_ica.utils import install_package, add_tags
 
 
 class MyLightningCLI(LightningCLI):
@@ -59,6 +59,7 @@ class MyLightningCLI(LightningCLI):
 
 if __name__ == "__main__":
     install_package()
+
     cli = MyLightningCLI(
         save_config_callback=None,
         run=True,
