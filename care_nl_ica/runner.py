@@ -139,6 +139,8 @@ class IIAModule(ModuleBase):
         panel_name = "Train"
         self.log(f"{panel_name}/loss", loss, on_epoch=True, on_step=False)
 
+        return loss
+
     def _forward(self, labels, obs, true_logits):
         """
 
@@ -196,6 +198,8 @@ class IIAModule(ModuleBase):
             self.logger.experiment.log(
                 {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
             )
+
+        return loss
 
     def _calc_and_log_matrices(self, inputs, aux_inputs=None):
 
