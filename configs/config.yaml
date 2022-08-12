@@ -17,14 +17,10 @@ trainer:
         mode: min
         patience: 40
   auto_select_gpus: true
-  checkpoint_callback: null
   enable_checkpointing: false
   default_root_dir: null
   gradient_clip_val: null
   gradient_clip_algorithm: null
-  process_position: 0
-  log_gpu_memory: null
-  progress_bar_refresh_rate: null
   enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
@@ -36,20 +32,18 @@ trainer:
   max_steps: -1
   min_steps: null
   max_time: null
+  accelerator: gpu
   gpus: 1
   limit_train_batches: 400.0
   limit_val_batches: 5.0
   limit_test_batches: 1.0
   limit_predict_batches: 1.0
   val_check_interval: 1.0
-  flush_logs_every_n_steps: null
   log_every_n_steps: 250
-  accelerator: null
   strategy: null
   sync_batchnorm: false
   precision: 32
   enable_model_summary: true
-  weights_summary: top
   weights_save_path: null
   num_sanity_val_steps: 2
   resume_from_checkpoint: null
@@ -57,16 +51,13 @@ trainer:
   benchmark: false
   deterministic: true
   reload_dataloaders_every_n_epochs: 0
-  reload_dataloaders_every_epoch: false
   auto_lr_find: false
   replace_sampler_ddp: true
   auto_scale_batch_size: false
-  prepare_data_per_node: null
   amp_backend: native
   amp_level: null
   move_metrics_to_cpu: false
   multiple_trainloader_mode: max_size_cycle
-  stochastic_weight_avg: false
   detect_anomaly: true
 model:
   offline: true
