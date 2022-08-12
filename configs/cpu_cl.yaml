@@ -1,0 +1,11 @@
+data:
+  batch_size: 512
+  latent_dim: 3
+  diag_weight: 0.4
+  permute: true
+  variant: 5
+  force_uniform: false
+  force_chain: true
+model:
+  start_step: 4500
+  lr: 1e-3
