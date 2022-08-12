@@ -24,7 +24,7 @@ class AugmentedNVARModel(nn.Module):
         self.seq = self._setup(mlplayers)
 
     def _setup(self, mlplayers):
-        """Convert MLP paramneters into a torch model to calculate the Jacobian"""
+        """Convert MLP parameters into a torch model to calculate the Jacobian"""
         mixing_layers = []
         for mlplayer in mlplayers:
             _, A, b = mlplayer.values()
