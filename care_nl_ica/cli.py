@@ -21,11 +21,20 @@ class MyLightningCLI(LightningCLI):
             help="Tags for the run on Weights and Biases",
         )
 
-        parser.link_arguments("data.latent_dim", "model.latent_dim")
-        parser.link_arguments("data.box_min", "model.box_min")
-        parser.link_arguments("data.box_max", "model.box_max")
-        parser.link_arguments("data.sphere_r", "model.sphere_r")
-        parser.link_arguments("data.normalize_latents", "model.normalize_latents")
+        # parser.link_arguments("data.latent_dim", "model.latent_dim")
+        # parser.link_arguments("data.box_min", "model.box_min")
+        # parser.link_arguments("data.box_max", "model.box_max")
+        # parser.link_arguments("data.sphere_r", "model.sphere_r")
+        # parser.link_arguments("data.normalize_latents", "model.normalize_latents")
+        #
+        # parser.link_arguments("data.num_data", "model.num_data")
+        # parser.link_arguments("data.num_layer", "model.num_layer")
+        # parser.link_arguments("data.num_comp", "model.num_comp")
+        # parser.link_arguments("data.num_basis", "model.num_basis")
+        # parser.link_arguments("data.ar_order", "model.ar_order")
+        # parser.link_arguments("data.batch_size", "model.batch_size")
+        # parser.link_arguments("data.net_model", "model.net_model")
+        # parser.link_arguments("data.num_segment", "model.num_segment")
 
     def before_instantiate_classes(self) -> None:
         self.config[self.subcommand].trainer.logger.init_args.tags = add_tags(
