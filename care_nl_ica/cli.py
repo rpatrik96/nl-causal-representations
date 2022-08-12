@@ -39,7 +39,7 @@ class MyLightningCLI(LightningCLI):
                 "entity"
             ] = "causal-representation-learning"
 
-            if self.config[self.subcommand].model.offline is True:
+            if self.config[self.subcommand].model.init_args.offline is True:
                 self.trainer.logger.__dict__["_wandb_init"]["mode"] = "offline"
             else:
                 self.trainer.logger.__dict__["_wandb_init"]["mode"] = "online"
