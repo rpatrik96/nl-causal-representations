@@ -74,7 +74,7 @@ class IIADataModule(pl.LightningDataModule):
         num_layer=3,  # number of layers of mixing-MLP
         num_comp=20,  # number of components (dimension)
         num_data=2**18,  # number of data points
-        num_data_test=2**15,  # number of data points
+        num_data_test=2**18,  # number of data points
         num_basis=64,  # number of frequencies of fourier bases
         modulate_range=[-2, 2],
         modulate_range2=[-2, 2],
