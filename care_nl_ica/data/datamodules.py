@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 
-from IIA.subfunc.generate_artificial_data import generate_artificial_data, apply_mlp
+from IIA.subfunc.generate_artificial_data import generate_artificial_data
 from IIA.subfunc.preprocessing import pca
 from care_nl_ica.cl_ica import invertible_network_utils
 from care_nl_ica.data.sem import LinearSEM, NonLinearSEM
@@ -56,7 +56,6 @@ class AugmentedNVARModel(nn.Module):
 
 class BiasNet(nn.Module):
     def __init__(self, dim):
-
         super().__init__()
         self.dim = dim
 
