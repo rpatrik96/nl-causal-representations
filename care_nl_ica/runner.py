@@ -177,6 +177,9 @@ class IIAModule(ModuleBase):
         panel_name = "Val"
         self.log(f"{panel_name}/loss", loss, on_epoch=True, on_step=False)
 
+        # for sweeps
+        self.log("val_loss", loss, on_epoch=True, on_step=False)
+
         """Disentanglement"""
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources.squeeze(), reconstructions
