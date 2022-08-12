@@ -101,22 +101,27 @@ def add_tags(args):
     if args.tags is None:
         args.tags = []
 
-    if args.data.use_sem is True:
-        args.tags.append("sem")
-
-    if args.data.nonlin_sem is True:
-        args.tags.append("nonlinear")
+    if "IIA" in args.data.class_path:
+        args.tags.append("iia")
     else:
-        args.tags.append("linear")
+        args.tags.append("cl")
 
-    if args.data.permute is True:
-        args.tags.append("permute")
+        if args.data.use_sem is True:
+            args.tags.append("sem")
 
-    if args.model.use_ar_mlp is False:
-        args.tags.append("mlp")
+            if args.data.nonlin_sem is True:
+                args.tags.append("nonlinear")
+            else:
+                args.tags.append("linear")
 
-    if args.model.normalize_latents is True:
-        args.tags.append("normalization")
+        if args.data.permute is True:
+            args.tags.append("permute")
+
+        if args.model.use_ar_mlp is False:
+            args.tags.append("mlp")
+
+        if args.model.normalize_latents is True:
+            args.tags.append("normalization")
 
     return list(set(args.tags))
 
