@@ -7,8 +7,11 @@ import wandb
 
 from care_nl_ica.dep_mat import jacobians
 from care_nl_ica.losses.utils import ContrastiveLosses
-from care_nl_ica.metrics.dep_mat import JacobianBinnedPrecisionRecall
-
+from care_nl_ica.metrics.dep_mat import (
+    JacobianBinnedPrecisionRecall,
+    correct_ica_scale_permutation,
+    jacobian_edge_accuracy,
+)
 from care_nl_ica.metrics.ica_dis import (
     calc_disent_metrics,
     DisentanglementMetrics,
@@ -143,17 +146,31 @@ class ContrastiveICAModule(pl.LightningModule):
                 {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
             )
 
-        # jacobian_metrics: JacobianMetrics = calc_jacobian_metrics(
-        #     dep_mat,
-        #     self.gt_jacobian_encoder,
-        #     self.indirect_causes,
-        #     self.gt_jacobian_decoder_permuted,
-        #     threshold=3e-5,
-        # )
-        # self.log(jacobian_metrics.log_dict(panel_name))
-
         self.log_scatter_latent_rec(sources[0], reconstructions[0], "n1")
         self.log_scatter_latent_rec(mixtures[0], reconstructions[0], "z1_n1_rec")
+
+        if self.hparams.permute is True and self.hparams.use_sem is True:
+            dep_mat = self.dep_mat[
+                torch.argsort(self.trainer.datamodule.mixing.permute_indices), :
+            ]
+        else:
+            dep_mat = self.dep_mat
+
+        dep_mat = correct_ica_scale_permutation(
+            dep_mat, self.trainer.datamodule.mixing_jacobian
+        )
+
+        if (
+            disent_metrics.perm_score > 0.6
+            or self.trainer.current_epoch == self.trainer.max_epochs - 1
+        ):
+            self.logger.experiment.log(
+                {
+                    f"{panel_name}/jacobian_edge_accuracy": jacobian_edge_accuracy(
+                        dep_mat, self.trainer.datamodule.unmixing_jacobian
+                    )
+                }
+            )
 
         return losses.total_loss
 
@@ -182,12 +199,18 @@ class ContrastiveICAModule(pl.LightningModule):
 
         # forward
         reconstructions = self.model(mixtures)
+        # create random "negative" pairs
+        # this is faster than sampling z3 again from the marginal distribution
+        # and should also yield samples as if they were sampled from the marginal
+        z3 = torch.roll(sources[0], 1, 0)
+        z3_rec = torch.roll(reconstructions[0], 1, 0)
+
         _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(
-            *sources, *reconstructions
+            *sources, z3, *reconstructions, z3_rec
         )
 
         # estimate entropy (i.e., the baseline of the loss)
-        entropy_estimate, _, _ = self.model.loss(*sources, *sources)
+        entropy_estimate, _, _ = self.model.loss(*sources, z3, *sources, z3)
 
         losses = ContrastiveLosses(
             cl_pos=loss_pos_mean,

@@ -1,9 +1,5 @@
 seed_everything: 42
 trainer:
-  plugins:
-    class_path: pytorch_lightning.plugins.environments.SLURMEnvironment
-    init_args:
-      auto_requeue: true
   logger:
     class_path: pytorch_lightning.loggers.WandbLogger
     init_args:
