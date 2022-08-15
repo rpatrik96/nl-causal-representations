@@ -79,6 +79,50 @@ from torchmetrics.utilities.data import METRIC_EPS
 from warnings import warn
 
 
+def correct_ica_scale_permutation(
+    dep_mat: torch.Tensor, gt_jacobian_mixing: torch.Tensor
+) -> torch.Tensor:
+    """
+
+    :param dep_mat: estimated unmixing Jacobian (including ICA permutation indeterminacy, i.e., P@J_GT)
+    :param gt_jacobian_mixing:
+    :return:
+    """
+
+    scale_permutation_est: torch.Tensor = dep_mat @ gt_jacobian_mixing
+
+    return scale_permutation_est.inverse() @ dep_mat
+
+
+def jacobian_edge_accuracy(
+    dep_mat: torch.Tensor, gt_jacobian_unmixing: torch.Tensor
+) -> torch.Tensor:
+    """
+    Calculates the accuracy of detecting edges based on the GT Jacobian and the estimated one such that the smallest N
+    absolute elements of the estimated `dep_mat` are set to 0, where N is the number of zeros in `gt_jacobian_unmixing`
+    :param dep_mat:
+    :param gt_jacobian_unmixing:
+    :return:
+    """
+    num_zeros = (gt_jacobian_unmixing == 0.0).sum()
+
+    # query indices of smallest absolute values
+    zero_idx = (
+        dep_mat.abs()
+        .view(
+            -1,
+        )
+        .sort()[1][:num_zeros]
+    )
+
+    # zero them out
+    dep_mat.view(
+        -1,
+    )[zero_idx] = 0
+
+    return (dep_mat.bool() == gt_jacobian_unmixing.bool()).float().mean()
+
+
 class JacobianBinnedPrecisionRecall(Metric):
     """
     Based on https://github.com/PyTorchLightning/metrics/blob/master/torchmetrics/classification/binned_precision_recall.py#L45-L184
