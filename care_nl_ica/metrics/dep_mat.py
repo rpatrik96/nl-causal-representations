@@ -1,82 +1,8 @@
-from dataclasses import dataclass
-from typing import Dict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from torchmetrics import Metric
-
-from care_nl_ica.metrics.ica_dis import amari_distance
-
-
-@dataclass
-class JacobianMetrics:
-    norm_diff: float
-    thresholded_norm_diff: float
-    optimal_threshold: float
-    sparsity_accuracy: float
-    amari_distance: float
-
-    def log_dict(self, panel_name) -> Dict[str, float]:
-        return {
-            f"{panel_name}/jacobian/norm_diff": self.norm_diff,
-            f"{panel_name}/jacobian/thresholded_norm_diff": self.thresholded_norm_diff,
-            f"{panel_name}/jacobian/optimal_threshold": self.optimal_threshold,
-            f"{panel_name}/jacobian/sparsity_accuracy": self.sparsity_accuracy,
-            f"{panel_name}/jacobian/amari_distance": self.amari_distance,
-        }
-
-
-def calc_jacobian_metrics(
-    dep_mat: torch.Tensor,
-    gt_jacobian_unmixing,
-    indirect_causes,
-    gt_jacobian_mixing_permuted,
-    threshold: float = 1e-3,
-) -> JacobianMetrics:
-    if dep_mat.min() < 0:
-        warn(
-            "The prediction has negative values, taking the absolute value...",
-            RuntimeWarning,
-        )
-        dep_mat = dep_mat.abs()
-
-    if (dep_max := dep_mat.max()) != 1.0:
-        warn("The prediction values not in [0;1], normalizing...", RuntimeWarning)
-        dep_mat /= dep_max
-
-    # calculate the optimal threshold for 1 accuracy
-    # calculate the indices where the GT is 0 (in the lower triangular part)
-    sparsity_mask = (torch.tril(gt_jacobian_unmixing.abs() < 1e-6)).bool()
-
-    if sparsity_mask.sum() > 0:
-        optimal_threshold = dep_mat[sparsity_mask].abs().max()
-    else:
-        optimal_threshold = None
-
-    # calculate the distance between ground truth and predicted jacobian
-    norm_diff: float = torch.norm(dep_mat.abs() - gt_jacobian_unmixing.abs()).mean()
-    thresholded_norm_diff: float = torch.norm(
-        dep_mat.abs() * (dep_mat.abs() > threshold) - gt_jacobian_unmixing.abs()
-    ).mean()
-
-    # calculate the fraction of correctly identified zeroes
-    incorrect_edges: float = ((dep_mat.abs() * indirect_causes) > threshold).sum()
-    sparsity_accuracy: float = 1.0 - incorrect_edges / (indirect_causes.sum() + 1e-8)
-
-    metrics = JacobianMetrics(
-        norm_diff,
-        thresholded_norm_diff,
-        optimal_threshold,
-        sparsity_accuracy,
-        amari_distance(dep_mat, gt_jacobian_mixing_permuted),
-    )
-
-    return metrics
-
-
-from typing import Any, Dict, List, Optional, Tuple, Union
-
 from torchmetrics.utilities.data import METRIC_EPS
-from warnings import warn
 
 
 def correct_ica_scale_permutation(

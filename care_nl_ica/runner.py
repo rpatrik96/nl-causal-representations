@@ -143,15 +143,6 @@ class ContrastiveICAModule(pl.LightningModule):
                 {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
             )
 
-        # jacobian_metrics: JacobianMetrics = calc_jacobian_metrics(
-        #     dep_mat,
-        #     self.gt_jacobian_encoder,
-        #     self.indirect_causes,
-        #     self.gt_jacobian_decoder_permuted,
-        #     threshold=3e-5,
-        # )
-        # self.log(jacobian_metrics.log_dict(panel_name))
-
         self.log_scatter_latent_rec(sources[0], reconstructions[0], "n1")
         self.log_scatter_latent_rec(mixtures[0], reconstructions[0], "z1_n1_rec")
 
