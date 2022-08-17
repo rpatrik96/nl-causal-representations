@@ -36,3 +36,31 @@ python3 care_nl_ica/cli.py fit --config configs/config.yaml
 
 ## Logging
 https://wandb.ai/causal-representation-learning
+
+
+### Code credits
+Our repo extensively relies on `cl-ica` [repo](https://github.com/brendel-group/cl-ica), so please consider citing the corresponding [paper](http://proceedings.mlr.press/v139/zimmermann21a/zimmermann21a.pdf) as well
+
+
+# Reference
+If you find our work useful, please consider citing our workshop paper
+
+```bibtex
+@article{reizinger2022multivariable,
+  author = {
+    Reizinger, Patrik and
+    Sharma, Yash and
+    Bethge, Matthias and
+    Schölkopf, Bernhard and
+    Huszár, Ferenc and
+    Brendel, Wieland
+  },
+  title = {
+    Multivariable Causal Discovery with General Nonlinear Relationships
+  },
+  booktitle = {First Workshop on Causal Representation Learning ({CRL} 2022), {UAI} 2022},
+  year = {2022},
+  url = {https://openreview.net/forum?id=TsXe-CyYJqx},
+}
+```
+
