@@ -137,8 +137,8 @@ def patrik_construct_invertible_mlp(
         Literal["smooth_leaky_relu"],
         Literal["softplus"],
     ] = "leaky_relu",
-    lower_triangular=True,
-    sparsity=True,
+    lower_triangular=False,
+    sparsity=False,
     variant=None,
     offset=0,
 ):

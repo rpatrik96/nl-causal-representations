@@ -210,6 +210,18 @@ def main():
         weight_matrix_init='rvs',
     )
     """
+    """
+    g = invertible_network_utils.patrik_construct_invertible_mlp(
+        n=args.n,
+        n_layers=args.n_mixing_layer,
+        act_fct=args.act_fct,
+        #cond_thresh_ratio=0.0,
+        cond_thresh_ratio=0.001,
+        n_iter_cond_thresh=25000,
+        #weight_matrix_init='pcl',
+        weight_matrix_init='rvs',
+    )
+    """
     g = invertible_network_utils.patrik_construct_invertible_mlp(
         n=args.n,
         n_layers=args.n_mixing_layer,
@@ -220,7 +232,6 @@ def main():
         #weight_matrix_init='pcl',
         weight_matrix_init='rvs',
         lower_triangular=True,
-        variant=None,
     )
     g = g.to(device)
 
