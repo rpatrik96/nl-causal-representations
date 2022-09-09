@@ -2,7 +2,13 @@ from os.path import isfile
 
 import numpy as np
 import pandas as pd
+import torch
+
 from care_nl_ica.models.sinkhorn import learn_permutation
+from care_nl_ica.metrics.dep_mat import (
+    correct_ica_scale_permutation,
+    jacobian_edge_accuracy,
+)
 
 BLUE = "#1A85FF"
 RED = "#D0021B"
@@ -243,6 +249,49 @@ def learning_stats(
             if len(success) > 0:
                 print(
                     f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\tAcc(order):{np.array(success).mean():.3f}\t  Acc:{np.array(accuracy).mean():.3f}\tSHD:{np.array(hamming).mean():.6f}\t[{len(success)} items]"
+                )
+            else:
+                print(f"No experiments for {dim=} ({selector_col}={selector})")
+            print("----------------------------------")
+            print("----------------------------------")
+
+
+def corrected_jacobian_stats(
+    df,
+    true_unmix_jacobians,
+    est_unmix_jacobians,
+    hamming_threshold=1e-2,
+    selector_col="nonlin_sem",
+    weight_threshold=None,
+    dag_permute=True,
+):
+
+    for dim in df.dim.unique():
+        for selector in df[selector_col].unique():
+            # success = []
+            # hamming = []
+            accuracy = []
+            for (selector_item, j_gt, j_est) in zip(
+                df[selector_col],
+                true_unmix_jacobians,
+                est_unmix_jacobians,
+            ):
+                if j_gt.shape[0] == dim and selector_item == selector:
+                    j_est = torch.from_numpy(j_est)
+                    j_gt = torch.from_numpy(j_gt)
+                    j_est_corr = correct_ica_scale_permutation(j_est, j_gt)
+                    acc = jacobian_edge_accuracy(j_est_corr, j_gt)
+
+                    # success.append(s)
+                    # hamming.append(h)
+                    accuracy.append(acc)
+
+            mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
+            print("----------------------------------")
+            print("----------------------------------")
+            if len(accuracy) > 0:
+                print(
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{np.array(accuracy).mean():.3f}"  # \tSHD:{np.array(hamming).mean():.6f}\t[{len(success)} items]"
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
