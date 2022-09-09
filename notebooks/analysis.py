@@ -265,11 +265,13 @@ def corrected_jacobian_stats(
     selector_col="nonlin_sem",
     weight_threshold=None,
     dag_permute=True,
-):
-
+) -> dict:
+    stats: dict = dict()
     for dim in df.dim.unique():
+        stats[dim] = dict()
         for selector in df[selector_col].unique():
-            jac_prec_recall = JacobianBinnedPrecisionRecall(15)
+
+            jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
             # success = []
             # hamming = []
             accuracy = []
@@ -284,16 +286,10 @@ def corrected_jacobian_stats(
                     j_est_corr = correct_ica_scale_permutation(j_est, j_gt)
                     acc = jacobian_edge_accuracy(j_est_corr, j_gt)
                     jac_prec_recall.update(j_est_corr, j_gt)
-
-                    # success.append(s)
-                    # hamming.append(h)
                     accuracy.append(acc)
+
             precisions, recalls, thresholds = jac_prec_recall.compute()
-            print(precisions)
-            print(recalls)
-            print(thresholds)
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
-            print("----------------------------------")
             print("----------------------------------")
             if len(accuracy) > 0:
                 print(
@@ -301,5 +297,10 @@ def corrected_jacobian_stats(
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
-            print("----------------------------------")
-            print("----------------------------------")
+
+            stats[dim][selector] = {
+                "precisions": precisions,
+                "recalls": recalls,
+                "thresholds": thresholds,
+            }
+    return stats
