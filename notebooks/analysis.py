@@ -8,6 +8,7 @@ from care_nl_ica.models.sinkhorn import learn_permutation
 from care_nl_ica.metrics.dep_mat import (
     correct_ica_scale_permutation,
     jacobian_edge_accuracy,
+    JacobianBinnedPrecisionRecall,
 )
 
 BLUE = "#1A85FF"
@@ -268,6 +269,7 @@ def corrected_jacobian_stats(
 
     for dim in df.dim.unique():
         for selector in df[selector_col].unique():
+            jac_prec_recall = JacobianBinnedPrecisionRecall(15)
             # success = []
             # hamming = []
             accuracy = []
@@ -281,11 +283,15 @@ def corrected_jacobian_stats(
                     j_gt = torch.from_numpy(j_gt)
                     j_est_corr = correct_ica_scale_permutation(j_est, j_gt)
                     acc = jacobian_edge_accuracy(j_est_corr, j_gt)
+                    jac_prec_recall.update(j_est_corr, j_gt)
 
                     # success.append(s)
                     # hamming.append(h)
                     accuracy.append(acc)
-
+            precisions, recalls, thresholds = jac_prec_recall.compute()
+            print(precisions)
+            print(recalls)
+            print(thresholds)
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
             print("----------------------------------")
             print("----------------------------------")
