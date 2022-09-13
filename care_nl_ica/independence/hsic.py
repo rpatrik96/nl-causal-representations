@@ -48,7 +48,10 @@ class HSIC(object):
         kernel_x = self.rbf(x, x, ls_x)
         kernel_y = self.rbf(y, y, ls_y)
 
-        H = torch.eye(num_samples, device=x.device) - torch.ones(num_samples, num_samples, device=x.device) / num_samples
+        H = (
+            torch.eye(num_samples, device=x.device)
+            - torch.ones(num_samples, num_samples, device=x.device) / num_samples
+        )
 
         return torch.trace(H @ kernel_x @ H @ kernel_y) / num_samples**2
 
