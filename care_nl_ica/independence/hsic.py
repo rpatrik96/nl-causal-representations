@@ -65,8 +65,8 @@ class HSIC(object):
 
     def run_test(
         self,
-        x,
-        y,
+        x: torch.Tensor,
+        y: torch.Tensor,
         device: str = "cpu",
         ls_x: float = None,
         ls_y: float = None,
