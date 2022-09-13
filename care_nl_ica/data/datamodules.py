@@ -98,7 +98,9 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 act_fct=self.hparams.act_fct,
                 lower_triangular=True,
                 sparsity=self.hparams.mlp_sparsity,
-                variant=self.hparams.variant,
+                variant=torch.IntTensor(
+                    self.hparams.variant, device=self.hparams.device
+                ),
                 offset=self.hparams.offset,
             )
         else:
