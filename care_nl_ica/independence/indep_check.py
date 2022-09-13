@@ -1,9 +1,6 @@
-from collections import Counter
-
 import torch
 
 from care_nl_ica.independence.hsic import HSIC
-from care_nl_ica.metrics.ica_dis import calc_disent_metrics
 
 
 class IndependenceChecker(object):
@@ -22,24 +19,16 @@ class IndependenceChecker(object):
         var_map = [1, 1, 2, 2]
         with torch.no_grad():
             decisions.append(
-                self.test.run_test(
-                    x1[:, 0], x2[:, 1], device="cpu", bonferroni=4
-                ).item()
+                self.test.run_test(x1[:, 0], x2[:, 1], bonferroni=4).item()
             )
             decisions.append(
-                self.test.run_test(
-                    x1[:, 0], x2[:, 0], device="cpu", bonferroni=4
-                ).item()
+                self.test.run_test(x1[:, 0], x2[:, 0], bonferroni=4).item()
             )
             decisions.append(
-                self.test.run_test(
-                    x1[:, 1], x2[:, 0], device="cpu", bonferroni=4
-                ).item()
+                self.test.run_test(x1[:, 1], x2[:, 0], bonferroni=4).item()
             )
             decisions.append(
-                self.test.run_test(
-                    x1[:, 1], x2[:, 1], device="cpu", bonferroni=4
-                ).item()
+                self.test.run_test(x1[:, 1], x2[:, 1], bonferroni=4).item()
             )
 
         return decisions, var_map
@@ -67,38 +56,3 @@ class IndependenceChecker(object):
                     ).item()
 
         return adjacency_matrix
-
-    def check_independence_z_gz(self, decoder, latent_space, dep_mat):
-        z_disentanglement = latent_space.sample_marginal(self.hparams.n_eval_samples)
-        disent_metrics = calc_disent_metrics(
-            z_disentanglement, decoder(z_disentanglement)
-        )
-
-        print(f"Id. Lin. Disentanglement: {disent_metrics.lin_score:.4f}")
-        print(f"Id. Perm. Disentanglement: {disent_metrics.perm_score:.4f}")
-        print(f"Id. MCC matrix: {disent_metrics.perm_corr_mat=}")
-        print("Run test with ground truth sources")
-
-        if dep_mat is not None:
-            # x \times z
-
-            print(dep_mat)
-            null_list = [False] * torch.numel(dep_mat)
-            null_list[torch.argmin(dep_mat).item()] = True
-            var_map = [1, 1, 2, 2]
-        else:
-            null_list, var_map = self.check_bivariate_dependence(
-                decoder(z_disentanglement), z_disentanglement
-            )
-        ######Note this is specific to a dense 2x2 triangular matrix!######
-        if Counter(null_list) == Counter([False, False, False, True]):
-
-            print("concluded a causal effect")
-
-            for i, null in enumerate(null_list):
-                if null:
-                    print("cause variable is X{}".format(str(var_map[i])))
-
-        else:
-            print("no causal effect...?")
-            # sys.exit()
