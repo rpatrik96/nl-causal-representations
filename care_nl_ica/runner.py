@@ -6,6 +6,7 @@ import torch
 import wandb
 
 from care_nl_ica.dep_mat import jacobians
+from care_nl_ica.independence.indep_check import IndependenceChecker
 from care_nl_ica.losses.utils import ContrastiveLosses
 from care_nl_ica.metrics.dep_mat import (
     JacobianBinnedPrecisionRecall,
@@ -39,9 +40,11 @@ class ContrastiveICAModule(pl.LightningModule):
         num_thresholds: int = 30,
         log_freq=500,
         offline: bool = False,
+        num_permutations=30,
     ):
         """
 
+        :param num_permutations: number of permutations for HSIC
         :param offline: offline W&B run (sync at the end)
         :param log_freq: gradient/weight log frequency for W&B, None turns it off
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
@@ -70,6 +73,7 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
+        self.indep_checker = IndependenceChecker(self.hparams)
 
         self._configure_metrics()
 
@@ -117,7 +121,8 @@ class ContrastiveICAModule(pl.LightningModule):
                     f"{panel_name}/jacobian/recalls": recalls,
                 }
             )
-
+        """HSIC"""
+        self.indep_checker.check_multivariate_dependence(sources[0], reconstructions[0])
         """Disentanglement"""
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources[0], reconstructions[0]
