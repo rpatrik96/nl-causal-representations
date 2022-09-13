@@ -120,6 +120,7 @@ def construct_invertible_mlp(
             if lower_triangular:
                 if sparsity:
                     _, tril_mask = createARmask(n, variant)
+                    tril_mask = tril_mask.cpu()
 
                     """Make the causal ordering unique"""
                     # A chain has a unique ordering, so if
@@ -188,7 +189,7 @@ def createARmask(
     mask_elem = tensor2bitlist(variant, mask_numel)
 
     # fill the mask
-    mask = torch.eye(dim)
+    mask = torch.eye(dim, device=variant.device)
     mask[row_idx, col_idx] = mask_elem.float()
 
     return variant, mask
