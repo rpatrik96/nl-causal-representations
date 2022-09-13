@@ -23,7 +23,7 @@ class ContrastiveICAModule(pl.LightningModule):
         self,
         lr: float = 1e-4,
         latent_dim: int = 3,
-        use_ar_mlp: bool = True,
+        use_ar_mlp: bool = False,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = False,
         p: float = 1,
