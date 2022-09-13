@@ -23,7 +23,6 @@ class ContrastiveICAModule(pl.LightningModule):
         self,
         lr: float = 1e-4,
         latent_dim: int = 3,
-        use_ar_mlp: bool = False,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = False,
         p: float = 1,
@@ -53,7 +52,6 @@ class ContrastiveICAModule(pl.LightningModule):
         :param use_bias: Use bias in the network
         :param lr: learning rate
         :param latent_dim: latent dimension
-        :param use_ar_mlp: Use the AR MLP unmixing
         :param device: device
         :param verbose: Print out details, more logging
         :param p: Exponent of the assumed model Lp Exponential distribution

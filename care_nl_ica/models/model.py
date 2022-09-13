@@ -28,23 +28,20 @@ class ContrastiveLearningModel(nn.Module):
             output_normalization_kwargs,
         ) = self._configure_output_normalization()
 
-        if self.hparams.use_ar_mlp is False:
-            self.unmixing = encoders.get_mlp(
-                n_in=hparams.latent_dim,
-                n_out=hparams.latent_dim,
-                layers=[
-                    hparams.latent_dim * 10,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 10,
-                ],
-                output_normalization=output_normalization,
-                output_normalization_kwargs=output_normalization_kwargs,
-            )
-        else:
-            raise NotImplementedError
+        self.unmixing = encoders.get_mlp(
+            n_in=hparams.latent_dim,
+            n_out=hparams.latent_dim,
+            layers=[
+                hparams.latent_dim * 10,
+                hparams.latent_dim * 50,
+                hparams.latent_dim * 50,
+                hparams.latent_dim * 50,
+                hparams.latent_dim * 50,
+                hparams.latent_dim * 10,
+            ],
+            output_normalization=output_normalization,
+            output_normalization_kwargs=output_normalization_kwargs,
+        )
 
         if self.hparams.verbose is True:
             print(f"{self.unmixing.detach()=}")
