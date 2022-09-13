@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 import torch
 
-from care_nl_ica.models.sinkhorn import learn_permutation
 from care_nl_ica.metrics.dep_mat import (
     correct_ica_scale_permutation,
     jacobian_edge_accuracy,
     JacobianBinnedPrecisionRecall,
 )
+from care_nl_ica.models.sinkhorn import learn_permutation
 
 BLUE = "#1A85FF"
 RED = "#D0021B"
@@ -210,7 +210,6 @@ def learning_stats(
     dag_permute=True,
     num_steps=5000,
 ):
-
     for dim in df.dim.unique():
         for selector in df[selector_col].unique():
             success = []
@@ -257,15 +256,20 @@ def learning_stats(
             print("----------------------------------")
 
 
+def perm2matrix(permute_indices):
+    m = torch.zeros(l := len(permute_indices), l)
+    m[list(range(l)), permute_indices] = 1.0
+
+    return m
+
+
 def corrected_jacobian_stats(
     df,
     true_unmix_jacobians,
     est_unmix_jacobians,
-    permute_indices=permute_indices,
+    permute_indices,
     hamming_threshold=1e-2,
     selector_col="nonlin_sem",
-    weight_threshold=None,
-    dag_permute=True,
 ) -> dict:
     stats: dict = dict()
     for dim in df.dim.unique():
@@ -276,15 +280,16 @@ def corrected_jacobian_stats(
             # success = []
             # hamming = []
             accuracy = []
-            for (selector_item, j_gt, p, j_est) in zip(
+            for (selector_item, j_gt, j_est, p) in zip(
                 df[selector_col],
                 true_unmix_jacobians,
                 est_unmix_jacobians,
                 permute_indices,
             ):
                 if j_gt.shape[0] == dim and selector_item == selector:
-                    j_est = torch.from_numpy(j_est)
-                    j_gt = torch.from_numpy(j_gt)
+                    j_est = torch.from_numpy(j_est.astype(np.float32))
+                    j_gt = torch.from_numpy(j_gt.astype(np.float32))
+                    p = perm2matrix(p)
                     j_est_corr = correct_ica_scale_permutation(j_est, p, j_gt)
                     acc = jacobian_edge_accuracy(j_est_corr, j_gt)
                     jac_prec_recall.update(j_est_corr, j_gt)
@@ -295,7 +300,8 @@ def corrected_jacobian_stats(
             print("----------------------------------")
             if len(accuracy) > 0:
                 print(
-                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{np.array(accuracy).mean():.3f}"  # \tSHD:{np.array(hamming).mean():.6f}\t[{len(success)} items]"
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{np.array(accuracy).mean():.3f}"
+                    # \tSHD:{np.array(hamming).mean():.6f}\t[{len(success)} items]"
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
