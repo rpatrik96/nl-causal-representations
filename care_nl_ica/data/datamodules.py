@@ -87,7 +87,6 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
     def _setup_mixing(self):
         if self.hparams.use_sem is False:
-            print("Variant is set to None")
             # create MLP
             ######NOTE THAT weight_matrix_init='rvs' (used in TCL data gen in icebeem) yields linear mixing!##########
             self.mixing = invertible_network_utils.construct_invertible_mlp(
@@ -99,7 +98,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 act_fct=self.hparams.act_fct,
                 lower_triangular=True,
                 sparsity=self.hparams.mlp_sparsity,
-                variant=None,
+                variant=self.hparams.variant,
                 offset=self.hparams.offset,
             )
         else:
