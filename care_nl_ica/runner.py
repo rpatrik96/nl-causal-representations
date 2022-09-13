@@ -71,7 +71,9 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
+
         self.indep_checker = IndependenceChecker(self.hparams)
+        self.hsic_adj = None
 
         self._configure_metrics()
 
@@ -120,23 +122,26 @@ class ContrastiveICAModule(pl.LightningModule):
                 }
             )
         """HSIC"""
-        self.indep_checker.check_multivariate_dependence(sources[0], reconstructions[0])
+        self.hsic_adj = self.indep_checker.check_multivariate_dependence(
+            sources[0], reconstructions[0]
+        ).float()
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
 
         """Disentanglement"""
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources[0], reconstructions[0]
         )
-
-        # for sweeps
-        self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
-        self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
-
         self.log(
             f"{panel_name}/disent",
             disent_metrics.log_dict(),
             on_epoch=True,
             on_step=False,
         )
+
+        # for sweeps
+        self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
+        self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log(
@@ -230,6 +235,7 @@ class ContrastiveICAModule(pl.LightningModule):
     def on_fit_end(self) -> None:
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            """Jacobians"""
             table = wandb.Table(
                 data=[self.dep_mat.reshape(1, -1).tolist()], columns=["dep_mat"]
             )
@@ -242,6 +248,12 @@ class ContrastiveICAModule(pl.LightningModule):
                 columns=["gt_unmixing_jacobian"],
             )
             self.logger.experiment.log({f"gt_unmixing_jacobian_table": table})
+
+            """HSIC"""
+            table = wandb.Table(
+                data=[self.hsic_adj.reshape(1, -1).tolist()], columns=["hsic_adj"]
+            )
+            self.logger.experiment.log({f"hsic_adj_table": table})
 
         if self.hparams.offline is True:
             # Syncing W&B at the end
