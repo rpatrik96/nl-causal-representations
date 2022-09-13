@@ -3,6 +3,7 @@ from os.path import isfile
 import numpy as np
 import pandas as pd
 import torch
+from scipy.spatial.distance import hamming
 
 from care_nl_ica.metrics.dep_mat import (
     correct_ica_scale_permutation,
@@ -271,6 +272,19 @@ def corrected_jacobian_stats(
     hamming_threshold=1e-2,
     selector_col="nonlin_sem",
 ) -> dict:
+    j_hamming = lambda gt, est: hamming(
+        gt.abs().reshape(
+            -1,
+        )
+        > hamming_threshold,
+        est.detach()
+        .abs()
+        .reshape(
+            -1,
+        )
+        > hamming_threshold,
+    )
+
     stats: dict = dict()
     for dim in df.dim.unique():
         stats[dim] = dict()
@@ -278,7 +292,7 @@ def corrected_jacobian_stats(
 
             jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
             # success = []
-            # hamming = []
+            hamming_dist = []
             accuracy = []
             for (selector_item, j_gt, j_est, p) in zip(
                 df[selector_col],
@@ -290,18 +304,20 @@ def corrected_jacobian_stats(
                     j_est = torch.from_numpy(j_est.astype(np.float32))
                     j_gt = torch.from_numpy(j_gt.astype(np.float32))
                     p = perm2matrix(p)
+
                     j_est_corr = correct_ica_scale_permutation(j_est, p, j_gt)
-                    acc = jacobian_edge_accuracy(j_est_corr, j_gt)
                     jac_prec_recall.update(j_est_corr, j_gt)
-                    accuracy.append(acc)
+
+                    accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
+                    hamming_dist.append(j_hamming(j_gt, j_est_corr))
 
             precisions, recalls, thresholds = jac_prec_recall.compute()
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
             print("----------------------------------")
             if len(accuracy) > 0:
                 print(
-                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{np.array(accuracy).mean():.3f}"
-                    # \tSHD:{np.array(hamming).mean():.6f}\t[{len(success)} items]"
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{np.array(accuracy).mean():.3f}\tSHD:{np.array(hamming_dist).mean():.6f}"
+                    # \t[{len(success)} items]"
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
