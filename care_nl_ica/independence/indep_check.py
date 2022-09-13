@@ -63,7 +63,7 @@ class IndependenceChecker(object):
             for i in range(num_dim):
                 for j in range(num_dim):
                     adjacency_matrix[i, j] = self.test.run_test(
-                        x1[:, i], x2[:, j], device="cpu", bonferroni=max_edge_num
+                        x1[:, i], x2[:, j], bonferroni=max_edge_num
                     ).item()
 
         return adjacency_matrix
