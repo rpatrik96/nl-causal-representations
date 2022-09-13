@@ -48,7 +48,7 @@ class HSIC(object):
         kernel_x = self.rbf(x, x, ls_x)
         kernel_y = self.rbf(y, y, ls_y)
 
-        H = torch.eye(num_samples) - torch.ones(num_samples, num_samples) / num_samples
+        H = torch.eye(num_samples, device=x.device) - torch.ones(num_samples, num_samples, device=x.device) / num_samples
 
         return torch.trace(H @ kernel_x @ H @ kernel_y) / num_samples**2
 
@@ -67,7 +67,6 @@ class HSIC(object):
         self,
         x: torch.Tensor,
         y: torch.Tensor,
-        device: str = "cpu",
         ls_x: float = None,
         ls_y: float = None,
         bonferroni: int = 1,
@@ -95,8 +94,8 @@ class HSIC(object):
         if len(y.shape) == 1:
             y = y.unsqueeze(1)
 
-        x = x.to(device).float()
-        y = y.to(device).float()
+        x = x.float()
+        y = y.float()
 
         if ls_x is None:
             ls_x = self.calc_ls(x)
@@ -116,7 +115,7 @@ class HSIC(object):
 
             stats.append(self.test_statistics(x, y[idx], ls_x, ls_y))
 
-        stats = torch.tensor(stats)
+        stats = torch.tensor(stats, device=x.device)
         crit_val = torch.quantile(stats, 1 - alpha_corr)
 
         p = (stats > stat_no_perm).sum() / self.num_permutations

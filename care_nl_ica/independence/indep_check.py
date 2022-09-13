@@ -57,6 +57,8 @@ class IndependenceChecker(object):
         max_edge_num = num_dim**2
         adjacency_matrix = torch.zeros(num_dim, num_dim).bool()
 
+        print(max_edge_num)
+
         with torch.no_grad():
             for i in range(num_dim):
                 for j in range(num_dim):
