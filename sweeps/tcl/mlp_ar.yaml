@@ -17,12 +17,8 @@ parameters:
     value: 20000
   model.offline:
     value: true
-  model.use_ar_mlp:
-    value: false
-  model.triangular:
-    value: false
   data.variant:
-    value: 3
+    values: [2758, 8965, 18754, 25314, 32767]
   data.latent_dim:
     value: 6
   data.use_sem:
