@@ -1,3 +1,0 @@
-model:
-  use_ar_mlp: true
-  triangular: false
