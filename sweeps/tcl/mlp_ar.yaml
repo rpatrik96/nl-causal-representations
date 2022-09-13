@@ -17,12 +17,8 @@ parameters:
     value: 20000
   model.offline:
     value: true
-  model.use_ar_mlp:
-    value: false
-  model.triangular:
-    value: false
   data.variant:
-    value: 3
+    values: [2758, 8965, 18754, 25314, 32767]
   data.latent_dim:
     value: 6
   data.use_sem:
@@ -30,11 +26,11 @@ parameters:
   data.n_mixing_layer:
     values: [1,2,3,4,5]
   data.data_gen_mode:
-    value: offset
+    value: rvs
   data.mlp_sparsity:
     value: true
   data.offset:
-    value: 3
+    value: 0
 
 
 
