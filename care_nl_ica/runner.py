@@ -40,7 +40,7 @@ class ContrastiveICAModule(pl.LightningModule):
         num_thresholds: int = 30,
         log_freq=500,
         offline: bool = False,
-        num_permutations=30,
+        num_permutations=10,
     ):
         """
 
@@ -126,7 +126,7 @@ class ContrastiveICAModule(pl.LightningModule):
         if (
             batch_idx == 0
             and (
-                self.current_epoch % 20 == 0
+                self.current_epoch % 1000 == 0
                 or self.current_epoch == (self.trainer.max_epochs - 1)
             )
             is True
