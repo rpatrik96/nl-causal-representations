@@ -261,6 +261,7 @@ def corrected_jacobian_stats(
     df,
     true_unmix_jacobians,
     est_unmix_jacobians,
+    permute_indices=permute_indices,
     hamming_threshold=1e-2,
     selector_col="nonlin_sem",
     weight_threshold=None,
@@ -275,15 +276,16 @@ def corrected_jacobian_stats(
             # success = []
             # hamming = []
             accuracy = []
-            for (selector_item, j_gt, j_est) in zip(
+            for (selector_item, j_gt, p, j_est) in zip(
                 df[selector_col],
                 true_unmix_jacobians,
                 est_unmix_jacobians,
+                permute_indices,
             ):
                 if j_gt.shape[0] == dim and selector_item == selector:
                     j_est = torch.from_numpy(j_est)
                     j_gt = torch.from_numpy(j_gt)
-                    j_est_corr = correct_ica_scale_permutation(j_est, j_gt)
+                    j_est_corr = correct_ica_scale_permutation(j_est, p, j_gt)
                     acc = jacobian_edge_accuracy(j_est_corr, j_gt)
                     jac_prec_recall.update(j_est_corr, j_gt)
                     accuracy.append(acc)
