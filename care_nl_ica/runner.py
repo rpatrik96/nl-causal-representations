@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from os.path import dirname
 
 import pytorch_lightning as pl
@@ -122,11 +123,19 @@ class ContrastiveICAModule(pl.LightningModule):
                 }
             )
         """HSIC"""
-        self.hsic_adj = self.indep_checker.check_multivariate_dependence(
-            sources[0], reconstructions[0]
-        ).float()
-        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
+        if (
+            batch_idx == 0
+            and (
+                self.current_epoch % 20 == 0
+                or self.current_epoch == (self.trainer.max_epochs - 1)
+            )
+            is True
+        ):
+            self.hsic_adj = self.indep_checker.check_multivariate_dependence(
+                sources[0], reconstructions[0]
+            ).float()
+            if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+                self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
 
         """Disentanglement"""
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
