@@ -232,7 +232,7 @@ def learning_stats(
                         diag_weight=6.0,
                         num_steps=num_steps,
                         lr=1e-4,
-                        verbose=True,
+                        verbose=False,
                         drop_smallest=True,
                         threshold=weight_threshold,
                         binary=True,
@@ -246,15 +246,12 @@ def learning_stats(
 
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
             print("----------------------------------")
-            print("----------------------------------")
             if len(success) > 0:
                 print(
                     f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\tAcc(order):{np.array(success).mean():.3f}\t  Acc:{np.array(accuracy).mean():.3f}\tSHD:{np.array(hamming).mean():.6f}\t[{len(success)} items]"
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
-            print("----------------------------------")
-            print("----------------------------------")
 
 
 def perm2matrix(permute_indices):
@@ -269,7 +266,7 @@ def corrected_jacobian_stats(
     true_unmix_jacobians,
     est_unmix_jacobians,
     permute_indices,
-    hamming_threshold=1e-2,
+    hamming_threshold=1e-3,
     selector_col="nonlin_sem",
 ) -> dict:
     j_hamming = lambda gt, est: hamming(
