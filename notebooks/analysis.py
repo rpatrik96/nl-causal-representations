@@ -313,11 +313,12 @@ def corrected_jacobian_stats(
 
             precisions, recalls, thresholds = jac_prec_recall.compute()
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
+            accuracy = np.array(accuracy)
+            hamming_dist = np.array(hamming_dist)
             print("----------------------------------")
             if len(accuracy) > 0:
                 print(
-                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{np.array(accuracy).mean():.3f}\tSHD:{np.array(hamming_dist).mean():.6f}"
-                    # \t[{len(success)} items]"
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
