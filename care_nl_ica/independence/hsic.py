@@ -71,10 +71,12 @@ class HSIC(object):
         ls_x: float = None,
         ls_y: float = None,
         bonferroni: int = 1,
+        verbose=False,
     ) -> bool:
         """
         Runs the HSIC test with randomly permuting the indices of y.
 
+        :param verbose: whether to print to CLI
         :param x: tensor of the first sample in the form of (num_samples, num_dim)
         :param y: tensor of the second sample in the form of (num_samples, num_dim)
         :param ls_x: lenght scale of the x RBF kernel
@@ -119,7 +121,8 @@ class HSIC(object):
 
         p = (stats > stat_no_perm).sum() / self.num_permutations
 
-        print(f"p={p:.3f}, critical value={crit_val:.3f}")
-        print(f"The null hypothesis (x and y is independent) is {p > crit_val}")
+        if verbose is True:
+            print(f"p={p:.3f}, critical value={crit_val:.3f}")
+            print(f"The null hypothesis (x and y is independent) is {p > crit_val}")
 
         return p > crit_val

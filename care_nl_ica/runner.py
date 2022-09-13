@@ -121,6 +121,7 @@ class ContrastiveICAModule(pl.LightningModule):
             )
         """HSIC"""
         self.indep_checker.check_multivariate_dependence(sources[0], reconstructions[0])
+
         """Disentanglement"""
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources[0], reconstructions[0]
