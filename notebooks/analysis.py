@@ -325,4 +325,5 @@ def corrected_jacobian_stats(
                 "recalls": recalls,
                 "thresholds": thresholds,
             }
+        stats[dim]["table_text"]
     return stats

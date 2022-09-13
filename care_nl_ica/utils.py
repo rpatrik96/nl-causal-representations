@@ -112,7 +112,6 @@ def add_tags(args):
     if args.data.permute is True:
         args.tags.append("permute")
 
-
     if args.model.normalize_latents is True:
         args.tags.append("normalization")
 
