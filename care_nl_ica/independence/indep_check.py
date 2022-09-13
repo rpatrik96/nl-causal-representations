@@ -2,7 +2,6 @@ from collections import Counter
 
 import torch
 
-from care_nl_ica.dep_mat import calc_jacobian
 from care_nl_ica.independence.hsic import HSIC
 from care_nl_ica.metrics.ica_dis import calc_disent_metrics
 

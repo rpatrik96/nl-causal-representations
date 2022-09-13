@@ -6,18 +6,37 @@ from torchmetrics.utilities.data import METRIC_EPS
 
 
 def correct_ica_scale_permutation(
-    dep_mat: torch.Tensor, gt_jacobian_mixing: torch.Tensor
+    dep_mat: torch.Tensor, permutation: torch.Tensor, gt_jacobian_unmixing: torch.Tensor
 ) -> torch.Tensor:
     """
 
+    :param permutation:
     :param dep_mat: estimated unmixing Jacobian (including ICA permutation indeterminacy, i.e., P@J_GT)
-    :param gt_jacobian_mixing:
+    :param gt_jacobian_unmixing:
     :return:
     """
 
-    scale_permutation_est: torch.Tensor = dep_mat @ gt_jacobian_mixing
+    scaled_appr_permutation_est_inv: torch.Tensor = (
+        (dep_mat @ permutation @ gt_jacobian_unmixing.inverse()).inverse().contiguous()
+    )
 
-    return scale_permutation_est.inverse() @ dep_mat
+    dim = dep_mat.shape[0]
+    num_zeros = dim**2 - dim
+    zero_idx = (
+        scaled_appr_permutation_est_inv.abs()
+        .view(
+            -1,
+        )
+        .sort()[1][:num_zeros]
+    )
+
+    # zero them out
+    scaled_appr_permutation_est_inv.view(-1, 1)[zero_idx] = 0
+
+    # torch.linalg.solve()
+    # print(scaled_appr_permutation_est_inv)
+
+    return scaled_appr_permutation_est_inv @ dep_mat @ permutation
 
 
 def jacobian_edge_accuracy(
@@ -63,6 +82,7 @@ class JacobianBinnedPrecisionRecall(Metric):
         num_thresholds: Optional[int] = None,
         thresholds: Union[int, torch.Tensor, List[float], None] = None,
         log_base: Optional[float] = 10.0,
+        start=-4,
         compute_on_step: Optional[bool] = None,
         **kwargs: Dict[str, Any],
     ) -> None:
@@ -70,7 +90,12 @@ class JacobianBinnedPrecisionRecall(Metric):
 
         if isinstance(num_thresholds, int):
             self.num_thresholds = num_thresholds
-            thresholds = torch.logspace(-5, 0, self.num_thresholds, base=log_base)
+            if log_base > 1:
+                thresholds = torch.logspace(
+                    start, 0, self.num_thresholds, base=log_base
+                )
+            else:
+                thresholds = torch.linspace(10**start, 1.0, num_thresholds)
             self.register_buffer("thresholds", thresholds)
         elif thresholds is not None:
             if not isinstance(thresholds, (list, torch.Tensor)):

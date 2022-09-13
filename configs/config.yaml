@@ -67,7 +67,6 @@ trainer:
 model:
   offline: true
   lr: 1e-4
-  use_ar_mlp: false
   verbose: false
   p: 1.0
   tau: 1.0

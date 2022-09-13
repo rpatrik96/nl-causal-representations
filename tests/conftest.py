@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from care_nl_ica.data.datamodules import ContrastiveDataModule
 from care_nl_ica.dataset import ContrastiveDataset
 
-arg_matrix = namedtuple("arg_matrix", ["latent_dim", "use_ar_mlp"])
+arg_matrix = namedtuple("arg_matrix", ["latent_dim"])
 
 from hydra import compose, initialize
 from pytorch_lightning import seed_everything
@@ -17,7 +17,7 @@ from argparse import Namespace
 
 @pytest.fixture(
     params=[
-        arg_matrix(latent_dim=3, use_ar_mlp=False),
+        arg_matrix(latent_dim=3),
     ]
 )
 def args(request):

@@ -6,11 +6,10 @@ import torch
 import wandb
 
 from care_nl_ica.dep_mat import jacobians
+from care_nl_ica.independence.indep_check import IndependenceChecker
 from care_nl_ica.losses.utils import ContrastiveLosses
 from care_nl_ica.metrics.dep_mat import (
     JacobianBinnedPrecisionRecall,
-    correct_ica_scale_permutation,
-    jacobian_edge_accuracy,
 )
 from care_nl_ica.metrics.ica_dis import (
     calc_disent_metrics,
@@ -24,7 +23,6 @@ class ContrastiveICAModule(pl.LightningModule):
         self,
         lr: float = 1e-4,
         latent_dim: int = 3,
-        use_ar_mlp: bool = True,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         verbose: bool = False,
         p: float = 1,
@@ -41,9 +39,11 @@ class ContrastiveICAModule(pl.LightningModule):
         num_thresholds: int = 30,
         log_freq=500,
         offline: bool = False,
+        num_permutations=30,
     ):
         """
 
+        :param num_permutations: number of permutations for HSIC
         :param offline: offline W&B run (sync at the end)
         :param log_freq: gradient/weight log frequency for W&B, None turns it off
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
@@ -52,7 +52,6 @@ class ContrastiveICAModule(pl.LightningModule):
         :param use_bias: Use bias in the network
         :param lr: learning rate
         :param latent_dim: latent dimension
-        :param use_ar_mlp: Use the AR MLP unmixing
         :param device: device
         :param verbose: Print out details, more logging
         :param p: Exponent of the assumed model Lp Exponential distribution
@@ -72,6 +71,9 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
+
+        self.indep_checker = IndependenceChecker(self.hparams)
+        self.hsic_adj = None
 
         self._configure_metrics()
 
@@ -119,22 +121,27 @@ class ContrastiveICAModule(pl.LightningModule):
                     f"{panel_name}/jacobian/recalls": recalls,
                 }
             )
+        """HSIC"""
+        self.hsic_adj = self.indep_checker.check_multivariate_dependence(
+            sources[0], reconstructions[0]
+        ).float()
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
 
         """Disentanglement"""
         disent_metrics: DisentanglementMetrics = calc_disent_metrics(
             sources[0], reconstructions[0]
         )
-
-        # for sweeps
-        self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
-        self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
-
         self.log(
             f"{panel_name}/disent",
             disent_metrics.log_dict(),
             on_epoch=True,
             on_step=False,
         )
+
+        # for sweeps
+        self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
+        self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log(
@@ -148,29 +155,6 @@ class ContrastiveICAModule(pl.LightningModule):
 
         self.log_scatter_latent_rec(sources[0], reconstructions[0], "n1")
         self.log_scatter_latent_rec(mixtures[0], reconstructions[0], "z1_n1_rec")
-
-        if self.hparams.permute is True and self.hparams.use_sem is True:
-            dep_mat = self.dep_mat[
-                torch.argsort(self.trainer.datamodule.mixing.permute_indices), :
-            ]
-        else:
-            dep_mat = self.dep_mat
-
-        dep_mat = correct_ica_scale_permutation(
-            dep_mat, self.trainer.datamodule.mixing_jacobian
-        )
-
-        if (
-            disent_metrics.perm_score > 0.6
-            or self.trainer.current_epoch == self.trainer.max_epochs - 1
-        ):
-            self.logger.experiment.log(
-                {
-                    f"{panel_name}/jacobian_edge_accuracy": jacobian_edge_accuracy(
-                        dep_mat, self.trainer.datamodule.unmixing_jacobian
-                    )
-                }
-            )
 
         return losses.total_loss
 
@@ -251,6 +235,7 @@ class ContrastiveICAModule(pl.LightningModule):
     def on_fit_end(self) -> None:
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            """Jacobians"""
             table = wandb.Table(
                 data=[self.dep_mat.reshape(1, -1).tolist()], columns=["dep_mat"]
             )
@@ -263,6 +248,12 @@ class ContrastiveICAModule(pl.LightningModule):
                 columns=["gt_unmixing_jacobian"],
             )
             self.logger.experiment.log({f"gt_unmixing_jacobian_table": table})
+
+            """HSIC"""
+            table = wandb.Table(
+                data=[self.hsic_adj.reshape(1, -1).tolist()], columns=["hsic_adj"]
+            )
+            self.logger.experiment.log({f"hsic_adj_table": table})
 
         if self.hparams.offline is True:
             # Syncing W&B at the end
