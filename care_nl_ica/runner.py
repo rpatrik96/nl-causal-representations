@@ -195,15 +195,23 @@ class ContrastiveICAModule(pl.LightningModule):
         # create random "negative" pairs
         # this is faster than sampling z3 again from the marginal distribution
         # and should also yield samples as if they were sampled from the marginal
-        z3 = torch.roll(sources[0], 1, 0)
-        z3_rec = torch.roll(reconstructions[0], 1, 0)
+        # z3 = torch.roll(sources[0], 1, 0)
+        # z3_rec = torch.roll(reconstructions[0], 1, 0)
 
         _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(
-            *sources, z3, *reconstructions, z3_rec
+            *sources,
+            # z3,
+            *reconstructions,
+            # z3_rec
         )
 
         # estimate entropy (i.e., the baseline of the loss)
-        entropy_estimate, _, _ = self.model.loss(*sources, z3, *sources, z3)
+        entropy_estimate, _, _ = self.model.loss(
+            *sources,
+            # z3,
+            *sources,
+            # z3
+        )
 
         losses = ContrastiveLosses(
             cl_pos=loss_pos_mean,
