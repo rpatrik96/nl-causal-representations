@@ -26,11 +26,11 @@ parameters:
   data.n_mixing_layer:
     values: [1,2,3,4,5]
   data.data_gen_mode:
-    value: rvs
+    value: offset
   data.mlp_sparsity:
     value: true
   data.offset:
-    value: 0
+    value: 3
 
 
 
