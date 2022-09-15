@@ -1,3 +1,4 @@
+import sys
 from os.path import isfile
 
 import numpy as np
@@ -26,7 +27,8 @@ def sweep2df(
     project="nl-causal-representations",
 ):
     csv_name = f"{filename}.csv"
-    npy_name = f"{filename}"
+    npy_name = f"{filename}.npz"
+
     if load is True and isfile(csv_name) is True and isfile(npy_name) is True:
         print(f"\t Loading {filename}...")
         npy_data = np.load(npy_name)
@@ -37,7 +39,7 @@ def sweep2df(
             hsic_adj = npy_data["hsic_adj"]
         except:
             hsic_adj = None
-        return pd.read_csv(filename), (
+        return pd.read_csv(csv_name), (
             true_unmixing_jacobians,
             est_unmixing_jacobians,
             permute_indices,
