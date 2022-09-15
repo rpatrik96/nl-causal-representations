@@ -5,6 +5,7 @@ import pandas as pd
 import torch
 from scipy.spatial.distance import hamming
 
+import wandb
 from care_nl_ica.metrics.dep_mat import (
     correct_ica_scale_permutation,
     jacobian_edge_accuracy,
@@ -16,7 +17,14 @@ BLUE = "#1A85FF"
 RED = "#D0021B"
 
 
-def sweep2df(sweep_runs, filename, save=False, load=False):
+def sweep2df(
+    sweep_runs,
+    filename,
+    save=False,
+    load=False,
+    entity="causal-representation-learning",
+    project="nl-causal-representations",
+):
     csv_name = f"{filename}.csv"
     npy_name = f"{filename}"
     if load is True and isfile(csv_name) is True and isfile(npy_name) is True:
@@ -25,15 +33,21 @@ def sweep2df(sweep_runs, filename, save=False, load=False):
         true_unmixing_jacobians = npy_data["true_unmixing_jacobians"]
         est_unmixing_jacobians = npy_data["est_unmixing_jacobians"]
         permute_indices = npy_data["permute_indices"]
+        try:
+            hsic_adj = npy_data["hsic_adj"]
+        except:
+            hsic_adj = None
         return pd.read_csv(filename), (
             true_unmixing_jacobians,
             est_unmixing_jacobians,
             permute_indices,
+            hsic_adj,
         )
     data = []
     true_unmixing_jacobians = []
     est_unmixing_jacobians = []
     permute_indices = []
+    hsic_adj = []
     max_dim = -1
     for run in sweep_runs:
 
@@ -76,6 +90,21 @@ def sweep2df(sweep_runs, filename, save=False, load=False):
                     .get_column("gt_unmixing_jacobian", "numpy")
                     .reshape(dim, dim)
                 )
+
+                if "Val/hsic_adj" in summary.keys():
+                    if dim <= 5:
+                        hsic_adj.append(np.array(summary["Val/hsic_adj"]))
+                    else:
+                        s = f"{entity}/{project}/run-{run.id}-hsic_adj_table:latest"
+
+                        run = wandb.init()
+                        hsic_adj.append(
+                            run.use_artifact(s, type="run_table")
+                            .get("hsic_adj_table")
+                            .get_column("hsic_adj", "numpy")
+                            .reshape(dim, dim)
+                        )
+
                 permute_indices.append(summary["Mixing/permute_indices"])
 
                 if dim > max_dim:
@@ -123,9 +152,15 @@ def sweep2df(sweep_runs, filename, save=False, load=False):
             true_unmixing_jacobians=true_unmixing_jacobians,
             est_unmixing_jacobians=est_unmixing_jacobians,
             permute_indices=permute_indices,
+            hsic_adj=hsic_adj,
         )
 
-    return runs_df, (true_unmixing_jacobians, est_unmixing_jacobians, permute_indices)
+    return runs_df, (
+        true_unmixing_jacobians,
+        est_unmixing_jacobians,
+        permute_indices,
+        hsic_adj,
+    )
 
 
 def format_violin(vp, facecolor=BLUE):
