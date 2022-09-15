@@ -23,7 +23,6 @@ def correct_ica_scale_permutation(
     scaled_appr_permutation_est_inv: torch.Tensor = (
         (dep_mat @ permutation @ gt_jacobian_unmixing.inverse()).inverse().contiguous()
     )
-
     dim = dep_mat.shape[0]
     num_zeros = dim**2 - dim
     zero_idx = (
@@ -42,7 +41,11 @@ def correct_ica_scale_permutation(
 
     return (
         scaled_appr_permutation_est_inv @ dep_mat @ permutation,
-        scaled_appr_permutation_est_inv.abs().bool().float() @ hsic_adj @ permutation,
+        None
+        if hsic_adj is None
+        else scaled_appr_permutation_est_inv.abs().bool().float()
+        @ hsic_adj
+        @ permutation,
     )
 
 

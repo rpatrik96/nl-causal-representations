@@ -323,55 +323,58 @@ def corrected_jacobian_stats(
     for dim in df.dim.unique():
         stats[dim] = dict()
 
-        for variant in df.variant.unique():
-            stats[dim][variant] = dict()
-            print("##################################")
-            print(f"variant={variant}")
+        for selector in df[selector_col].unique():
+            if hsic_adj is None:
+                hsic_adj = [None] * len(true_unmix_jacobians)
 
-            for selector in df[selector_col].unique():
+            jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
+            # success = []
+            hamming_dist = []
+            accuracy = []
+            accuracy_hsic = [] if hsic_adj[0] is not None else -1.0
+            for (selector_item, j_gt, j_est, p, hsic) in zip(
+                df[selector_col],
+                true_unmix_jacobians,
+                est_unmix_jacobians,
+                permute_indices,
+                hsic_adj,
+            ):
+                if j_gt.shape[0] == dim and selector_item == selector:
+                    j_est = torch.from_numpy(j_est.astype(np.float32))
+                    j_gt = torch.from_numpy(j_gt.astype(np.float32))
+                    p = perm2matrix(p)
 
-                jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
-                # success = []
-                hamming_dist = []
-                accuracy = []
-                accuracy_hsic = []
-                for (selector_item, j_gt, j_est, p, hsic) in zip(
-                    df[selector_col],
-                    true_unmix_jacobians,
-                    est_unmix_jacobians,
-                    permute_indices,
-                    hsic_adj,
-                ):
-                    if j_gt.shape[0] == dim and selector_item == selector:
-                        j_est = torch.from_numpy(j_est.astype(np.float32))
-                        j_gt = torch.from_numpy(j_gt.astype(np.float32))
-                        p = perm2matrix(p)
-
-                        j_est_corr, hsic_corr = correct_ica_scale_permutation(
-                            j_est, p, j_gt, torch.from_numpy(hsic.astype(np.float32))
-                        )
-                        jac_prec_recall.update(j_est_corr, j_gt)
-
-                        accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
-                        accuracy_hsic.append((hsic_corr == j_gt.bool()).float().mean())
-                        hamming_dist.append(j_hamming(j_gt, j_est_corr))
-
-                precisions, recalls, thresholds = jac_prec_recall.compute()
-                mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
-                accuracy = np.array(accuracy)
-                accuracy_hsic = np.array(accuracy_hsic)
-                hamming_dist = np.array(hamming_dist)
-                print("----------------------------------")
-                if len(accuracy) > 0:
-                    print(
-                        f"{dim=} ({selector_col}={selector}, variant={variant})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc (HSIC):{accuracy_hsic.mean():.3f}+{accuracy_hsic.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
+                    j_est_corr, hsic_corr = correct_ica_scale_permutation(
+                        j_est,
+                        p,
+                        j_gt,
+                        None
+                        if hsic is None
+                        else torch.from_numpy(hsic.astype(np.float32)),
                     )
-                else:
-                    print(f"No experiments for {dim=} ({selector_col}={selector})")
+                    jac_prec_recall.update(j_est_corr, j_gt)
 
-                stats[dim][variant][selector] = {
-                    "precisions": precisions,
-                    "recalls": recalls,
-                    "thresholds": thresholds,
-                }
+                    accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
+                    if hsic is not None:
+                        accuracy_hsic.append((hsic_corr == j_gt.bool()).float().mean())
+                    hamming_dist.append(j_hamming(j_gt, j_est_corr))
+
+            precisions, recalls, thresholds = jac_prec_recall.compute()
+            mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
+            accuracy = np.array(accuracy)
+            accuracy_hsic = np.array(accuracy_hsic)
+            hamming_dist = np.array(hamming_dist)
+            print("----------------------------------")
+            if len(accuracy) > 0:
+                print(
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc (HSIC):{accuracy_hsic.mean():.3f}+{accuracy_hsic.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
+                )
+            else:
+                print(f"No experiments for {dim=} ({selector_col}={selector})")
+
+            stats[dim][selector] = {
+                "precisions": precisions,
+                "recalls": recalls,
+                "thresholds": thresholds,
+            }
     return stats
