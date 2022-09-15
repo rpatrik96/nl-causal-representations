@@ -29,6 +29,8 @@ parameters:
     value: true
   data.offset:
     value: 1
+  data.mask_prob:
+    value: 0.5
 
 
 

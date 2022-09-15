@@ -5,6 +5,7 @@ import pandas as pd
 import torch
 from scipy.spatial.distance import hamming
 
+import wandb
 from care_nl_ica.metrics.dep_mat import (
     correct_ica_scale_permutation,
     jacobian_edge_accuracy,
@@ -16,24 +17,38 @@ BLUE = "#1A85FF"
 RED = "#D0021B"
 
 
-def sweep2df(sweep_runs, filename, save=False, load=False):
+def sweep2df(
+    sweep_runs,
+    filename,
+    save=False,
+    load=False,
+    entity="causal-representation-learning",
+    project="nl-causal-representations",
+):
     csv_name = f"{filename}.csv"
-    npy_name = f"{filename}"
+    npy_name = f"{filename}.npz"
+
     if load is True and isfile(csv_name) is True and isfile(npy_name) is True:
         print(f"\t Loading {filename}...")
         npy_data = np.load(npy_name)
         true_unmixing_jacobians = npy_data["true_unmixing_jacobians"]
         est_unmixing_jacobians = npy_data["est_unmixing_jacobians"]
         permute_indices = npy_data["permute_indices"]
-        return pd.read_csv(filename), (
+        try:
+            hsic_adj = npy_data["hsic_adj"]
+        except:
+            hsic_adj = None
+        return pd.read_csv(csv_name), (
             true_unmixing_jacobians,
             est_unmixing_jacobians,
             permute_indices,
+            hsic_adj,
         )
     data = []
     true_unmixing_jacobians = []
     est_unmixing_jacobians = []
     permute_indices = []
+    hsic_adj = []
     max_dim = -1
     for run in sweep_runs:
 
@@ -76,6 +91,21 @@ def sweep2df(sweep_runs, filename, save=False, load=False):
                     .get_column("gt_unmixing_jacobian", "numpy")
                     .reshape(dim, dim)
                 )
+
+                if "Val/hsic_adj" in summary.keys():
+                    if dim <= 5:
+                        hsic_adj.append(np.array(summary["Val/hsic_adj"]))
+                    else:
+                        s = f"{entity}/{project}/run-{run.id}-hsic_adj_table:latest"
+
+                        run = wandb.init()
+                        hsic_adj.append(
+                            run.use_artifact(s, type="run_table")
+                            .get("hsic_adj_table")
+                            .get_column("hsic_adj", "numpy")
+                            .reshape(dim, dim)
+                        )
+
                 permute_indices.append(summary["Mixing/permute_indices"])
 
                 if dim > max_dim:
@@ -123,9 +153,15 @@ def sweep2df(sweep_runs, filename, save=False, load=False):
             true_unmixing_jacobians=true_unmixing_jacobians,
             est_unmixing_jacobians=est_unmixing_jacobians,
             permute_indices=permute_indices,
+            hsic_adj=hsic_adj,
         )
 
-    return runs_df, (true_unmixing_jacobians, est_unmixing_jacobians, permute_indices)
+    return runs_df, (
+        true_unmixing_jacobians,
+        est_unmixing_jacobians,
+        permute_indices,
+        hsic_adj,
+    )
 
 
 def format_violin(vp, facecolor=BLUE):
@@ -266,6 +302,7 @@ def corrected_jacobian_stats(
     true_unmix_jacobians,
     est_unmix_jacobians,
     permute_indices,
+    hsic_adj,
     hamming_threshold=1e-3,
     selector_col="nonlin_sem",
 ) -> dict:
@@ -285,44 +322,56 @@ def corrected_jacobian_stats(
     stats: dict = dict()
     for dim in df.dim.unique():
         stats[dim] = dict()
-        for selector in df[selector_col].unique():
 
-            jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
-            # success = []
-            hamming_dist = []
-            accuracy = []
-            for (selector_item, j_gt, j_est, p) in zip(
-                df[selector_col],
-                true_unmix_jacobians,
-                est_unmix_jacobians,
-                permute_indices,
-            ):
-                if j_gt.shape[0] == dim and selector_item == selector:
-                    j_est = torch.from_numpy(j_est.astype(np.float32))
-                    j_gt = torch.from_numpy(j_gt.astype(np.float32))
-                    p = perm2matrix(p)
+        for variant in df.variant.unique():
+            stats[dim][variant] = dict()
+            print("##################################")
+            print(f"variant={variant}")
 
-                    j_est_corr = correct_ica_scale_permutation(j_est, p, j_gt)
-                    jac_prec_recall.update(j_est_corr, j_gt)
+            for selector in df[selector_col].unique():
 
-                    accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
-                    hamming_dist.append(j_hamming(j_gt, j_est_corr))
+                jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
+                # success = []
+                hamming_dist = []
+                accuracy = []
+                accuracy_hsic = []
+                for (selector_item, j_gt, j_est, p, hsic) in zip(
+                    df[selector_col],
+                    true_unmix_jacobians,
+                    est_unmix_jacobians,
+                    permute_indices,
+                    hsic_adj,
+                ):
+                    if j_gt.shape[0] == dim and selector_item == selector:
+                        j_est = torch.from_numpy(j_est.astype(np.float32))
+                        j_gt = torch.from_numpy(j_gt.astype(np.float32))
+                        p = perm2matrix(p)
 
-            precisions, recalls, thresholds = jac_prec_recall.compute()
-            mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
-            accuracy = np.array(accuracy)
-            hamming_dist = np.array(hamming_dist)
-            print("----------------------------------")
-            if len(accuracy) > 0:
-                print(
-                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
-                )
-            else:
-                print(f"No experiments for {dim=} ({selector_col}={selector})")
+                        j_est_corr, hsic_corr = correct_ica_scale_permutation(
+                            j_est, p, j_gt, torch.from_numpy(hsic.astype(np.float32))
+                        )
+                        jac_prec_recall.update(j_est_corr, j_gt)
 
-            stats[dim][selector] = {
-                "precisions": precisions,
-                "recalls": recalls,
-                "thresholds": thresholds,
-            }
+                        accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
+                        accuracy_hsic.append((hsic_corr == j_gt.bool()).float().mean())
+                        hamming_dist.append(j_hamming(j_gt, j_est_corr))
+
+                precisions, recalls, thresholds = jac_prec_recall.compute()
+                mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
+                accuracy = np.array(accuracy)
+                accuracy_hsic = np.array(accuracy_hsic)
+                hamming_dist = np.array(hamming_dist)
+                print("----------------------------------")
+                if len(accuracy) > 0:
+                    print(
+                        f"{dim=} ({selector_col}={selector}, variant={variant})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc (HSIC):{accuracy_hsic.mean():.3f}+{accuracy_hsic.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
+                    )
+                else:
+                    print(f"No experiments for {dim=} ({selector_col}={selector})")
+
+                stats[dim][variant][selector] = {
+                    "precisions": precisions,
+                    "recalls": recalls,
+                    "thresholds": thresholds,
+                }
     return stats

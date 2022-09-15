@@ -6,11 +6,15 @@ from torchmetrics.utilities.data import METRIC_EPS
 
 
 def correct_ica_scale_permutation(
-    dep_mat: torch.Tensor, permutation: torch.Tensor, gt_jacobian_unmixing: torch.Tensor
-) -> torch.Tensor:
+    dep_mat: torch.Tensor,
+    permutation: torch.Tensor,
+    gt_jacobian_unmixing: torch.Tensor,
+    hsic_adj,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
 
-    :param permutation:
+    :param hsic_adj: adjacency matrix estimated by HSIC
+    :param permutation: permutation matrix
     :param dep_mat: estimated unmixing Jacobian (including ICA permutation indeterminacy, i.e., P@J_GT)
     :param gt_jacobian_unmixing:
     :return:
@@ -36,7 +40,10 @@ def correct_ica_scale_permutation(
     # torch.linalg.solve()
     # print(scaled_appr_permutation_est_inv)
 
-    return scaled_appr_permutation_est_inv @ dep_mat @ permutation
+    return (
+        scaled_appr_permutation_est_inv @ dep_mat @ permutation,
+        scaled_appr_permutation_est_inv.abs().bool().float() @ hsic_adj @ permutation,
+    )
 
 
 def jacobian_edge_accuracy(
