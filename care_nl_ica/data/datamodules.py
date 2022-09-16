@@ -44,7 +44,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
         offset=0,
         mask_prob=0.0,
         mlp_sparsity=False,
-        weight_rand_func=torch.rand,
+        weight_rand_func="rand",
         **kwargs,
     ):
 
