@@ -16,6 +16,7 @@ class LinearSEM(nn.Module):
         diag_weight: float = 0.0,
         offset: float = 1.0,
         mask_prob=1.0,
+        weight_rand_func=torch.rand,
     ):
         super().__init__()
         self.variant = variant
@@ -24,7 +25,7 @@ class LinearSEM(nn.Module):
         # weight init
         inv_weight = torch.tril(
             # torch.randn((num_vars, num_vars)).tril() + diag_weight * torch.eye(num_vars)
-            torch.rand((num_vars, num_vars)).tril()
+            weight_rand_func((num_vars, num_vars)).tril()
             + offset * torch.ones((num_vars, num_vars))
             + diag_weight * torch.eye(num_vars)
         )
@@ -122,6 +123,7 @@ class NonLinearSEM(LinearSEM):
         diag_weight: float = 0.0,
         offset: float = 1.0,
         mask_prob=0.0,
+        weight_rand_func=torch.rand,
     ):
         super().__init__(
             num_vars=num_vars,
@@ -132,6 +134,7 @@ class NonLinearSEM(LinearSEM):
             diag_weight=diag_weight,
             offset=offset,
             mask_prob=mask_prob,
+            weight_rand_func=weight_rand_func,
         )
 
         self.slopes = torch.rand(num_vars).clip(0.25, 1)
