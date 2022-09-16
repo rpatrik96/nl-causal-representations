@@ -16,11 +16,18 @@ class LinearSEM(nn.Module):
         diag_weight: float = 0.0,
         offset: float = 1.0,
         mask_prob=1.0,
-        weight_rand_func=torch.rand,
+        weight_rand_func="rand",
     ):
         super().__init__()
         self.variant = variant
         self.num_vars = num_vars
+
+        if weight_rand_func == "rand":
+            weight_rand_func = torch.rand
+        elif weight_rand_func == "randn":
+            weight_rand_func = torch.randn
+        else:
+            raise ValueError
 
         # weight init
         inv_weight = torch.tril(
@@ -123,7 +130,7 @@ class NonLinearSEM(LinearSEM):
         diag_weight: float = 0.0,
         offset: float = 1.0,
         mask_prob=0.0,
-        weight_rand_func=torch.rand,
+        weight_rand_func="rand",
     ):
         super().__init__(
             num_vars=num_vars,
