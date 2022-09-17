@@ -26,11 +26,11 @@ parameters:
   data.nonlin_sem:
     values: [false, true]
   data.permute:
-    value: true
+    value: false
   data.offset:
     value: 1
   data.mask_prob:
-    value: 0.5
+    value: 0.75
 
 
 
