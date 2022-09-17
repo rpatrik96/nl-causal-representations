@@ -72,7 +72,7 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
-        self.ica_permutation_idx = None
+        self.munkres_permutation_idx = None
 
         self.indep_checker = IndependenceChecker(self.hparams)
         self.hsic_adj = None
@@ -139,7 +139,7 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
 
         """Disentanglement"""
-        disent_metrics, self.ica_permutation_idx = calc_disent_metrics(
+        disent_metrics, self.munkres_permutation_idx = calc_disent_metrics(
             sources[0], reconstructions[0]
         )
         self.log(
@@ -255,8 +255,8 @@ class ContrastiveICAModule(pl.LightningModule):
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             """ICA permutation indices"""
             self.logger.experiment.summary[
-                "ica_permutation_idx"
-            ] = self.ica_permutation_idx
+                "munkres_permutation_idx"
+            ] = self.munkres_permutation_idx
 
             """Jacobians"""
             table = wandb.Table(
