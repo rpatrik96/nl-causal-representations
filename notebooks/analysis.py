@@ -118,7 +118,11 @@ def sweep2df(
                         summary["munkres_permutation_idx"]
                     )
 
-                permute_indices.append(summary["Mixing/permute_indices"])
+                permute_indices.append(
+                    summary["Mixing/permute_indices"]
+                    if permute is True
+                    else np.arange(0, dim)
+                )
 
                 if dim > max_dim:
                     max_dim = dim
