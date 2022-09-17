@@ -29,6 +29,10 @@ class LinearSEM(nn.Module):
         else:
             raise ValueError
 
+        if force_chain is False and permute is True:
+            print(f"-----As {permute=}, setting force_chain=True")
+            force_chain = True
+
         # weight init
         inv_weight = torch.tril(
             # torch.randn((num_vars, num_vars)).tril() + diag_weight * torch.eye(num_vars)
