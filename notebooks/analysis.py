@@ -8,6 +8,7 @@ from scipy.spatial.distance import hamming
 import wandb
 from care_nl_ica.metrics.dep_mat import (
     correct_ica_scale_permutation,
+    correct_jacobian_permutations,
     jacobian_edge_accuracy,
     JacobianBinnedPrecisionRecall,
 )
@@ -321,6 +322,7 @@ def corrected_jacobian_stats(
     est_unmix_jacobians,
     permute_indices,
     hsic_adj,
+    munkres_indices,
     hamming_threshold=1e-3,
     selector_col="nonlin_sem",
 ) -> dict:
@@ -350,30 +352,36 @@ def corrected_jacobian_stats(
             hamming_dist = []
             accuracy = []
             accuracy_hsic = [] if hsic_adj[0] is not None else -1.0
-            for (selector_item, j_gt, j_est, p, hsic) in zip(
+            for (selector_item, j_gt, j_est, p, hsic, munkres) in zip(
                 df[selector_col],
                 true_unmix_jacobians,
                 est_unmix_jacobians,
                 permute_indices,
                 hsic_adj,
+                munkres_indices,
             ):
                 if j_gt.shape[0] == dim and selector_item == selector:
                     j_est = torch.from_numpy(j_est.astype(np.float32))
                     j_gt = torch.from_numpy(j_gt.astype(np.float32))
                     p = perm2matrix(p)
+                    munkres = perm2matrix(munkres)
 
-                    j_est_corr, hsic_corr = correct_ica_scale_permutation(
-                        j_est,
-                        p,
-                        j_gt,
-                        None
-                        if hsic is None
-                        else torch.from_numpy(hsic.astype(np.float32)),
-                    )
+                    j_est_corr = correct_jacobian_permutations(j_est, munkres, p)
+
+                    # j_est_corr, hsic_corr = correct_ica_scale_permutation(
+                    #     j_est,
+                    #     p,
+                    #     j_gt,
+                    #     None
+                    #     if hsic is None
+                    #     else torch.from_numpy(hsic.astype(np.float32)),
+                    # )
                     jac_prec_recall.update(j_est_corr, j_gt)
 
                     accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
                     if hsic is not None:
+                        hsic = torch.from_numpy(hsic.astype(np.float32))
+                        hsic_corr = correct_jacobian_permutations(hsic, munkres, p)
                         accuracy_hsic.append((hsic_corr == j_gt.bool()).float().mean())
                     hamming_dist.append(j_hamming(j_gt, j_est_corr))
 
