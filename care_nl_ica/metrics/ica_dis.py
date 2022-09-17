@@ -1,6 +1,6 @@
 import itertools
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Tuple, List
 
 import torch
 
@@ -151,13 +151,14 @@ def ksi_correlation(hz: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     return ksi_matrix
 
 
-def calc_disent_metrics(z, hz) -> DisentanglementMetrics:
+def calc_disent_metrics(z, hz) -> Tuple[DisentanglementMetrics, List]:
     (lin_dis_score, _), _ = disentanglement_utils.linear_disentanglement(
         z, hz, mode="r2"
     )
     (
         permutation_disentanglement_score,
         perm_corr_mat,
+        munkres_sort_idx,
     ), _ = disentanglement_utils.permutation_disentanglement(
         z,
         hz,
@@ -172,7 +173,7 @@ def calc_disent_metrics(z, hz) -> DisentanglementMetrics:
 
     beta = torch.diag((z.detach() * hz.detach()).sum(0) / (hz.detach() ** 2).sum(0))
 
-    non_perm_dis_score, non_perm_corr_mat = disentanglement_utils._disentanglement(
+    non_perm_dis_score, non_perm_corr_mat, _ = disentanglement_utils._disentanglement(
         z.detach().cpu().numpy(),
         (hz.detach() @ beta).cpu().numpy(),
         mode="pearson",
@@ -185,19 +186,22 @@ def calc_disent_metrics(z, hz) -> DisentanglementMetrics:
         ksi_correlation(z.detach(), hz.detach()), -1
     )
 
-    return DisentanglementMetrics(
-        lin_score=lin_dis_score,
-        perm_score=permutation_disentanglement_score,
-        non_perm_score=non_perm_dis_score,
-        perm_corr_mat=torch.tensor(perm_corr_mat),
-        non_perm_corr_mat=torch.tensor(non_perm_corr_mat),
-        ksi_corr_mat=ksi_corr_mat,
-        perm_corr_diag=frobenius_diagonality(torch.tensor(perm_corr_mat)).item(),
-        non_perm_corr_diag=frobenius_diagonality(
-            torch.tensor(non_perm_corr_mat)
-        ).item(),
-        ksi_corr_diag=frobenius_diagonality(ksi_corr_mat).item(),
-        perm_corr_mig=_mig_from_correlation(torch.tensor(perm_corr_mat)),
-        non_perm_corr_mig=_mig_from_correlation(torch.tensor(non_perm_corr_mat)),
-        ksi_corr_mig=_mig_from_correlation(ksi_corr_mat),
+    return (
+        DisentanglementMetrics(
+            lin_score=lin_dis_score,
+            perm_score=permutation_disentanglement_score,
+            non_perm_score=non_perm_dis_score,
+            perm_corr_mat=torch.tensor(perm_corr_mat),
+            non_perm_corr_mat=torch.tensor(non_perm_corr_mat),
+            ksi_corr_mat=ksi_corr_mat,
+            perm_corr_diag=frobenius_diagonality(torch.tensor(perm_corr_mat)).item(),
+            non_perm_corr_diag=frobenius_diagonality(
+                torch.tensor(non_perm_corr_mat)
+            ).item(),
+            ksi_corr_diag=frobenius_diagonality(ksi_corr_mat).item(),
+            perm_corr_mig=_mig_from_correlation(torch.tensor(perm_corr_mat)),
+            non_perm_corr_mig=_mig_from_correlation(torch.tensor(non_perm_corr_mat)),
+            ksi_corr_mig=_mig_from_correlation(ksi_corr_mat),
+        ),
+        munkres_sort_idx,
     )
