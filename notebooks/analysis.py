@@ -38,16 +38,23 @@ def sweep2df(
             hsic_adj = npy_data["hsic_adj"]
         except:
             hsic_adj = None
+        try:
+            munkres_permutation_indices = npy_data["munkres_permutation_indices"]
+        except:
+            munkres_permutation_indices = None
+
         return pd.read_csv(csv_name), (
             true_unmixing_jacobians,
             est_unmixing_jacobians,
             permute_indices,
             hsic_adj,
+            munkres_permutation_indices,
         )
     data = []
     true_unmixing_jacobians = []
     est_unmixing_jacobians = []
     permute_indices = []
+    munkres_permutation_indices = []
     hsic_adj = []
     max_dim = -1
     for run in sweep_runs:
@@ -106,6 +113,11 @@ def sweep2df(
                             .reshape(dim, dim)
                         )
 
+                if "munkres_permutation_idx" in summary.keys():
+                    munkres_permutation_indices.append(
+                        summary["munkres_permutation_idx"]
+                    )
+
                 permute_indices.append(summary["Mixing/permute_indices"])
 
                 if dim > max_dim:
@@ -154,6 +166,7 @@ def sweep2df(
             est_unmixing_jacobians=est_unmixing_jacobians,
             permute_indices=permute_indices,
             hsic_adj=hsic_adj,
+            munkres_permutation_indices=munkres_permutation_indices,
         )
 
     return runs_df, (
@@ -161,6 +174,7 @@ def sweep2df(
         est_unmixing_jacobians,
         permute_indices,
         hsic_adj,
+        munkres_permutation_indices,
     )
 
 
