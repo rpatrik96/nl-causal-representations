@@ -5,6 +5,12 @@ from torchmetrics import Metric
 from torchmetrics.utilities.data import METRIC_EPS
 
 
+def correct_jacobian_permutations(
+    dep_mat: torch.Tensor, ica_permutation: torch.Tensor, sem_permutation: torch.Tensor
+) -> torch.Tensor:
+    return ica_permutation @ dep_mat @ sem_permutation
+
+
 def correct_ica_scale_permutation(
     dep_mat: torch.Tensor,
     permutation: torch.Tensor,
@@ -19,7 +25,7 @@ def correct_ica_scale_permutation(
     :param gt_jacobian_unmixing:
     :return:
     """
-
+    # permutation = torch.eye(dep_mat.shape[0])
     scaled_appr_permutation_est_inv: torch.Tensor = (
         (dep_mat @ permutation @ gt_jacobian_unmixing.inverse()).inverse().contiguous()
     )
@@ -33,12 +39,15 @@ def correct_ica_scale_permutation(
         .sort()[1][:num_zeros]
     )
 
+    # print(scaled_appr_permutation_est_inv)
+    # sys.exit(0)
+
     # zero them out
     scaled_appr_permutation_est_inv.view(-1, 1)[zero_idx] = 0
 
     # torch.linalg.solve()
     # print(scaled_appr_permutation_est_inv)
-
+    print(scaled_appr_permutation_est_inv.abs())
     return (
         scaled_appr_permutation_est_inv @ dep_mat @ permutation,
         None
