@@ -14,7 +14,7 @@ parameters:
   trainer.max_epochs:
     value: 7500
   seed_everything:
-    values: [42, 64, 982, 5748, 23567]
+    values: [42, 64, 982, 5748, 23567, 8734, 564, 74452, 96, 26]
   model.offline:
     value: true
   data.variant:
