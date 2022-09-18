@@ -7,7 +7,6 @@ from scipy.spatial.distance import hamming
 
 import wandb
 from care_nl_ica.metrics.dep_mat import (
-    correct_ica_scale_permutation,
     correct_jacobian_permutations,
     jacobian_edge_accuracy,
     JacobianBinnedPrecisionRecall,
@@ -367,22 +366,17 @@ def corrected_jacobian_stats(
                     munkres = perm2matrix(munkres)
 
                     j_est_corr = correct_jacobian_permutations(j_est, munkres, p)
-
-                    # j_est_corr, hsic_corr = correct_ica_scale_permutation(
-                    #     j_est,
-                    #     p,
-                    #     j_gt,
-                    #     None
-                    #     if hsic is None
-                    #     else torch.from_numpy(hsic.astype(np.float32)),
-                    # )
                     jac_prec_recall.update(j_est_corr, j_gt)
 
                     accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
                     if hsic is not None:
                         hsic = torch.from_numpy(hsic.astype(np.float32))
-                        hsic_corr = correct_jacobian_permutations(hsic, munkres, p)
-                        accuracy_hsic.append((hsic_corr == j_gt.bool()).float().mean())
+                        hsic_edges = torch.eye(dim)
+                        # hsic = correct_jacobian_permutations(hsic, munkres, p)
+
+                        hsic2edge(hsic, hsic_edges)
+
+                        accuracy_hsic.append((hsic_edges == j_gt.bool()).float().mean())
                     hamming_dist.append(j_hamming(j_gt, j_est_corr))
 
             precisions, recalls, thresholds = jac_prec_recall.compute()
@@ -404,3 +398,13 @@ def corrected_jacobian_stats(
                 "thresholds": thresholds,
             }
     return stats
+
+
+def hsic2edge(hsic, hsic_edges):
+    for i in range(dim := hsic.shape[0]):
+        for j in range(i + 1, dim):
+            if hsic[i, j] + hsic[i, i] + hsic[j, i] + hsic[j, j] == 1:
+                if hsic[i, j] + hsic[i, i] > 0:
+                    hsic_edges[i, j] = 1
+                else:
+                    hsic_edges[j, i] = 1
