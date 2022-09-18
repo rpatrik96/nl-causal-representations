@@ -347,7 +347,7 @@ def corrected_jacobian_stats(
             if hsic_adj is None:
                 hsic_adj = [None] * len(true_unmix_jacobians)
 
-            jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
+            jac_prec_recall = JacobianBinnedPrecisionRecall(50, log_base=10, start=-7)
             # success = []
             hamming_dist = []
             accuracy = []
