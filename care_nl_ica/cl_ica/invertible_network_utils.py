@@ -29,7 +29,7 @@ def construct_invertible_mlp(
         Literal["softplus"],
     ] = "leaky_relu",
     lower_triangular=True,
-    sparsity=True,
+    mask_prob=0.0,
     variant=None,
     offset=0,
 ):
@@ -118,9 +118,22 @@ def construct_invertible_mlp(
                     offset if offset != 0.0 else (0.32 * n**2)
                 )
             if lower_triangular:
-                if sparsity:
-                    _, tril_mask = createARmask(n, variant)
-                    tril_mask = tril_mask.cpu()
+                if mask_prob > 0.0:
+                    # _, tril_mask = createARmask(n, variant)
+
+                    tril_mask = (
+                        (
+                            torch.tril(
+                                torch.bernoulli(
+                                    mask_prob * torch.ones_like(weight_matrix)
+                                ),
+                                1,
+                            )
+                        )
+                        .bool()
+                        .float()
+                        .cpu()
+                    )
 
                     """Make the causal ordering unique"""
                     # A chain has a unique ordering, so if

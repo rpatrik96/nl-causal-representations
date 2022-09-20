@@ -99,7 +99,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 weight_matrix_init=self.hparams.data_gen_mode,
                 act_fct=self.hparams.act_fct,
                 lower_triangular=True,
-                sparsity=self.hparams.mlp_sparsity,
+                mask_prob=self.hparams.mask_prob,
                 variant=torch.tensor(
                     self.hparams.variant, device=self.hparams.device
                 ).int(),

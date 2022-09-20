@@ -1,0 +1,40 @@
+command:
+  - ${env}
+  - python3
+  - care_nl_ica/cli.py
+  - fit
+  - "--config"
+  - "configs/config.yaml"
+  - ${args}
+method: grid
+metric:
+  goal: minimize
+  name: val_loss
+parameters:
+  seed_everything:
+    values: [42, 64, 982, 5748, 23567]
+  trainer.max_epochs:
+    value: 20000
+  model.offline:
+    value: true
+  data.variant:
+    value: 3
+  data.latent_dim:
+    value: 6
+  data.use_sem:
+    value: false
+  data.n_mixing_layer:
+    values: [1,2,3,4,5]
+  data.data_gen_mode:
+    value: offset
+  data.mlp_sparsity:
+    value: true
+  data.offset:
+    value: 0
+  data.mask_prob:
+    value: 0.25
+
+
+
+
+
