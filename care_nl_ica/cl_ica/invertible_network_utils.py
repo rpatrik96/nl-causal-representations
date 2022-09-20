@@ -124,9 +124,7 @@ def construct_invertible_mlp(
                     tril_mask = (
                         (
                             torch.tril(
-                                torch.bernoulli(
-                                    mask_prob * torch.ones_like(weight_matrix)
-                                ),
+                                torch.bernoulli(mask_prob * torch.ones(n, n)),
                                 1,
                             )
                         )
