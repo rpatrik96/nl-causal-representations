@@ -15,6 +15,7 @@ from care_nl_ica.models.sinkhorn import learn_permutation
 
 BLUE = "#1A85FF"
 RED = "#D0021B"
+METRIC_EPS = 1e-6
 
 
 def sweep2df(
@@ -351,6 +352,8 @@ def corrected_jacobian_stats(
             hamming_dist = []
             accuracy = []
             accuracy_hsic = [] if hsic_adj[0] is not None else -1.0
+            precision_hsic = [] if hsic_adj[0] is not None else -1.0
+            recall_hsic = [] if hsic_adj[0] is not None else -1.0
             for (selector_item, j_gt, j_est, p, hsic, munkres) in zip(
                 df[selector_col],
                 true_unmix_jacobians,
@@ -377,20 +380,36 @@ def corrected_jacobian_stats(
                             hsic_edges, munkres, p
                         )
 
-                        accuracy_hsic.append(
-                            (hsic_edges_corr == j_gt.bool()).float().mean()
+                        numel = dim**2
+                        hsic_tp = (hsic_edges_corr == j_gt.bool()).float().sum()
+                        hsic_fp = (
+                            (hsic_edges_corr == j_gt.bool().logical_not()).float().sum()
                         )
+                        hsic_fn = (
+                            (hsic_edges_corr.logical_not() == j_gt.bool()).float().sum()
+                        )
+
+                        precision_hsic.append(
+                            (hsic_tp + METRIC_EPS) / (hsic_tp + hsic_fp + METRIC_EPS)
+                        )
+                        recall_hsic.append(
+                            (hsic_tp + METRIC_EPS) / (hsic_tp + hsic_fn + METRIC_EPS)
+                        )
+
+                        accuracy_hsic.append(hsic_tp / numel)
                     hamming_dist.append(j_hamming(j_gt, j_est_corr))
 
             precisions, recalls, thresholds = jac_prec_recall.compute()
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
             accuracy = np.array(accuracy)
             accuracy_hsic = np.array(accuracy_hsic)
+            precision_hsic = np.array(precision_hsic)
+            recall_hsic = np.array(recall_hsic)
             hamming_dist = np.array(hamming_dist)
             print("----------------------------------")
             if len(accuracy) > 0:
                 print(
-                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc (HSIC):{accuracy_hsic.mean():.3f}+{accuracy_hsic.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc (HSIC):{accuracy_hsic.mean():.3f}+{accuracy_hsic.std():.3f}\tPrec (HSIC):{precision_hsic.mean():.3f}+{precision_hsic.std():.3f}\tRec (HSIC):{recall_hsic.mean():.3f}+{recall_hsic.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
