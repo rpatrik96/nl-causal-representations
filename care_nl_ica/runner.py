@@ -133,7 +133,7 @@ class ContrastiveICAModule(pl.LightningModule):
             is True
         ):
             self.hsic_adj = self.indep_checker.check_multivariate_dependence(
-                sources[0], mixtures[0]
+                reconstructions[0], mixtures[0]
             ).float()
             if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
                 self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
