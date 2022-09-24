@@ -11,53 +11,6 @@ def correct_jacobian_permutations(
     return ica_permutation @ dep_mat @ sem_permutation
 
 
-def correct_ica_scale_permutation(
-    dep_mat: torch.Tensor,
-    permutation: torch.Tensor,
-    gt_jacobian_unmixing: torch.Tensor,
-    hsic_adj,
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-
-    :param hsic_adj: adjacency matrix estimated by HSIC
-    :param permutation: permutation matrix
-    :param dep_mat: estimated unmixing Jacobian (including ICA permutation indeterminacy, i.e., P@J_GT)
-    :param gt_jacobian_unmixing:
-    :return:
-    """
-    # permutation = torch.eye(dep_mat.shape[0])
-    scaled_appr_permutation_est_inv: torch.Tensor = (
-        (dep_mat @ permutation @ gt_jacobian_unmixing.inverse()).inverse().contiguous()
-    )
-    dim = dep_mat.shape[0]
-    num_zeros = dim**2 - dim
-    zero_idx = (
-        scaled_appr_permutation_est_inv.abs()
-        .view(
-            -1,
-        )
-        .sort()[1][:num_zeros]
-    )
-
-    # print(scaled_appr_permutation_est_inv)
-    # sys.exit(0)
-
-    # zero them out
-    scaled_appr_permutation_est_inv.view(-1, 1)[zero_idx] = 0
-
-    # torch.linalg.solve()
-    # print(scaled_appr_permutation_est_inv)
-    print(scaled_appr_permutation_est_inv.abs())
-    return (
-        scaled_appr_permutation_est_inv @ dep_mat @ permutation,
-        None
-        if hsic_adj is None
-        else scaled_appr_permutation_est_inv.abs().bool().float()
-        @ hsic_adj
-        @ permutation,
-    )
-
-
 def jacobian_edge_accuracy(
     dep_mat: torch.Tensor, gt_jacobian_unmixing: torch.Tensor
 ) -> torch.Tensor:
