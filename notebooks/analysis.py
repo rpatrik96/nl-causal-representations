@@ -372,7 +372,6 @@ def corrected_jacobian_stats(
         )
         > hamming_threshold,
     )
-    print("----We need to figure out whether HSIC needs to be corrected--------")
     stats: dict = dict()
     for dim in df.dim.unique():
         stats[dim] = dict()
