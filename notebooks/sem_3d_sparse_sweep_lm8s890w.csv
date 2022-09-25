@@ -1,0 +1,17 @@
+,name,dim,permute,variant,n_mixing_layer,use_sem,nonlin_sem,force_chain,force_uniform,mcc,val_loss
+0,classic-sweep-20,3,False,0,1,True,True,False,False,0.9999596225772244,4.484454154968262
+1,northern-sweep-19,3,False,0,1,True,True,False,False,0.9999133110494473,4.493100643157959
+2,lucky-sweep-18,3,False,0,1,True,True,False,False,0.999934173215041,4.493666648864746
+3,sunny-sweep-16,3,False,0,1,True,True,False,False,0.9999475003711812,4.4822492599487305
+4,ethereal-sweep-15,3,False,0,1,True,True,False,False,0.9999135937156256,4.465629577636719
+5,splendid-sweep-14,3,False,0,1,True,True,False,False,0.9999369829837246,4.470257759094238
+6,cerulean-sweep-13,3,False,0,1,True,True,False,False,0.9998532325373448,4.4454545974731445
+7,restful-sweep-11,3,False,0,1,True,True,False,False,0.999959709496154,4.461050510406494
+8,bumbling-sweep-10,3,False,0,1,True,False,False,False,0.9999579945185338,4.493952751159668
+9,morning-sweep-9,3,False,0,1,True,False,False,False,0.9999619495424686,4.491983890533447
+10,classic-sweep-8,3,False,0,1,True,False,False,False,0.9999773318709866,4.492518424987793
+11,vital-sweep-7,3,False,0,1,True,False,False,False,0.9999648924388136,4.451825141906738
+12,winter-sweep-6,3,False,0,1,True,False,False,False,0.9999844737286218,4.4821624755859375
+13,golden-sweep-5,3,False,0,1,True,False,False,False,0.9999239649393522,4.46468448638916
+14,apricot-sweep-4,3,False,0,1,True,False,False,False,0.9999426637679648,4.468593120574951
+15,stilted-sweep-1,3,False,0,1,True,False,False,False,0.9999451954775463,4.459792137145996
