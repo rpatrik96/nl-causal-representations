@@ -21,7 +21,7 @@ def _disentanglement(z, hz, mode: __Mode = "r2", reorder=None):
     assert mode in ("r2", "adjusted_r2", "pearson", "spearman")
 
     if mode == "r2":
-        return metrics.r2_score(z, hz), None
+        return metrics.r2_score(z, hz), None, None
     elif mode == "adjusted_r2":
         r2 = metrics.r2_score(z, hz)
         # number of data samples
@@ -29,8 +29,9 @@ def _disentanglement(z, hz, mode: __Mode = "r2", reorder=None):
         # number of predictors, i.e. features
         p = z.shape[1]
         adjusted_r2 = 1.0 - (1.0 - r2) * (n - 1) / (n - p - 1)
-        return adjusted_r2, None
+        return adjusted_r2, None, None
     elif mode in ("spearman", "pearson"):
+        sort_idx = None
         dim = z.shape[-1]
 
         if mode == "spearman":
@@ -57,7 +58,7 @@ def _disentanglement(z, hz, mode: __Mode = "r2", reorder=None):
 
             corr = raw_corr[:dim, dim:]
 
-        return np.diag(np.abs(corr)).mean(), corr
+        return np.diag(np.abs(corr)).mean(), corr, sort_idx
 
 
 def linear_disentanglement(z, hz, mode: __Mode = "r2", train_test_split=False):
@@ -97,7 +98,7 @@ def linear_disentanglement(z, hz, mode: __Mode = "r2", train_test_split=False):
 
     hz_2 = model.predict(hz_2)
 
-    inner_result = _disentanglement(z_2, hz_2, mode=mode, reorder=False)
+    inner_result = _disentanglement(z_2, hz_2, mode=mode, reorder=False)[:-1]
 
     return inner_result, (z_2, hz_2)
 

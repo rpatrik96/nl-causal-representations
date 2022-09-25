@@ -14,6 +14,8 @@ class IndependenceChecker(object):
 
         self.test = HSIC(hparams.num_permutations)
 
+        print("Using Bonferroni = 4")
+
     def check_bivariate_dependence(self, x1, x2):
         decisions = []
         var_map = [1, 1, 2, 2]
@@ -52,7 +54,7 @@ class IndependenceChecker(object):
             for i in range(num_dim):
                 for j in range(num_dim):
                     adjacency_matrix[i, j] = self.test.run_test(
-                        x1[:, i], x2[:, j], bonferroni=max_edge_num
+                        x1[:, i], x2[:, j], bonferroni=4  # max_edge_num
                     ).item()
 
         return adjacency_matrix

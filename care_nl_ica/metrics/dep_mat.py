@@ -5,45 +5,10 @@ from torchmetrics import Metric
 from torchmetrics.utilities.data import METRIC_EPS
 
 
-def correct_ica_scale_permutation(
-    dep_mat: torch.Tensor,
-    permutation: torch.Tensor,
-    gt_jacobian_unmixing: torch.Tensor,
-    hsic_adj,
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-
-    :param hsic_adj: adjacency matrix estimated by HSIC
-    :param permutation: permutation matrix
-    :param dep_mat: estimated unmixing Jacobian (including ICA permutation indeterminacy, i.e., P@J_GT)
-    :param gt_jacobian_unmixing:
-    :return:
-    """
-
-    scaled_appr_permutation_est_inv: torch.Tensor = (
-        (dep_mat @ permutation @ gt_jacobian_unmixing.inverse()).inverse().contiguous()
-    )
-
-    dim = dep_mat.shape[0]
-    num_zeros = dim**2 - dim
-    zero_idx = (
-        scaled_appr_permutation_est_inv.abs()
-        .view(
-            -1,
-        )
-        .sort()[1][:num_zeros]
-    )
-
-    # zero them out
-    scaled_appr_permutation_est_inv.view(-1, 1)[zero_idx] = 0
-
-    # torch.linalg.solve()
-    # print(scaled_appr_permutation_est_inv)
-
-    return (
-        scaled_appr_permutation_est_inv @ dep_mat @ permutation,
-        scaled_appr_permutation_est_inv.abs().bool().float() @ hsic_adj @ permutation,
-    )
+def correct_jacobian_permutations(
+    dep_mat: torch.Tensor, ica_permutation: torch.Tensor, sem_permutation: torch.Tensor
+) -> torch.Tensor:
+    return ica_permutation @ dep_mat @ sem_permutation
 
 
 def jacobian_edge_accuracy(

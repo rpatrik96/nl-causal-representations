@@ -72,6 +72,7 @@ class ContrastiveICAModule(pl.LightningModule):
         ).to(self.hparams.device)
 
         self.dep_mat = None
+        self.munkres_permutation_idx = None
 
         self.indep_checker = IndependenceChecker(self.hparams)
         self.hsic_adj = None
@@ -132,13 +133,13 @@ class ContrastiveICAModule(pl.LightningModule):
             is True
         ):
             self.hsic_adj = self.indep_checker.check_multivariate_dependence(
-                sources[0], reconstructions[0]
+                reconstructions[0], mixtures[0]
             ).float()
             if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
                 self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
 
         """Disentanglement"""
-        disent_metrics: DisentanglementMetrics = calc_disent_metrics(
+        disent_metrics, self.munkres_permutation_idx = calc_disent_metrics(
             sources[0], reconstructions[0]
         )
         self.log(
@@ -195,15 +196,23 @@ class ContrastiveICAModule(pl.LightningModule):
         # create random "negative" pairs
         # this is faster than sampling z3 again from the marginal distribution
         # and should also yield samples as if they were sampled from the marginal
-        z3 = torch.roll(sources[0], 1, 0)
-        z3_rec = torch.roll(reconstructions[0], 1, 0)
+        # z3 = torch.roll(sources[0], 1, 0)
+        # z3_rec = torch.roll(reconstructions[0], 1, 0)
 
         _, _, [loss_pos_mean, loss_neg_mean] = self.model.loss(
-            *sources, z3, *reconstructions, z3_rec
+            *sources,
+            # z3,
+            *reconstructions,
+            # z3_rec
         )
 
         # estimate entropy (i.e., the baseline of the loss)
-        entropy_estimate, _, _ = self.model.loss(*sources, z3, *sources, z3)
+        entropy_estimate, _, _ = self.model.loss(
+            *sources,
+            # z3,
+            *sources,
+            # z3
+        )
 
         losses = ContrastiveLosses(
             cl_pos=loss_pos_mean,
@@ -244,6 +253,11 @@ class ContrastiveICAModule(pl.LightningModule):
     def on_fit_end(self) -> None:
 
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            """ICA permutation indices"""
+            self.logger.experiment.summary[
+                "munkres_permutation_idx"
+            ] = self.munkres_permutation_idx
+
             """Jacobians"""
             table = wandb.Table(
                 data=[self.dep_mat.reshape(1, -1).tolist()], columns=["dep_mat"]

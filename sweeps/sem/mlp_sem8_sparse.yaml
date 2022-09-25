@@ -18,9 +18,9 @@ parameters:
   model.offline:
     value: true
   data.variant:
-    values: [0,1,2,3,4,5]
+    values: [0,575, 8754, 12450, 21345, 36755]
   data.latent_dim:
-    value: 3
+    value: 8
   data.use_sem:
     value: true
   data.nonlin_sem:
@@ -28,7 +28,9 @@ parameters:
   data.permute:
     value: true
   data.offset:
-    value: 0
+    value: 1
+  data.mask_prob:
+    value: 0.5
 
 
 

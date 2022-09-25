@@ -44,11 +44,13 @@ class ContrastiveDataModule(pl.LightningDataModule):
         offset=0,
         mask_prob=0.0,
         mlp_sparsity=False,
+        weight_rand_func="rand",
         **kwargs,
     ):
 
         """
 
+        :param weight_rand_func: function to draw SEM weights from
         :param mlp_sparsity: whether the invertible MLP has a sparsity mask
         :param mask_prob: probability to delete edges in the SEM
         :param offset: constant to add to weights in SEM
@@ -97,7 +99,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 weight_matrix_init=self.hparams.data_gen_mode,
                 act_fct=self.hparams.act_fct,
                 lower_triangular=True,
-                sparsity=self.hparams.mlp_sparsity,
+                mask_prob=self.hparams.mask_prob,
                 variant=torch.tensor(
                     self.hparams.variant, device=self.hparams.device
                 ).int(),
@@ -115,6 +117,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     diag_weight=self.hparams.diag_weight,
                     offset=self.hparams.offset,
                     mask_prob=self.hparams.mask_prob,
+                    weight_rand_func=self.hparams.weight_rand_func,
                 )
             else:
                 self.mixing = NonLinearSEM(
@@ -126,6 +129,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     diag_weight=self.hparams.diag_weight,
                     offset=self.hparams.offset,
                     mask_prob=self.hparams.mask_prob,
+                    weight_rand_func=self.hparams.weight_rand_func,
                 )
 
             # print(f"{self.mixing.weight=}")

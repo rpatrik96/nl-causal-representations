@@ -14,11 +14,11 @@ parameters:
   trainer.max_epochs:
     value: 15000
   seed_everything:
-    values: [42, 64, 982, 5748, 23567]
+    values: [42, 64, 982, 5748, 23567, 8734, 564, 74452, 96, 26]
   model.offline:
     value: true
   data.variant:
-    values: [0,1,2,3,4,5]
+    value: 0
   data.latent_dim:
     value: 3
   data.use_sem:
@@ -26,10 +26,11 @@ parameters:
   data.nonlin_sem:
     values: [false, true]
   data.permute:
-    value: true
+    value: false
   data.offset:
-    value: 0
-
+    value: 1
+  data.mask_prob:
+    value: 0.25
 
 
 

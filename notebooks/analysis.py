@@ -7,7 +7,7 @@ from scipy.spatial.distance import hamming
 
 import wandb
 from care_nl_ica.metrics.dep_mat import (
-    correct_ica_scale_permutation,
+    correct_jacobian_permutations,
     jacobian_edge_accuracy,
     JacobianBinnedPrecisionRecall,
 )
@@ -15,6 +15,41 @@ from care_nl_ica.models.sinkhorn import learn_permutation
 
 BLUE = "#1A85FF"
 RED = "#D0021B"
+METRIC_EPS = 1e-6
+
+from matplotlib import pyplot as plt
+from matplotlib import rc
+
+
+def plot_typography(
+    usetex: bool = False, small: int = 16, medium: int = 20, big: int = 22
+):
+    """
+    Initializes font settings and visualization backend (LaTeX or standard matplotlib).
+    :param usetex: flag to indicate the usage of LaTeX (needs LaTeX indstalled)
+    :param small: small font size in pt (for legends and axes' ticks)
+    :param medium: medium font size in pt (for axes' labels)
+    :param big: big font size in pt (for titles)
+    :return:
+    """
+
+    # font family
+    rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
+    ## for Palatino and other serif fonts use:
+    # rc('font',**{'family':'serif','serif':['Palatino']})
+
+    # backend
+    rc("text", usetex=usetex)
+    rc("font", family="serif")
+
+    # font sizes
+    rc("font", size=small)  # controls default text sizes
+    rc("axes", titlesize=big)  # fontsize of the axes title
+    rc("axes", labelsize=medium)  # fontsize of the x and y labels
+    rc("xtick", labelsize=small)  # fontsize of the tick labels
+    rc("ytick", labelsize=small)  # fontsize of the tick labels
+    rc("legend", fontsize=small)  # legend fontsize
+    rc("figure", titlesize=big)  # fontsize of the figure title
 
 
 def sweep2df(
@@ -38,16 +73,23 @@ def sweep2df(
             hsic_adj = npy_data["hsic_adj"]
         except:
             hsic_adj = None
+        try:
+            munkres_permutation_indices = npy_data["munkres_permutation_indices"]
+        except:
+            munkres_permutation_indices = None
+
         return pd.read_csv(csv_name), (
             true_unmixing_jacobians,
             est_unmixing_jacobians,
             permute_indices,
             hsic_adj,
+            munkres_permutation_indices,
         )
     data = []
     true_unmixing_jacobians = []
     est_unmixing_jacobians = []
     permute_indices = []
+    munkres_permutation_indices = []
     hsic_adj = []
     max_dim = -1
     for run in sweep_runs:
@@ -106,7 +148,16 @@ def sweep2df(
                             .reshape(dim, dim)
                         )
 
-                permute_indices.append(summary["Mixing/permute_indices"])
+                if "munkres_permutation_idx" in summary.keys():
+                    munkres_permutation_indices.append(
+                        summary["munkres_permutation_idx"]
+                    )
+
+                permute_indices.append(
+                    summary["Mixing/permute_indices"]
+                    if permute is True
+                    else np.arange(0, dim)
+                )
 
                 if dim > max_dim:
                     max_dim = dim
@@ -154,6 +205,7 @@ def sweep2df(
             est_unmixing_jacobians=est_unmixing_jacobians,
             permute_indices=permute_indices,
             hsic_adj=hsic_adj,
+            munkres_permutation_indices=munkres_permutation_indices,
         )
 
     return runs_df, (
@@ -161,6 +213,7 @@ def sweep2df(
         est_unmixing_jacobians,
         permute_indices,
         hsic_adj,
+        munkres_permutation_indices,
     )
 
 
@@ -303,6 +356,7 @@ def corrected_jacobian_stats(
     est_unmix_jacobians,
     permute_indices,
     hsic_adj,
+    munkres_indices,
     hamming_threshold=1e-3,
     selector_col="nonlin_sem",
 ) -> dict:
@@ -318,60 +372,129 @@ def corrected_jacobian_stats(
         )
         > hamming_threshold,
     )
-
     stats: dict = dict()
     for dim in df.dim.unique():
         stats[dim] = dict()
 
-        for variant in df.variant.unique():
-            stats[dim][variant] = dict()
-            print("##################################")
-            print(f"variant={variant}")
+        for selector in df[selector_col].unique():
+            if hsic_adj is None:
+                hsic_adj = [None] * len(true_unmix_jacobians)
 
-            for selector in df[selector_col].unique():
+            jac_prec_recall = JacobianBinnedPrecisionRecall(50, log_base=10, start=-7)
+            # success = []
+            hamming_dist = []
+            accuracy = []
+            accuracy_hsic = [] if hsic_adj[0] is not None else -1.0
+            precision_hsic = [] if hsic_adj[0] is not None else -1.0
+            recall_hsic = [] if hsic_adj[0] is not None else -1.0
+            for (selector_item, j_gt, j_est, p, hsic, munkres) in zip(
+                df[selector_col],
+                true_unmix_jacobians,
+                est_unmix_jacobians,
+                permute_indices,
+                hsic_adj,
+                munkres_indices,
+            ):
+                if j_gt.shape[0] == dim and selector_item == selector:
+                    j_est = torch.from_numpy(j_est.astype(np.float32))
+                    j_gt = torch.from_numpy(j_gt.astype(np.float32))
+                    p = perm2matrix(p)
+                    munkres = perm2matrix(munkres)
 
-                jac_prec_recall = JacobianBinnedPrecisionRecall(25, log_base=1)
-                # success = []
-                hamming_dist = []
-                accuracy = []
-                accuracy_hsic = []
-                for (selector_item, j_gt, j_est, p, hsic) in zip(
-                    df[selector_col],
-                    true_unmix_jacobians,
-                    est_unmix_jacobians,
-                    permute_indices,
-                    hsic_adj,
-                ):
-                    if j_gt.shape[0] == dim and selector_item == selector:
-                        j_est = torch.from_numpy(j_est.astype(np.float32))
-                        j_gt = torch.from_numpy(j_gt.astype(np.float32))
-                        p = perm2matrix(p)
+                    j_est_corr = correct_jacobian_permutations(j_est, munkres, p)
+                    jac_prec_recall.update(j_est_corr, j_gt)
 
-                        j_est_corr, hsic_corr = correct_ica_scale_permutation(
-                            j_est, p, j_gt, torch.from_numpy(hsic.astype(np.float32))
+                    accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
+
+                    if hsic is not None:
+                        hsic = torch.from_numpy(hsic.astype(np.float32))
+                        hsic_corr = correct_jacobian_permutations(hsic, munkres, p)
+                        hsic_edges = hsic2edge(hsic_corr)
+
+                        numel = dim**2
+                        hsic_tp = (hsic_edges == j_gt.bool()).float().sum()
+                        hsic_fp = (
+                            (hsic_edges == j_gt.bool().logical_not()).float().sum()
                         )
-                        jac_prec_recall.update(j_est_corr, j_gt)
+                        hsic_fn = (
+                            (hsic_edges.logical_not() == j_gt.bool()).float().sum()
+                        )
 
-                        accuracy.append(jacobian_edge_accuracy(j_est_corr, j_gt))
-                        accuracy_hsic.append((hsic_corr == j_gt.bool()).float().mean())
-                        hamming_dist.append(j_hamming(j_gt, j_est_corr))
+                        precision_hsic.append(
+                            (hsic_tp + METRIC_EPS) / (hsic_tp + hsic_fp + METRIC_EPS)
+                        )
+                        recall_hsic.append(
+                            (hsic_tp + METRIC_EPS) / (hsic_tp + hsic_fn + METRIC_EPS)
+                        )
 
-                precisions, recalls, thresholds = jac_prec_recall.compute()
-                mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
-                accuracy = np.array(accuracy)
-                accuracy_hsic = np.array(accuracy_hsic)
-                hamming_dist = np.array(hamming_dist)
-                print("----------------------------------")
-                if len(accuracy) > 0:
-                    print(
-                        f"{dim=} ({selector_col}={selector}, variant={variant})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc (HSIC):{accuracy_hsic.mean():.3f}+{accuracy_hsic.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
-                    )
-                else:
-                    print(f"No experiments for {dim=} ({selector_col}={selector})")
+                        accuracy_hsic.append(hsic_tp / numel)
+                    hamming_dist.append(j_hamming(j_gt, j_est_corr))
 
-                stats[dim][variant][selector] = {
-                    "precisions": precisions,
-                    "recalls": recalls,
-                    "thresholds": thresholds,
-                }
+            precisions, recalls, thresholds = jac_prec_recall.compute()
+            mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
+            accuracy = np.array(accuracy)
+            accuracy_hsic = np.array(accuracy_hsic)
+            precision_hsic = np.array(precision_hsic)
+            recall_hsic = np.array(recall_hsic)
+            hamming_dist = np.array(hamming_dist)
+            print("----------------------------------")
+            if len(accuracy) > 0:
+                print(
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc (HSIC):{accuracy_hsic.mean():.3f}+{accuracy_hsic.std():.3f}\tPrec (HSIC):{precision_hsic.mean():.3f}+{precision_hsic.std():.3f}\tRec (HSIC):{recall_hsic.mean():.3f}+{recall_hsic.std():.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(accuracy)} items]"
+                )
+            else:
+                print(f"No experiments for {dim=} ({selector_col}={selector})")
+
+            stats[dim][selector] = {
+                "precisions": precisions,
+                "recalls": recalls,
+                "thresholds": thresholds,
+                "accuracy": accuracy,
+                "accuracy_hsic": accuracy_hsic,
+            }
     return stats
+
+
+def hsic2edge(hsic):
+    dim = hsic.shape[0]
+    hsic_edges = torch.eye(dim)
+
+    for i in range(dim):
+        for j in range(i + 1, dim):
+            if hsic[i, j] + hsic[i, i] + hsic[j, i] + hsic[j, j] == 1:
+                # as the test is ran for s_i, x_j, the (j,i) edge should be set
+                if hsic[j, i] == 1:
+                    hsic_edges[i, j] = 1
+                elif hsic[i, j] == 1:
+                    hsic_edges[j, i] = 1
+
+    # due to iteration pattern, we need to transpose hsic_edges
+    return hsic_edges.T
+
+
+# Source: https://matplotlib.org/3.1.1/gallery/specialty_plots/hinton_demo.html
+
+
+def hinton(matrix, max_weight=None, ax=None, filename=None):
+    """Draw Hinton diagram for visualizing a weight matrix."""
+    ax = ax if ax is not None else plt.gca()
+
+    if not max_weight:
+        max_weight = 2 ** np.ceil(np.log(np.abs(matrix).max()) / np.log(2))
+
+    ax.patch.set_facecolor("gray")
+    ax.set_aspect("equal", "box")
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+
+    for (x, y), w in np.ndenumerate(matrix):
+        color = BLUE if w > 0 else RED
+        size = np.sqrt(np.abs(w) / max_weight)
+        rect = plt.Rectangle(
+            [x - size / 2, y - size / 2], size, size, facecolor=color, edgecolor=color
+        )
+        ax.add_patch(rect)
+
+    ax.autoscale_view()
+    if filename is not None:
+        plt.savefig(f"{filename}.svg")
