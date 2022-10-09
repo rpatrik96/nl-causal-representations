@@ -52,7 +52,7 @@ class LinearSEM(nn.Module):
             zeros_in_chain = torch.tril(torch.ones_like(inv_weight), -2)
             mask[zeros_in_chain == 1] = 0
 
-            if mask_prob != 0.0:
+            if mask_prob != 1.0:
                 mask = (
                     (
                         mask
