@@ -299,12 +299,17 @@ def learning_stats(
     weight_threshold=None,
     dag_permute=True,
     num_steps=5000,
+    rank_acc=False,
+    drop_smallest=True,
+    binary=True,
 ):
     for dim in df.dim.unique():
         for selector in df[selector_col].unique():
             success = []
             hamming = []
             accuracy = []
+            permutation_losses_dag = []
+            permutation_losses_ica = []
             for (selector_item, j_gt, j_est, permute) in zip(
                 df[selector_col],
                 true_unmix_jacobians,
@@ -312,26 +317,31 @@ def learning_stats(
                 permute_indices,
             ):
                 if j_gt.shape[0] == dim and selector_item == selector:
-                    s, h, a = learn_permutation(
+                    s, h, a, p_dag, p_ica = learn_permutation(
                         j_gt,
                         j_est,
                         permute,
-                        triu_weigth=20.0,
-                        tril_weight=10.0,
-                        diag_weight=6.0,
                         num_steps=num_steps,
+                        tril_weight=10.0,
+                        triu_weigth=20.0,
+                        diag_weight=6.0,
                         lr=1e-4,
                         verbose=False,
-                        drop_smallest=True,
+                        drop_smallest=drop_smallest,
                         threshold=weight_threshold,
-                        binary=True,
+                        binary=binary,
                         hamming_threshold=hamming_threshold,
                         dag_permute=dag_permute,
+                        rank_acc=rank_acc,
                     )
 
-                    success.append(s)
-                    hamming.append(h)
-                    accuracy.append(a)
+                    print(s, p_dag, p_ica)
+                    if s >= 0:
+                        success.append(s)
+                        hamming.append(h)
+                        accuracy.append(a)
+                        permutation_losses_dag.append(p_dag)
+                        permutation_losses_ica.append(p_ica)
 
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
             print("----------------------------------")
