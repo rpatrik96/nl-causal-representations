@@ -429,7 +429,7 @@ def hinton(matrix, max_weight=None, ax=None, filename=None):
         color = BLUE if w > 0 else RED
         size = np.sqrt(np.abs(w) / max_weight)
         rect = plt.Rectangle(
-            [x - size / 2, y - size / 2], size, size, facecolor=color, edgecolor=color
+            [x - size / 2, y - size / 2], size, size, facecolor=color, edgecolor="black"
         )
         ax.add_patch(rect)
 
