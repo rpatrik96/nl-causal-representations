@@ -9,7 +9,6 @@ class SinkhornOperator(object):
     """
 
     def __init__(self, num_steps: int):
-
         if num_steps < 1:
             raise ValueError(f"{num_steps=} should be at least 1")
 
@@ -151,7 +150,6 @@ def learn_permutation(
     else:
         optim = torch.optim.Adam(s_ica.parameters(), lr=lr)
     for i in range(num_steps):
-
         optim.zero_grad()
         if dag_permute is True:
             matrix = (
@@ -195,7 +193,6 @@ def learn_permutation(
     # calculate the ratio of index pairs that are in the correct order
     correct_rank_pairs = 0.0
     if len(learned_order.unique()) == dim:
-
         for o1 in range(dim):
             for o2 in range(o1 + 1, dim):
                 correct_rank_pairs += (

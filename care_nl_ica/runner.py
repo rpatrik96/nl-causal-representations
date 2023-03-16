@@ -169,7 +169,6 @@ class ContrastiveICAModule(pl.LightningModule):
         return losses.total_loss
 
     def _calc_and_log_matrices(self, mixtures, sources):
-
         dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
             self.model, sources[0], mixtures[0]
         )
@@ -223,7 +222,6 @@ class ContrastiveICAModule(pl.LightningModule):
         return sources, mixtures, reconstructions, losses
 
     def log_scatter_latent_rec(self, latent, rec, name: str):
-
         if (
             self.hparams.log_latent_rec is True
             and isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True
@@ -251,7 +249,6 @@ class ContrastiveICAModule(pl.LightningModule):
                 self.logger.experiment.summary[key] = val
 
     def on_fit_end(self) -> None:
-
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             """ICA permutation indices"""
             self.logger.experiment.summary[

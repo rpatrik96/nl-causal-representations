@@ -47,7 +47,6 @@ class ContrastiveDataModule(pl.LightningDataModule):
         weight_rand_func="rand",
         **kwargs,
     ):
-
         """
 
         :param weight_rand_func: function to draw SEM weights from

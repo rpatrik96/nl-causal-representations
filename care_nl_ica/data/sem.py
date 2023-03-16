@@ -74,7 +74,6 @@ class LinearSEM(nn.Module):
         self._setup_permutation(permute)
 
     def _setup_permutation(self, permute):
-
         if self.variant == -1:
             self.permute_indices = torch.randperm(self.num_vars)
         else:
@@ -107,7 +106,6 @@ class LinearSEM(nn.Module):
         return m
 
     def forward(self, x):
-
         return self.permutation((self.weight @ x.T).T)
 
     def to(self, device):

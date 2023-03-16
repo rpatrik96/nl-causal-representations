@@ -92,7 +92,6 @@ def sweep2df(
     hsic_adj = []
     max_dim = -1
     for run in sweep_runs:
-
         # .summary contains the output keys/values for metrics like accuracy.
         #  We call ._json_dict to omit large files
         summary = run.summary._json_dict
@@ -238,7 +237,7 @@ def learning_stats(
             success = []
             hamming_dist = []
             accuracy = []
-            for (selector_item, j_gt, j_est, permute) in zip(
+            for selector_item, j_gt, j_est, permute in zip(
                 df[selector_col],
                 true_unmix_jacobians,
                 est_unmix_jacobians,
@@ -325,7 +324,7 @@ def corrected_jacobian_stats(
             accuracy_hsic = [] if hsic_adj[0] is not None else -1.0
             precision_hsic = [] if hsic_adj[0] is not None else -1.0
             recall_hsic = [] if hsic_adj[0] is not None else -1.0
-            for (selector_item, j_gt, j_est, p, hsic, munkres) in zip(
+            for selector_item, j_gt, j_est, p, hsic, munkres in zip(
                 df[selector_col],
                 true_unmix_jacobians,
                 est_unmix_jacobians,

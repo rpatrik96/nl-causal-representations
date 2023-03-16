@@ -93,7 +93,6 @@ def construct_invertible_mlp(
     print("condition number threshold: {0:f}".format(condThresh))
 
     for i in range(n_layers):
-
         lin_layer = nn.Linear(n, n, bias=False)
         if weight_matrix_init in ["pcl", "rvs", "offset"]:
             if weight_matrix_init == "pcl":
