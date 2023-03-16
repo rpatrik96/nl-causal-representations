@@ -42,12 +42,11 @@ class ContrastiveDataModule(pl.LightningDataModule):
         force_uniform: bool = False,
         diag_weight=0.0,
         offset=0,
-        mask_prob=0.0,
+        mask_prob=1.0,
         mlp_sparsity=False,
         weight_rand_func="rand",
         **kwargs,
     ):
-
         """
 
         :param weight_rand_func: function to draw SEM weights from

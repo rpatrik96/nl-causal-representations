@@ -35,7 +35,6 @@ def calc_jacobian(
 
         output_vars = model(input_vars)
         if not vectorize:
-
             for i in range(output_vars.shape[1]):
                 jacob.append(
                     torch.autograd.grad(

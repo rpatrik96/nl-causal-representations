@@ -17,7 +17,6 @@ BLUE = "#1A85FF"
 RED = "#D0021B"
 METRIC_EPS = 1e-6
 
-from matplotlib import pyplot as plt
 from matplotlib import rc
 
 
@@ -93,7 +92,6 @@ def sweep2df(
     hsic_adj = []
     max_dim = -1
     for run in sweep_runs:
-
         # .summary contains the output keys/values for metrics like accuracy.
         #  We call ._json_dict to omit large files
         summary = run.summary._json_dict
@@ -217,76 +215,7 @@ def sweep2df(
     )
 
 
-def format_violin(vp, facecolor=BLUE):
-    for el in vp["bodies"]:
-        el.set_facecolor(facecolor)
-        el.set_edgecolor("black")
-        el.set_linewidth(0.75)
-        el.set_alpha(0.9)
-    for pn in ["cbars", "cmins", "cmaxes", "cmedians"]:
-        vp_ = vp[pn]
-        vp_.set_edgecolor("black")
-        vp_.set_linewidth(0.5)
-
-
 import matplotlib.pyplot as plt
-
-
-def create_violinplot(groups, xlabel, ylabel, xticklabels, filename=None, ax=None):
-    if ax is None:
-        fig, ax = plt.subplots()
-    else:
-        ax = ax.twinx()
-
-    vp = ax.violinplot(groups, showmedians=True)
-    format_violin(vp, BLUE)
-
-    ax.set_xticklabels(xticklabels)
-    # ax.set_xticks(xticks)
-    # plt.locator_params(axis='y', nbins=5)
-    # plt.yticks(fontsize=24)
-    # plt.ylim([0, 0.5])
-    ax.set_ylabel(ylabel)
-    # ax.set_xlabel(xlabel)
-    if filename is not None:
-        plt.savefig(f"{filename}.svg")
-    return ax
-
-
-def violin_by_prior(
-    gauss_data,
-    laplace_data,
-    uniform_data,
-    xticks,
-    xlabel,
-    ylabel,
-    offset,
-    filename,
-    figsize=(8, 6),
-    log=False,
-):
-    plt.figure(figsize=figsize)
-    vp_gauss = plt.violinplot(
-        [np.log10(i) if log is True else i for i in gauss_data], positions=xticks
-    )
-    vp_laplace = plt.violinplot(
-        [np.log10(i) if log is True else i for i in laplace_data],
-        positions=-offset + xticks,
-    )
-    vp_uniform = plt.violinplot(
-        [np.log10(i) if log is True else i for i in uniform_data],
-        positions=offset + xticks,
-    )
-    plt.legend(
-        [vp_gauss["bodies"][0], vp_laplace["bodies"][0], vp_uniform["bodies"][0]],
-        ["gaussian", "laplace", "uniform"],
-        loc="upper right",
-    )
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.xticks(xticks)
-    # plt.tight_layout()
-    plt.savefig(filename)
 
 
 def learning_stats(
@@ -299,45 +228,53 @@ def learning_stats(
     weight_threshold=None,
     dag_permute=True,
     num_steps=5000,
+    rank_acc=False,
+    drop_smallest=True,
+    binary=True,
 ):
     for dim in df.dim.unique():
         for selector in df[selector_col].unique():
             success = []
-            hamming = []
+            hamming_dist = []
             accuracy = []
-            for (selector_item, j_gt, j_est, permute) in zip(
+            for selector_item, j_gt, j_est, permute in zip(
                 df[selector_col],
                 true_unmix_jacobians,
                 est_unmix_jacobians,
                 permute_indices,
             ):
                 if j_gt.shape[0] == dim and selector_item == selector:
-                    s, h, a = learn_permutation(
+                    s, h, a, p_dag, p_ica = learn_permutation(
                         j_gt,
                         j_est,
                         permute,
-                        triu_weigth=20.0,
-                        tril_weight=10.0,
-                        diag_weight=6.0,
                         num_steps=num_steps,
+                        tril_weight=10.0,
+                        triu_weigth=20.0,
+                        diag_weight=6.0,
                         lr=1e-4,
                         verbose=False,
-                        drop_smallest=True,
+                        drop_smallest=drop_smallest,
                         threshold=weight_threshold,
-                        binary=True,
+                        binary=binary,
                         hamming_threshold=hamming_threshold,
                         dag_permute=dag_permute,
+                        rank_acc=rank_acc,
                     )
 
-                    success.append(s)
-                    hamming.append(h)
-                    accuracy.append(a)
+                    if s >= 0:
+                        success.append(s)
+                        hamming_dist.append(h)
+                        accuracy.append(a)
 
             mcc = df.mcc[(df.dim == dim) & (df[selector_col] == selector)]
+            success = np.array(success)
+            accuracy = np.array(accuracy)
+            hamming_dist = np.array(hamming_dist)
             print("----------------------------------")
             if len(success) > 0:
                 print(
-                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\tAcc(order):{np.array(success).mean():.3f}\t  Acc:{np.array(accuracy).mean():.3f}\tSHD:{np.array(hamming).mean():.6f}\t[{len(success)} items]"
+                    f"{dim=} ({selector_col}={selector})\tMCC={mcc.mean():.3f}+{mcc.std():.3f}\t  Acc:{accuracy.mean():.3f}+{accuracy.std():.3f}\tAcc(order):{success.mean():.3f}+{success.std():.3f}\tOrder ratio:{len(success)/len(mcc):.3f}\tSHD:{hamming_dist.mean():.6f}+{hamming_dist.std():.6f}\t[{len(mcc)} items]"
                 )
             else:
                 print(f"No experiments for {dim=} ({selector_col}={selector})")
@@ -387,7 +324,7 @@ def corrected_jacobian_stats(
             accuracy_hsic = [] if hsic_adj[0] is not None else -1.0
             precision_hsic = [] if hsic_adj[0] is not None else -1.0
             recall_hsic = [] if hsic_adj[0] is not None else -1.0
-            for (selector_item, j_gt, j_est, p, hsic, munkres) in zip(
+            for selector_item, j_gt, j_est, p, hsic, munkres in zip(
                 df[selector_col],
                 true_unmix_jacobians,
                 est_unmix_jacobians,
@@ -491,7 +428,7 @@ def hinton(matrix, max_weight=None, ax=None, filename=None):
         color = BLUE if w > 0 else RED
         size = np.sqrt(np.abs(w) / max_weight)
         rect = plt.Rectangle(
-            [x - size / 2, y - size / 2], size, size, facecolor=color, edgecolor=color
+            [x - size / 2, y - size / 2], size, size, facecolor=color, edgecolor="black"
         )
         ax.add_patch(rect)
 

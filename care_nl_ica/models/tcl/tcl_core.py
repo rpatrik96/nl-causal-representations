@@ -340,7 +340,6 @@ def train_cpu(
     """
 
     with tf.Graph().as_default(), tf.device("/cpu:0"):
-
         # Set random_seed
         if random_seed is not None:
             np.random.seed(random_seed)
@@ -509,7 +508,6 @@ def train_gpu(
     """
 
     with tf.Graph().as_default():  # , tf.device('/gpu:0'):
-
         # Set random_seed
         if random_seed is not None:
             np.random.seed(random_seed)

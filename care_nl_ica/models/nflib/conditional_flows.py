@@ -213,7 +213,6 @@ class NormalizingFlowModel(nn.Module):
         return flow_logdensity
 
     def sample(self, n_samples, cond_size=None):
-
         self.eval()
         # conditional model
         if self.conditional and cond_size is not None:

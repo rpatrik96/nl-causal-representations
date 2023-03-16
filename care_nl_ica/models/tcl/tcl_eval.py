@@ -41,7 +41,6 @@ def get_tensor(x, vars, sess, data_holder, batch=256):
     # Start batch-inputs --------------------------------------
     y = {}
     for iter in range(Niter):
-
         sys.stdout.write("\r>> Getting tensors... %d/%d" % (iter + 1, Niter))
         sys.stdout.flush()
 
@@ -59,9 +58,7 @@ def get_tensor(x, vars, sess, data_holder, batch=256):
             if iter == 0:
                 y[tn] = np.zeros([Ndata] + list(ybatch[tn].shape[1:]), dtype=np.float32)
             # Store
-            y[tn][
-                batchidx,
-            ] = ybatch[tn]
+            y[tn][batchidx,] = ybatch[tn]
 
     sys.stdout.write("\r\n")
 

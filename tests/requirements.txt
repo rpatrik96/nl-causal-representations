@@ -3,7 +3,7 @@ codecov
 pytest~=6.2.5
 pytest-cov
 pytest-flake8
-black
+black~=23.1.0
 flake8
 check-manifest
 twine==1.13.0

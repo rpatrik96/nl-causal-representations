@@ -31,7 +31,6 @@ class SparseBudgetNet(nn.Module):
 
     @property
     def entropy(self):
-
         probs = torch.nn.functional.softmax(self.mask, -1).view(
             -1,
         )
