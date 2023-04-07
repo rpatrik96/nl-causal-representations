@@ -2,12 +2,41 @@
 ![CI testing](https://github.com/rpatrik96/nl-causal-representations/workflows/python-package/badge.svg?branch=master)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-# Identifying nonlinear causal graphs with ICA
+# Jacobian-based Causal Discovery with Nonlinear ICA
 
-## Singularity container build
+
+## Description
+This is the code for the paper _Jacobian-based Causal Discovery with Nonlinear ICA_, demonstrating how identifiable representations (particularly, with Nonlinear ICA) can be used to extract the causal graph from an underlying structural equation model (SEM).
+
+## Before running the code
+
+### Singularity container build
 
 ```bash
 singularity build --fakeroot nv.sif nv.def
+```
+
+### Logging
+
+1. First, you need to log into `wandb`
+```bash
+wandb login #you will find your API key at https://wandb.ai/authorize
+```
+
+2. Second, you need to specify the project for logging, which you can in the `before_fit` method in [cli.py](https://github.com/rpatrik96/nl-causal-representations/blob/master/care_nl_ica/cli.py#L37)
+```python
+    def before_fit(self):
+        if isinstance(self.trainer.logger, WandbLogger) is True:
+            # required as the parser cannot parse the "-" symbol
+            self.trainer.logger.__dict__["_wandb_init"][
+                "entity"
+            ] = "causal-representation-learning" # <--- modify this line
+```
+
+3. Then, you can create and run the sweep
+```bash
+wandb sweep sweeps/sweep_file.yaml  # returns sweep ID
+wandb agent <ID-comes-here> --count=<number of runs> # when used on a cluster, set it to one and start multiple processes
 ```
 
 
@@ -20,23 +49,22 @@ singularity build --fakeroot nv.sif nv.def
 
 2. Install
 ```bash
+# install package
 pip3 install -e .
+
+# install requirements 
+pip install -r requirements.txt
+
 # install pre-commit hooks
 pre-commit install
 ```
 
 3. Run:
 ```bash
- PYTHONPATH=/mnt/qb/work/bethge/preizinger/nl-causal-representations/ python3 care_nl_ica/main.py --variant 1 --project mlp-test --use-ar-mlp --use-wandb --use-dep-mat --use-sem --nonlin-sem --n-steps 1501 --n 3 --notes "Description of the run" --permute
-```
-
-Or
-```bash
 python3 care_nl_ica/cli.py fit --config configs/config.yaml
 ```
 
-## Logging
-https://wandb.ai/causal-representation-learning
+
 
 
 ### Code credits
@@ -64,4 +92,34 @@ If you find our work useful, please consider citing our workshop paper
   url = {https://openreview.net/forum?id=TsXe-CyYJqx},
 }
 ```
+
+[//]: # (@article{)
+
+[//]: # (    reizinger2023jacobian,)
+
+[//]: # (    title={Jacobian-based Causal Discovery with Nonlinear ICA},)
+
+[//]: # (    author = {)
+
+[//]: # (    Reizinger, Patrik and)
+
+[//]: # (    Sharma, Yash and)
+
+[//]: # (    Bethge, Matthias and)
+
+[//]: # (    Schölkopf, Bernhard and)
+
+[//]: # (    Huszár, Ferenc and)
+
+[//]: # (    Brendel, Wieland)
+
+[//]: # (    },)
+
+[//]: # (    journal={Transactions on Machine Learning Research},)
+
+[//]: # (    year={2023},)
+
+[//]: # (    url={https://openreview.net/forum?id=2Yo9xqR6Ab},)
+
+[//]: # (})
 
