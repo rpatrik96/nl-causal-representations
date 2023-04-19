@@ -77,10 +77,10 @@ Our repo extensively relies on `cl-ica` [repo](https://github.com/brendel-group/
 
 
 # Reference
-If you find our work useful, please consider citing our workshop paper
+If you find our work useful, please consider citing our [TMLR paper](https://openreview.net/forum?id=2Yo9xqR6Ab)
 
 ```bibtex
-@article{reizinger2022multivariable,
+@article{reizinger2023jacobianbased,
   author = {
     Reizinger, Patrik and
     Sharma, Yash and
@@ -90,41 +90,13 @@ If you find our work useful, please consider citing our workshop paper
     Brendel, Wieland
   },
   title = {
-    Multivariable Causal Discovery with General Nonlinear Relationships
+    Jacobian-based Causal Discovery with Nonlinear {ICA}
   },
-  booktitle = {First Workshop on Causal Representation Learning ({CRL} 2022), {UAI} 2022},
-  year = {2022},
-  url = {https://openreview.net/forum?id=TsXe-CyYJqx},
+  journal={Transactions on Machine Learning Research},
+  issn={2835-8856},
+  year={2023},
+  url={https://openreview.net/forum?id=2Yo9xqR6Ab},
 }
 ```
 
-[//]: # (@article{)
-
-[//]: # (    reizinger2023jacobian,)
-
-[//]: # (    title={Jacobian-based Causal Discovery with Nonlinear ICA},)
-
-[//]: # (    author = {)
-
-[//]: # (    Reizinger, Patrik and)
-
-[//]: # (    Sharma, Yash and)
-
-[//]: # (    Bethge, Matthias and)
-
-[//]: # (    Schölkopf, Bernhard and)
-
-[//]: # (    Huszár, Ferenc and)
-
-[//]: # (    Brendel, Wieland)
-
-[//]: # (    },)
-
-[//]: # (    journal={Transactions on Machine Learning Research},)
-
-[//]: # (    year={2023},)
-
-[//]: # (    url={https://openreview.net/forum?id=2Yo9xqR6Ab},)
-
-[//]: # (})
 
