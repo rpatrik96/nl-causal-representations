@@ -74,6 +74,7 @@ model:
   normalization: ''
   start_step: null
   use_bias: false
+  strnn: false
 data:
   n_mixing_layer: 1
   permute: false
