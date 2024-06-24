@@ -3,7 +3,7 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.WandbLogger
     init_args:
-      log_model: true
+      log_model: false
       project: experiment
       save_dir:
   callbacks:
