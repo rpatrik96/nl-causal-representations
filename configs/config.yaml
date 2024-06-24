@@ -30,7 +30,7 @@ trainer:
   deterministic: true
   detect_anomaly: true
 model:
-  offline: true
+  offline: false
   lr: 1e-4
   verbose: false
   p: 1.0

@@ -15,8 +15,6 @@ parameters:
     value: 15000
   seed_everything:
     values: [42, 64, 982, 5748, 23567]
-  model.offline:
-    value: true
   model.strnn:
     value: true
   data.variant:

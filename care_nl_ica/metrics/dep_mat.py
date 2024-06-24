@@ -58,7 +58,7 @@ class JacobianBinnedPrecisionRecall(Metric):
         compute_on_step: Optional[bool] = None,
         **kwargs: Dict[str, Any],
     ) -> None:
-        super().__init__(compute_on_step=compute_on_step, **kwargs)
+        super().__init__(**kwargs)
 
         if isinstance(num_thresholds, int):
             self.num_thresholds = num_thresholds

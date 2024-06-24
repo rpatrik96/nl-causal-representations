@@ -49,7 +49,7 @@ wandb agent <ID-comes-here> --count=<number of runs> # when used on a cluster, s
 
 1. Clone
 ```bash
- git clone https://github.com/rpatrik96/nl-causal-representations.git
+ git clone --recurse-submodules https://github.com/rpatrik96/nl-causal-representations.git
 ```
 
 2. Install
