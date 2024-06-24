@@ -28,7 +28,7 @@ trainer:
   num_sanity_val_steps: 2
   benchmark: false
   deterministic: true
-  detect_anomaly: true
+  detect_anomaly: false
 model:
   offline: false
   lr: 1e-4
