@@ -23,25 +23,47 @@ class ContrastiveLearningModel(nn.Module):
     def _setup_unmixing(self):
         hparams = self.hparams
 
-        (
-            output_normalization,
-            output_normalization_kwargs,
-        ) = self._configure_output_normalization()
+        if hparams.strnn is False:
+            (
+                output_normalization,
+                output_normalization_kwargs,
+            ) = self._configure_output_normalization()
 
-        self.unmixing = encoders.get_mlp(
-            n_in=hparams.latent_dim,
-            n_out=hparams.latent_dim,
-            layers=[
+            self.unmixing = encoders.get_mlp(
+                n_in=hparams.latent_dim,
+                n_out=hparams.latent_dim,
+                layers=[
+                    hparams.latent_dim * 10,
+                    hparams.latent_dim * 50,
+                    hparams.latent_dim * 50,
+                    hparams.latent_dim * 50,
+                    hparams.latent_dim * 50,
+                    hparams.latent_dim * 10,
+                ],
+                output_normalization=output_normalization,
+                output_normalization_kwargs=output_normalization_kwargs,
+            )
+        else:
+            from strnn.models.strNN import StrNN
+
+            adjacency = torch.tril(
+                torch.ones(hparams.latent_dim, hparams.latent_dim)
+            ).numpy()
+
+            out_dim = hparams.latent_dim
+            in_dim = hparams.latent_dim
+            hid_dim = (
                 hparams.latent_dim * 10,
                 hparams.latent_dim * 50,
                 hparams.latent_dim * 50,
                 hparams.latent_dim * 50,
                 hparams.latent_dim * 50,
                 hparams.latent_dim * 10,
-            ],
-            output_normalization=output_normalization,
-            output_normalization_kwargs=output_normalization_kwargs,
-        )
+            )
+
+            self.unmixing = StrNN(
+                in_dim, hid_dim, out_dim, opt_type="greedy", adjacency=adjacency
+            )
 
         if self.hparams.verbose is True:
             print(f"{self.unmixing.detach()=}")

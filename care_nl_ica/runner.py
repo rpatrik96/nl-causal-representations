@@ -41,6 +41,7 @@ class ContrastiveICAModule(pl.LightningModule):
         log_freq=500,
         offline: bool = False,
         num_permutations=10,
+        strnn=True,
     ):
         """
 
@@ -95,18 +96,24 @@ class ContrastiveICAModule(pl.LightningModule):
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
 
+    def _log_dict(self, name, dictionary):
+        for key, value in dictionary.items():
+            self.log(f"{name}/{key}", value)
+
     def training_step(self, batch, batch_idx):
         panel_name = "Train"
         _, _, _, losses = self._forward(batch)
-        self.log(f"{panel_name}/losses", losses.log_dict())
+
+        self._log_dict(f"{panel_name}/losses", losses.log_dict())
 
         return losses.total_loss
 
     def validation_step(self, batch, batch_idx):
         panel_name = "Val"
         sources, mixtures, reconstructions, losses = self._forward(batch)
-        self.log(
-            f"{panel_name}/losses", losses.log_dict(), on_epoch=True, on_step=False
+        self._log_dict(
+            f"{panel_name}/losses",
+            losses.log_dict(),  # on_epoch=True, on_step=False
         )
 
         self.dep_mat = self._calc_and_log_matrices(mixtures, sources).detach()
@@ -142,11 +149,11 @@ class ContrastiveICAModule(pl.LightningModule):
         disent_metrics, self.munkres_permutation_idx = calc_disent_metrics(
             sources[0], reconstructions[0]
         )
-        self.log(
+        self._log_dict(
             f"{panel_name}/disent",
             disent_metrics.log_dict(),
-            on_epoch=True,
-            on_step=False,
+            # on_epoch=True,
+            # on_step=False,
         )
 
         # for sweeps
