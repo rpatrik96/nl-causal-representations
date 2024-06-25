@@ -36,7 +36,6 @@ class ContrastiveICAModule(pl.LightningModule):
         normalize_latents: bool = True,
         log_latent_rec=False,
         num_thresholds: int = 30,
-        log_freq=None,
         offline: bool = False,
         num_permutations=10,
         strnn=True,
@@ -45,7 +44,6 @@ class ContrastiveICAModule(pl.LightningModule):
 
         :param num_permutations: number of permutations for HSIC
         :param offline: offline W&B run (sync at the end)
-        :param log_freq: gradient/weight log frequency for W&B, None turns it off
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
         :param log_latent_rec: Log the latents and their reconstructions
         :param normalize_latents: normalize the latents to [0;1] (for the Jacobian calculation)
@@ -87,9 +85,6 @@ class ContrastiveICAModule(pl.LightningModule):
         torch.cuda.empty_cache()
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             self.logger.experiment.log({f"thresholds": self.jac_prec_recall.thresholds})
-
-            if self.hparams.log_freq is not None:
-                self.logger.watch(self.model, log="all", log_freq=self.hparams.log_freq)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
