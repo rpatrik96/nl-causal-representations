@@ -1,5 +1,4 @@
 import subprocess
-import sys
 from os.path import dirname
 
 import pytorch_lightning as pl
@@ -14,7 +13,6 @@ from care_nl_ica.metrics.dep_mat import (
 )
 from care_nl_ica.metrics.ica_dis import (
     calc_disent_metrics,
-    DisentanglementMetrics,
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
 
@@ -38,7 +36,7 @@ class ContrastiveICAModule(pl.LightningModule):
         normalize_latents: bool = True,
         log_latent_rec=False,
         num_thresholds: int = 30,
-        log_freq=500,
+        log_freq=None,
         offline: bool = False,
         num_permutations=10,
         strnn=True,
@@ -118,7 +116,43 @@ class ContrastiveICAModule(pl.LightningModule):
 
         self.dep_mat = self._calc_and_log_matrices(mixtures, sources).detach()
 
-        """Precision-Recall"""
+        self.log_prec_recall(panel_name)
+        self.log_hsic(batch_idx, mixtures, panel_name, reconstructions)
+        disent_metrics = self.log_disent(panel_name, reconstructions, sources)
+
+        # for sweeps
+        self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
+        self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
+
+        self.log_scatter_latent_rec(sources[0], reconstructions[0], "n1")
+        self.log_scatter_latent_rec(mixtures[0], reconstructions[0], "z1_n1_rec")
+
+        return losses.total_loss
+
+    def log_disent(self, panel_name, reconstructions, sources):
+        disent_metrics, self.munkres_permutation_idx = calc_disent_metrics(
+            sources[0], reconstructions[0]
+        )
+        self._log_dict(
+            f"{panel_name}/disent",
+            disent_metrics.log_dict(),
+            # on_epoch=True,
+            # on_step=False,
+        )
+
+        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
+            self.logger.experiment.log(
+                {
+                    f"{panel_name}/disent/non_perm_corr_mat": disent_metrics.non_perm_corr_mat
+                }
+            )
+            self.logger.experiment.log(
+                {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
+            )
+
+        return disent_metrics
+
+    def log_prec_recall(self, panel_name):
         self.jac_prec_recall.update(
             self.dep_mat, self.trainer.datamodule.unmixing_jacobian
         )
@@ -130,7 +164,8 @@ class ContrastiveICAModule(pl.LightningModule):
                     f"{panel_name}/jacobian/recalls": recalls,
                 }
             )
-        """HSIC"""
+
+    def log_hsic(self, batch_idx, mixtures, panel_name, reconstructions):
         if (
             batch_idx == 0
             and (
@@ -144,36 +179,6 @@ class ContrastiveICAModule(pl.LightningModule):
             ).float()
             if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
                 self.logger.experiment.log({f"{panel_name}/hsic_adj": self.hsic_adj})
-
-        """Disentanglement"""
-        disent_metrics, self.munkres_permutation_idx = calc_disent_metrics(
-            sources[0], reconstructions[0]
-        )
-        self._log_dict(
-            f"{panel_name}/disent",
-            disent_metrics.log_dict(),
-            # on_epoch=True,
-            # on_step=False,
-        )
-
-        # for sweeps
-        self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
-        self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
-
-        if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
-            self.logger.experiment.log(
-                {
-                    f"{panel_name}/disent/non_perm_corr_mat": disent_metrics.non_perm_corr_mat
-                }
-            )
-            self.logger.experiment.log(
-                {f"{panel_name}/disent/perm_corr_mat": disent_metrics.perm_corr_mat}
-            )
-
-        self.log_scatter_latent_rec(sources[0], reconstructions[0], "n1")
-        self.log_scatter_latent_rec(mixtures[0], reconstructions[0], "z1_n1_rec")
-
-        return losses.total_loss
 
     def _calc_and_log_matrices(self, mixtures, sources):
         dep_mat, numerical_jacobian, enc_dec_jac = jacobians(
