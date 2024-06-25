@@ -74,7 +74,10 @@ class ContrastiveLearningModel(nn.Module):
             self.unmixing = nn.Sequential(sinkhorn, strnn)
 
         if self.hparams.verbose is True:
-            print(f"{self.unmixing.detach()=}")
+            print(f"{self.unmixing=}")
+
+            if self.hparams.strnn is True:
+                print(f"{self.unmixing[0].doubly_stochastic_matrix=}")
 
         self.unmixing = self.unmixing.to(hparams.device)
 
