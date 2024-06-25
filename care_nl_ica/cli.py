@@ -1,9 +1,8 @@
-from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.cli import LightningCLI
 
-from care_nl_ica.utils import add_tags, install_package
 from care_nl_ica.data.datamodules import ContrastiveDataModule
 from care_nl_ica.runner import ContrastiveICAModule
+from care_nl_ica.utils import add_tags, install_package
 
 
 class MyLightningCLI(LightningCLI):
@@ -33,21 +32,6 @@ class MyLightningCLI(LightningCLI):
         self.config[self.subcommand].trainer.logger.init_args.tags = add_tags(
             self.config[self.subcommand]
         )
-
-    def before_fit(self):
-        if isinstance(self.trainer.logger, WandbLogger) is True:
-            # required as the parser cannot parse the "-" symbol
-            self.trainer.logger.__dict__["_wandb_init"][
-                "entity"
-            ] = "causal-representation-learning"
-
-            if self.config[self.subcommand].model.offline is True:
-                self.trainer.logger.__dict__["_wandb_init"]["mode"] = "offline"
-            else:
-                self.trainer.logger.__dict__["_wandb_init"]["mode"] = "online"
-
-            # todo: maybe set run in the CLI to false and call watch before?
-            self.trainer.logger.watch(self.model, log="all", log_freq=250)
 
 
 if __name__ == "__main__":
