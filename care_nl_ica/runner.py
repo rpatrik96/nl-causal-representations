@@ -187,9 +187,21 @@ class ContrastiveICAModule(pl.LightningModule):
 
             if self.hparams.verbose is True:
                 self.logger.experiment.log({"enc_dec_jacobian": enc_dec_jac.detach()})
-                self.logger.experiment.log(
-                    {"numerical_jacobian": numerical_jacobian.detach()}
-                )
+
+                if numerical_jacobian is not None:
+                    self.logger.experiment.log(
+                        {"numerical_jacobian": numerical_jacobian.detach()}
+                    )
+
+                if self.hparams.strnn is True:
+                    print(f"{self.model.unmixing[0].doubly_stochastic_matrix=}")
+                    self.logger.experiment.log(
+                        {
+                            "strnn/sinkhorn": self.model.unmixing[
+                                0
+                            ].doubly_stochastic_matrix.detach()
+                        }
+                    )
 
         return dep_mat
 
