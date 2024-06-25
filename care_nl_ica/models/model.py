@@ -50,6 +50,12 @@ class ContrastiveLearningModel(nn.Module):
                 torch.ones(hparams.latent_dim, hparams.latent_dim)
             ).numpy()
 
+            from care_nl_ica.models.sinkhorn import SinkhornNet
+
+            sinkhorn = SinkhornNet(
+                num_dim=hparams.latent_dim, num_steps=15, temperature=3e-3
+            )
+
             out_dim = hparams.latent_dim
             in_dim = hparams.latent_dim
             hid_dim = (
@@ -61,9 +67,11 @@ class ContrastiveLearningModel(nn.Module):
                 hparams.latent_dim * 10,
             )
 
-            self.unmixing = StrNN(
+            strnn = StrNN(
                 in_dim, hid_dim, out_dim, opt_type="greedy", adjacency=adjacency
             )
+
+            self.unmixing = nn.Sequential(sinkhorn, strnn)
 
         if self.hparams.verbose is True:
             print(f"{self.unmixing.detach()=}")
