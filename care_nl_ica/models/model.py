@@ -71,11 +71,12 @@ class ContrastiveLearningModel(nn.Module):
             )
 
             if self.hparams.obs_dim is not None:
-                obs_unmixing = nn.Linear(self.hparams.obs_dim, self.hparams.latent_dim)
+                obs_unmixing = nn.Linear(
+                    self.hparams.obs_dim, self.hparams.latent_dim, bias=False
+                )
+
                 self.unmixing = nn.Sequential(
-                    obs_unmixing,
-                    nn.PReLU(),
-                    strnn.Sequential(obs_unmixing, nn.PReLU(), strnn),
+                    obs_unmixing, nn.LeakyReLU(negative_slope=0.25), strnn
                 )
             else:
                 from care_nl_ica.models.sinkhorn import SinkhornNet
