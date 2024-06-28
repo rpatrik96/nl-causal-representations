@@ -117,6 +117,12 @@ class ContrastiveICAModule(pl.LightningModule):
         self.log_hsic(batch_idx, mixtures, panel_name, reconstructions)
         disent_metrics = self.log_disent(panel_name, reconstructions, sources)
 
+        if self.hparams.obs_dim is not None:
+            rec_z = self.model.unmixing[:-1](mixtures[0])  # get causal vars
+            z = self.trainer.datamodule.mixing[0](sources[0])
+
+            self.log_disent(f"{panel_name}_z", (rec_z,), (z,))
+
         # for sweeps
         self.log("val_loss", losses.total_loss, on_epoch=True, on_step=False)
         self.log("val_mcc", disent_metrics.perm_score, on_epoch=True, on_step=False)
