@@ -146,13 +146,18 @@ class ContrastiveDataModule(pl.LightningDataModule):
         if self.hparams.obs_dim is not None:
             print("Adding observation layer")
             obs_mixing = nn.Linear(
-                self.hparams.latent_dim, self.hparams.obs_dim, bias=False
+                self.hparams.latent_dim,
+                self.hparams.obs_dim,
+                bias=False,
+                device=self.hparams.device,
             )
 
-            nn.init.orthogonal_(obs_mixing.weight.data)
+            nn.init.orthogonal_(obs_mixing.weight.data).to(self.hparams.device)
 
             self.mixing = nn.Sequential(
-                self.mixing, nn.LeakyReLU(negative_slope=0.25), obs_mixing
+                self.mixing.to(self.hparams.device),
+                nn.LeakyReLU(negative_slope=0.25).to(self.hparams.device),
+                obs_mixing,
             )
 
         # make it non-trainable

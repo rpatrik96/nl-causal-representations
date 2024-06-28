@@ -12,7 +12,7 @@ metric:
   name: val_loss
 parameters:
   trainer.max_epochs:
-    value: 15000
+    value: 75000
   seed_everything:
     values: [42, 64, 982, 5748, 23567]
   model.strnn:
@@ -21,6 +21,8 @@ parameters:
     values: [0,1,2,3,4,5]
   data.latent_dim:
     value: 3
+  data.obs_dim:
+    values: [3, 5]
   data.use_sem:
     value: true
   data.nonlin_sem:
