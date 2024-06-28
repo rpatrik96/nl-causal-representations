@@ -43,7 +43,7 @@ class ContrastiveDataset(torch.utils.data.IterableDataset):
                 size=self.hparams.batch_size,
                 device=self.hparams.device,
             )
-        )
+        ).squeeze()
 
         mixtures = torch.stack(tuple(map(self.transform, sources)))
 

@@ -39,9 +39,11 @@ class ContrastiveICAModule(pl.LightningModule):
         offline: bool = False,
         num_permutations=10,
         strnn=True,
+        obs_dim=None,
     ):
         """
 
+        :param obs_dim:
         :param num_permutations: number of permutations for HSIC
         :param offline: offline W&B run (sync at the end)
         :param num_thresholds: number of thresholds for calculating the Jacobian precision-recall
@@ -194,14 +196,16 @@ class ContrastiveICAModule(pl.LightningModule):
                     )
 
                 if self.hparams.strnn is True:
-                    print(f"{self.model.unmixing[0].doubly_stochastic_matrix=}")
-                    self.logger.experiment.log(
-                        {
-                            "strnn/sinkhorn": self.model.unmixing[
-                                0
-                            ].doubly_stochastic_matrix.detach()
-                        }
-                    )
+                    if self.hparams.obs_dim is None:
+                        print(f"{self.model.unmixing[0].doubly_stochastic_matrix=}")
+
+                        self.logger.experiment.log(
+                            {
+                                "strnn/sinkhorn": self.model.unmixing[
+                                    0
+                                ].doubly_stochastic_matrix.detach()
+                            }
+                        )
 
         return dep_mat
 

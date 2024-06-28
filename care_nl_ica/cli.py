@@ -27,6 +27,7 @@ class MyLightningCLI(LightningCLI):
         parser.link_arguments("data.box_max", "model.box_max")
         parser.link_arguments("data.sphere_r", "model.sphere_r")
         parser.link_arguments("data.normalize_latents", "model.normalize_latents")
+        parser.link_arguments("data.obs_dim", "model.obs_dim")
 
     def before_instantiate_classes(self) -> None:
         self.config[self.subcommand].trainer.logger.init_args.tags = add_tags(

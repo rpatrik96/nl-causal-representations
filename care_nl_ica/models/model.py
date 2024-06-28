@@ -50,33 +50,49 @@ class ContrastiveLearningModel(nn.Module):
                 torch.ones(hparams.latent_dim, hparams.latent_dim)
             ).numpy()
 
-            from care_nl_ica.models.sinkhorn import SinkhornNet
-
-            sinkhorn = SinkhornNet(
-                num_dim=hparams.latent_dim, num_steps=15, temperature=3e-3
-            )
-
             out_dim = hparams.latent_dim
             in_dim = hparams.latent_dim
             hid_dim = (
                 hparams.latent_dim * 10,
-                hparams.latent_dim * 50,
-                hparams.latent_dim * 50,
-                hparams.latent_dim * 50,
-                hparams.latent_dim * 50,
+                # hparams.latent_dim * 50,
+                # hparams.latent_dim * 50,
+                # hparams.latent_dim * 50,
+                # hparams.latent_dim * 50,
                 hparams.latent_dim * 10,
             )
 
             strnn = StrNN(
-                in_dim, hid_dim, out_dim, opt_type="greedy", adjacency=adjacency
+                in_dim,
+                hid_dim,
+                out_dim,
+                opt_type="greedy",
+                adjacency=adjacency,
+                activation="prelu",
             )
 
-            self.unmixing = nn.Sequential(sinkhorn, strnn)
+            if self.hparams.obs_dim is not None:
+                obs_unmixing = nn.Linear(self.hparams.obs_dim, self.hparams.latent_dim)
+                self.unmixing = nn.Sequential(
+                    obs_unmixing,
+                    nn.PReLU(),
+                    strnn.Sequential(obs_unmixing, nn.PReLU(), strnn),
+                )
+            else:
+                from care_nl_ica.models.sinkhorn import SinkhornNet
+
+                sinkhorn = SinkhornNet(
+                    num_dim=hparams.latent_dim, num_steps=15, temperature=3e-3
+                )
+                self.unmixing = nn.Sequential(
+                    sinkhorn, strnn
+                )  # eval needs to check causal variables to check whether the StrNN is useful
+
+                # if re-setting the adjacency, then the weights are reinitialized
 
         if self.hparams.verbose is True:
             print(f"{self.unmixing=}")
 
-            if self.hparams.strnn is True:
+            if self.hparams.strnn is True and self.hparams.obs_dim is None:
                 print(f"{self.unmixing[0].doubly_stochastic_matrix=}")
 
         self.unmixing = self.unmixing.to(hparams.device)

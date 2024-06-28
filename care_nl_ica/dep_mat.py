@@ -138,21 +138,23 @@ def calc_dependency_matrix(encoder: nn.Module, latents: torch.Tensor) -> torch.T
 
 
 def jacobians(unmixing, sources, mixtures, eps=1e-6, calc_numerical: bool = False):
+    normalize = unmixing.hparams.normalize_latents
+    device = unmixing.hparams.device
+
+    # CRL
+    if sources.shape[-1] != mixtures.shape[-1]:
+        mixtures = unmixing.unmixing[:-1](
+            mixtures
+        )  # unmix with the inverse observational mixing part
+        unmixing = unmixing.unmixing[-1]  # pick the strnn
+
     # calculate the dependency matrix
     dep_mat = (
-        calc_jacobian(
-            unmixing, mixtures.clone(), normalize=unmixing.hparams.normalize_latents
-        )
-        .abs()
-        .mean(0)
+        calc_jacobian(unmixing, mixtures.clone(), normalize=normalize).abs().mean(0)
     )
 
     jac_enc_dec = (
-        calc_jacobian(
-            unmixing, sources.clone(), normalize=unmixing.hparams.normalize_latents
-        )
-        .abs()
-        .mean(0)
+        calc_jacobian(unmixing, sources.clone(), normalize=normalize).abs().mean(0)
     )
 
     # 3/b calculate the numerical jacobian
@@ -160,9 +162,7 @@ def jacobians(unmixing, sources, mixtures, eps=1e-6, calc_numerical: bool = Fals
     numerical_jacobian = (
         None
         if calc_numerical is False
-        else calc_jacobian_numerical(
-            unmixing, mixtures, dep_mat.shape[0], unmixing.hparams.device, eps
-        )
+        else calc_jacobian_numerical(unmixing, mixtures, dep_mat.shape[0], device, eps)
     )
 
     return dep_mat, numerical_jacobian, jac_enc_dec

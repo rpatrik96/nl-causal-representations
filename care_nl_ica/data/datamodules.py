@@ -1,10 +1,10 @@
 from typing import Optional
 
 
-import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
+import torch.nn as nn
 
 from care_nl_ica.cl_ica import invertible_network_utils
 from care_nl_ica.dataset import ContrastiveDataset
@@ -13,6 +13,14 @@ from care_nl_ica.graph_utils import indirect_causes
 from care_nl_ica.data.sem import LinearSEM, NonLinearSEM
 
 from care_nl_ica.utils import SpaceType, DataGenType
+
+
+def collate_fn(batch):
+    sources, mixtures = batch
+    batched_sources = sources
+    batched_mixtures = mixtures
+
+    return batched_sources, batched_mixtures
 
 
 class ContrastiveDataModule(pl.LightningDataModule):
@@ -45,10 +53,14 @@ class ContrastiveDataModule(pl.LightningDataModule):
         mask_prob=1.0,
         mlp_sparsity=False,
         weight_rand_func="rand",
+        obs_dim=None,
+        max_num_workers=4,
         **kwargs,
     ):
         """
 
+        :param max_num_workers:
+        :param obs_dim:
         :param weight_rand_func: function to draw SEM weights from
         :param mlp_sparsity: whether the invertible MLP has a sparsity mask
         :param mask_prob: probability to delete edges in the SEM
@@ -131,7 +143,13 @@ class ContrastiveDataModule(pl.LightningDataModule):
                     weight_rand_func=self.hparams.weight_rand_func,
                 )
 
-            # print(f"{self.mixing.weight=}")
+        if self.hparams.obs_dim is not None:
+            print("Adding observation layer")
+            obs_mixing = nn.Linear(
+                self.hparams.latent_dim, self.hparams.obs_dim, bias=False
+            )
+
+            self.mixing = nn.Sequential(self.mixing, obs_mixing)
 
         # make it non-trainable
         for p in self.mixing.parameters():
@@ -144,16 +162,22 @@ class ContrastiveDataModule(pl.LightningDataModule):
         if self.hparams.use_dep_mat is True:
             # draw a sample from the latent space (marginal only)
             z = next(iter(self.train_dataloader()))[0][0, :]
+
+            # if using CRL, only calculate the Jacobian of teh causal part
+            # i.e., dropping the observational mixing
+            if self.hparams.obs_dim is not None:
+                mixing = self.mixing[0]
+            else:
+                mixing = self.mixing
+
             # save the decoder jacobian including the permutation
             self.mixing_jacobian_permuted = self.mixing_jacobian = (
-                calc_jacobian(self.mixing, z, normalize=False).abs().mean(0).detach()
+                calc_jacobian(mixing, z, normalize=False).abs().mean(0).detach()
             )
 
             if self.hparams.permute is True and self.hparams.use_sem is True:
-                # print(f"{dep_mat=}")
-                # set_trace()
                 self.mixing_jacobian = self.mixing_jacobian[
-                    torch.argsort(self.mixing.permute_indices), :
+                    torch.argsort(mixing.permute_indices), :
                 ]
 
             self.unmixing_jacobian = torch.tril(self.mixing_jacobian.inverse())
@@ -172,7 +196,9 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
         # generate data
         self.dataset = ContrastiveDataset(self.hparams, self.mixing)
-        self.dl = DataLoader(self.dataset, batch_size=self.hparams.batch_size)
+        self.dl = DataLoader(
+            self.dataset, batch_size=self.hparams.batch_size, collate_fn=collate_fn
+        )
 
         self._calc_dep_mat()
 
@@ -199,5 +225,9 @@ class ContrastiveDataModule(pl.LightningDataModule):
             f"Mixing/paths": self.paths,
             f"Mixing/permute_indices": torch.arange(self.hparams.latent_dim)
             if self.hparams.use_sem is False
-            else self.mixing.permute_indices,
+            else (
+                self.mixing.permute_indices
+                if self.hparams.obs_dim is None
+                else self.mixing[0].permute_indices
+            ),
         }
