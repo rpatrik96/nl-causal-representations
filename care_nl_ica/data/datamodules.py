@@ -149,7 +149,11 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 self.hparams.latent_dim, self.hparams.obs_dim, bias=False
             )
 
-            self.mixing = nn.Sequential(self.mixing, obs_mixing)
+            nn.init.orthogonal_(obs_mixing.weight.data)
+
+            self.mixing = nn.Sequential(
+                self.mixing, nn.LeakyReLU(negative_slope=0.25), obs_mixing
+            )
 
         # make it non-trainable
         for p in self.mixing.parameters():
