@@ -40,9 +40,13 @@ class ContrastiveICAModule(pl.LightningModule):
         num_permutations=10,
         strnn=True,
         obs_dim=None,
+        strnn_layers=2,
+        obs_layers=1,
     ):
         """
 
+        :param strnn_layers:
+        :param obs_layers:
         :param obs_dim:
         :param num_permutations: number of permutations for HSIC
         :param offline: offline W&B run (sync at the end)

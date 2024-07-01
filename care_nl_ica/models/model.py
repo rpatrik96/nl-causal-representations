@@ -52,13 +52,9 @@ class ContrastiveLearningModel(nn.Module):
 
             out_dim = hparams.latent_dim
             in_dim = hparams.latent_dim
-            hid_dim = (
-                hparams.latent_dim * 10,
-                # hparams.latent_dim * 50,
-                # hparams.latent_dim * 50,
-                # hparams.latent_dim * 50,
-                # hparams.latent_dim * 50,
-                hparams.latent_dim * 10,
+
+            hid_dim = tuple(
+                [hparams.latent_dim * 10 for _ in range(hparams.strnn_layers)]
             )
 
             strnn = StrNN(
@@ -71,12 +67,22 @@ class ContrastiveLearningModel(nn.Module):
             )
 
             if self.hparams.obs_dim is not None:
-                obs_unmixing = nn.Linear(
-                    self.hparams.obs_dim, self.hparams.latent_dim, bias=False
-                )
+                obs_unmixing = []
+                for _ in range(self.hparams.obs_layers - 1):
+                    obs_unmixing.append(
+                        nn.Linear(
+                            self.hparams.obs_dim, self.hparams.obs_dim, bias=False
+                        )
+                    )
+                    obs_unmixing.append(nn.LeakyReLU(negative_slope=0.25))
 
                 self.unmixing = nn.Sequential(
-                    obs_unmixing, nn.LeakyReLU(negative_slope=0.25), strnn
+                    *obs_unmixing,
+                    nn.Linear(
+                        self.hparams.obs_dim, self.hparams.latent_dim, bias=False
+                    ),
+                    nn.LeakyReLU(negative_slope=0.25),
+                    strnn,
                 )
             else:
                 from care_nl_ica.models.sinkhorn import SinkhornNet
