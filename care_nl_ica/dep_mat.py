@@ -142,13 +142,14 @@ def jacobians(unmixing, sources, mixtures, eps=1e-6, calc_numerical: bool = Fals
     device = unmixing.hparams.device
 
     # CRL
-    if sources.shape[-1] != mixtures.shape[-1]:
+    if unmixing.hparams.obs_dim is not None:
         mixtures = unmixing.unmixing[:-1](
             mixtures
         )  # unmix with the inverse observational mixing part
         unmixing = unmixing.unmixing[-1]  # pick the strnn
 
     # calculate the dependency matrix
+
     dep_mat = (
         calc_jacobian(unmixing, mixtures.clone(), normalize=normalize).abs().mean(0)
     )
