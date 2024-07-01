@@ -32,7 +32,7 @@ parameters:
   data.nonlin_sem:
     value: true #[false, true]
   data.permute:
-    value: true
+    value: false
   data.offset:
     value: 0
 
