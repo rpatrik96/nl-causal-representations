@@ -14,19 +14,23 @@ parameters:
   trainer.max_epochs:
     value: 75000
   seed_everything:
-    values: [42, 64, 982, 5748, 23567]
+    values: [42,  982] #64, 5748, 23567]
   model.strnn:
     value: true
+  model.obs_layers:
+    values: [1,2,3]
+  model.strnn_layers:
+    values: [2,4,5]
   data.variant:
-    values: [0,1,2,3,4,5]
+    value: 3 #[0,1,2,3,4,5]
   data.latent_dim:
     value: 3
   data.obs_dim:
-    values: [3, 5]
+    value: 3
   data.use_sem:
     value: true
   data.nonlin_sem:
-    values: [false, true]
+    value: true #[false, true]
   data.permute:
     value: true
   data.offset:
