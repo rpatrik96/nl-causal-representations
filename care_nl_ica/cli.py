@@ -30,9 +30,10 @@ class MyLightningCLI(LightningCLI):
         parser.link_arguments("data.obs_dim", "model.obs_dim")
 
     def before_instantiate_classes(self) -> None:
-        self.config[self.subcommand].trainer.logger.init_args.tags = add_tags(
-            self.config[self.subcommand]
-        )
+        if self.config[self.subcommand].trainer.logger is not None:
+            self.config[self.subcommand].trainer.logger.init_args.tags = add_tags(
+                self.config[self.subcommand]
+            )
 
 
 if __name__ == "__main__":
@@ -42,5 +43,4 @@ if __name__ == "__main__":
         ContrastiveDataModule,
         save_config_callback=None,
         run=True,
-        parser_kwargs={"parse_as_dict": False},
     )
