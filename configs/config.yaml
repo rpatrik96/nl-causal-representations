@@ -13,7 +13,7 @@ trainer:
       init_args:
         monitor: val_loss
         mode: min
-        patience: 40
+        patience: 75
   max_epochs: 5000
   limit_train_batches: 1.
   limit_val_batches: 10
