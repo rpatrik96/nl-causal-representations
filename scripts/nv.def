@@ -16,14 +16,6 @@ From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
     # otherwise, installing packages can fail
     export DEBIAN_FRONTEND=noninteractive
 
-    # if the cuda container cannot be verified as nvidia did not update the key (GPG error)
-    # https://github.com/NVIDIA/nvidia-docker/issues/619#issuecomment-359580806
-    rm -f /etc/apt/sources.list.d/cuda.list
-
-    # sometimes fetching the key explicitly can help
-    # https://github.com/NVIDIA/nvidia-docker/issues/619#issuecomment-359695597
-    apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
-
     apt-get -qq -y update
     
     # apt-get install -y build-essential cmake git rsync
