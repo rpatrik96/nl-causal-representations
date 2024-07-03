@@ -7,8 +7,6 @@ From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
     export PS1="\u@\h \W§ "
 
 %files
-    # copy the dropbear keys into the container
-    /mnt/qb/work/bethge/preizinger/dropbear /etc/dropbear
 
     # project requirement file
     ../requirements.txt 
