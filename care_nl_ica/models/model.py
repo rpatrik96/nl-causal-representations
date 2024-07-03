@@ -32,14 +32,7 @@ class ContrastiveLearningModel(nn.Module):
             self.unmixing = encoders.get_mlp(
                 n_in=hparams.latent_dim,
                 n_out=hparams.latent_dim,
-                layers=[
-                    hparams.latent_dim * 10,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 50,
-                    hparams.latent_dim * 10,
-                ],
+                layers=[hparams.latent_dim * 10 for _ in range(hparams.strnn_layers)],
                 output_normalization=output_normalization,
                 output_normalization_kwargs=output_normalization_kwargs,
             )
