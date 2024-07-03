@@ -18,7 +18,7 @@ From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
     # if the cuda container cannot be verified as nvidia did not update the key (GPG error)
     # https://github.com/NVIDIA/nvidia-docker/issues/619#issuecomment-359580806
-    rm /etc/apt/sources.list.d/cuda.list
+    rm -f /etc/apt/sources.list.d/cuda.list
 
     # sometimes fetching the key explicitly can help
     # https://github.com/NVIDIA/nvidia-docker/issues/619#issuecomment-359695597
