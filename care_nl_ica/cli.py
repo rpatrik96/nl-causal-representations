@@ -28,6 +28,7 @@ class MyLightningCLI(LightningCLI):
         parser.link_arguments("data.sphere_r", "model.sphere_r")
         parser.link_arguments("data.normalize_latents", "model.normalize_latents")
         parser.link_arguments("data.obs_dim", "model.obs_dim")
+        parser.link_arguments("data.permute", "model.permute")
 
     def before_instantiate_classes(self) -> None:
         if self.config[self.subcommand].trainer.logger is not None:
