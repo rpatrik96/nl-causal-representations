@@ -10,6 +10,9 @@ class ContrastiveLearningModel(nn.Module):
 
         self.hparams = hparams
 
+        if self.hparams.obs_dim < 1:
+            self.hparams.obs_dim = None
+
         self._setup_unmixing()
         self._setup_loss()
 

@@ -98,6 +98,9 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
         self.save_hyperparameters()
 
+        if self.hparams.obs_dim < 1:
+            self.hparams.obs_dim = None
+
     def _setup_mixing(self):
         if self.hparams.use_sem is False:
             # create MLP
