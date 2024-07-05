@@ -17,8 +17,6 @@ parameters:
     values: [42, 64, 982, 5748, 23567]
   model.strnn:
     values: [true, false]
-  model.obs_layers:
-    value: null
   model.strnn_layers:
     value: 5
   data.variant:
