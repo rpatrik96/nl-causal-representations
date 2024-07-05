@@ -81,21 +81,28 @@ class ContrastiveLearningModel(nn.Module):
                     strnn,
                 )
             else:
-                from care_nl_ica.models.sinkhorn import SinkhornNet
+                if self.hparams.permute is True:
+                    from care_nl_ica.models.sinkhorn import SinkhornNet
 
-                sinkhorn = SinkhornNet(
-                    num_dim=hparams.latent_dim, num_steps=15, temperature=3e-3
-                )
-                self.unmixing = nn.Sequential(
-                    sinkhorn, strnn
-                )  # eval needs to check causal variables to check whether the StrNN is useful
+                    sinkhorn = SinkhornNet(
+                        num_dim=hparams.latent_dim, num_steps=15, temperature=3e-3
+                    )
+                    self.unmixing = nn.Sequential(
+                        sinkhorn, strnn
+                    )  # eval needs to check causal variables to check whether the StrNN is useful
 
-                # if re-setting the adjacency, then the weights are reinitialized
+                    # if re-setting the adjacency, then the weights are reinitialized
+                else:
+                    self.unmixing = strnn
 
         if self.hparams.verbose is True:
             print(f"{self.unmixing=}")
 
-            if self.hparams.strnn is True and self.hparams.obs_dim is None:
+            if (
+                self.hparams.strnn is True
+                and self.hparams.obs_dim is None
+                and self.hparams.permute is False
+            ):
                 print(f"{self.unmixing[0].doubly_stochastic_matrix=}")
 
         self.unmixing = self.unmixing.to(hparams.device)

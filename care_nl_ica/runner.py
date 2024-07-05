@@ -208,7 +208,7 @@ class ContrastiveICAModule(pl.LightningModule):
                     )
 
                 if self.hparams.strnn is True:
-                    if self.hparams.obs_dim is None:
+                    if self.hparams.obs_dim is None and self.hparams.permute is True:
                         print(f"{self.model.unmixing[0].doubly_stochastic_matrix=}")
 
                         self.logger.experiment.log(
