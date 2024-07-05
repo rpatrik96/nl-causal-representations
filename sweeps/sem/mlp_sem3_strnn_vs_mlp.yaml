@@ -23,8 +23,6 @@ parameters:
     value: 0
   data.latent_dim:
     value: 3
-  data.obs_dim:
-    value: null
   data.use_sem:
     value: true
   data.nonlin_sem:
@@ -33,7 +31,8 @@ parameters:
     value: false
   data.offset:
     value: 0
-
+  data.obs_dim:
+    value: -1
 
 
 
