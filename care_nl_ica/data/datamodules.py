@@ -236,7 +236,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
             f"Mixing/indirect_causes": self.indirect_causes,
             f"Mixing/paths": self.paths,
             f"Mixing/permute_indices": torch.arange(self.hparams.latent_dim)
-            if self.hparams.use_sem is False
+            if (self.hparams.use_sem is False or self.hparams.permute is True)
             else (
                 self.mixing.permute_indices
                 if self.hparams.obs_dim is None
