@@ -98,7 +98,7 @@ class ContrastiveDataModule(pl.LightningDataModule):
 
         self.save_hyperparameters()
 
-        if self.hparams.obs_dim < 1:
+        if self.hparams.obs_dim is not None and self.hparams.obs_dim < 1:
             self.hparams.obs_dim = None
 
     def _setup_mixing(self):

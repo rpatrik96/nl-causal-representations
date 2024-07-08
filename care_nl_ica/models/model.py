@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 
 from care_nl_ica.cl_ica import encoders, losses
+from care_nl_ica.models.sinkhorn import SinkhornNet
+from strnn.models.strNN import StrNN
 
 
 class ContrastiveLearningModel(nn.Module):
@@ -10,7 +12,7 @@ class ContrastiveLearningModel(nn.Module):
 
         self.hparams = hparams
 
-        if self.hparams.obs_dim < 1:
+        if self.hparams.obs_dim is not None and self.hparams.obs_dim < 1:
             self.hparams.obs_dim = None
 
         self._setup_unmixing()
@@ -26,74 +28,66 @@ class ContrastiveLearningModel(nn.Module):
     def _setup_unmixing(self):
         hparams = self.hparams
 
+        out_dim = hparams.latent_dim
+        in_dim = hparams.latent_dim
+        hidden_sizes = [hparams.latent_dim * 10 for _ in range(hparams.strnn_layers)]
+
         if hparams.strnn is False:
             (
                 output_normalization,
                 output_normalization_kwargs,
             ) = self._configure_output_normalization()
 
-            self.unmixing = encoders.get_mlp(
-                n_in=hparams.latent_dim,
-                n_out=hparams.latent_dim,
-                layers=[hparams.latent_dim * 10 for _ in range(hparams.strnn_layers)],
+            encoder = encoders.get_mlp(
+                n_in=in_dim,
+                n_out=out_dim,
+                layers=hidden_sizes,
                 output_normalization=output_normalization,
                 output_normalization_kwargs=output_normalization_kwargs,
             )
         else:
-            from strnn.models.strNN import StrNN
-
             adjacency = torch.tril(
                 torch.ones(hparams.latent_dim, hparams.latent_dim)
             ).numpy()
 
-            out_dim = hparams.latent_dim
-            in_dim = hparams.latent_dim
-
-            hid_dim = tuple(
-                [hparams.latent_dim * 10 for _ in range(hparams.strnn_layers)]
-            )
-
-            strnn = StrNN(
-                in_dim,
-                hid_dim,
-                out_dim,
+            encoder = StrNN(
+                nin=in_dim,
+                hidden_sizes=(tuple(hidden_sizes)),
+                nout=out_dim,
                 opt_type="greedy",
                 adjacency=adjacency,
                 activation="prelu",
             )
 
-            if self.hparams.obs_dim is not None:
-                obs_unmixing = []
-                for _ in range(self.hparams.obs_layers - 1):
-                    obs_unmixing.append(
-                        nn.Linear(
-                            self.hparams.obs_dim, self.hparams.obs_dim, bias=False
-                        )
-                    )
-                    obs_unmixing.append(nn.LeakyReLU(negative_slope=0.25))
-
-                self.unmixing = nn.Sequential(
-                    *obs_unmixing,
-                    nn.Linear(
-                        self.hparams.obs_dim, self.hparams.latent_dim, bias=False
-                    ),
-                    nn.LeakyReLU(negative_slope=0.25),
-                    strnn,
+            if self.hparams.permute is True:
+                sinkhorn = SinkhornNet(
+                    num_dim=hparams.latent_dim, num_steps=15, temperature=3e-3
                 )
-            else:
-                if self.hparams.permute is True:
-                    from care_nl_ica.models.sinkhorn import SinkhornNet
+                encoder = nn.Sequential(
+                    sinkhorn, encoder
+                )  # eval needs to check causal variables to check whether the StrNN is useful
 
-                    sinkhorn = SinkhornNet(
-                        num_dim=hparams.latent_dim, num_steps=15, temperature=3e-3
-                    )
-                    self.unmixing = nn.Sequential(
-                        sinkhorn, strnn
-                    )  # eval needs to check causal variables to check whether the StrNN is useful
+                # if re-setting the adjacency, then the weights are reinitialized
 
-                    # if re-setting the adjacency, then the weights are reinitialized
-                else:
-                    self.unmixing = strnn
+        if self.hparams.obs_dim is not None:
+            obs_unmixing = []
+            for _ in range(self.hparams.obs_layers - 1):
+                obs_unmixing.append(
+                    nn.Linear(self.hparams.obs_dim, self.hparams.obs_dim, bias=False)
+                )
+                obs_unmixing.append(nn.LeakyReLU(negative_slope=0.25))
+
+            obs_unmixing.append(
+                nn.Linear(self.hparams.obs_dim, self.hparams.latent_dim, bias=False)
+            )
+            obs_unmixing.append(nn.LeakyReLU(negative_slope=0.25))
+
+            self.unmixing = nn.Sequential(
+                *obs_unmixing,
+                encoder,
+            )
+        else:
+            self.unmixing = encoder
 
         if self.hparams.verbose is True:
             print(f"{self.unmixing=}")
