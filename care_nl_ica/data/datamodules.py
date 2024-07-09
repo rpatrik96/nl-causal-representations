@@ -55,10 +55,12 @@ class ContrastiveDataModule(pl.LightningDataModule):
         weight_rand_func="rand",
         obs_dim=None,
         max_num_workers=4,
+        obs_mixing_layers=1,
         **kwargs,
     ):
         """
 
+        :param obs_mixing_layers:
         :param max_num_workers:
         :param obs_dim:
         :param weight_rand_func: function to draw SEM weights from
@@ -147,20 +149,28 @@ class ContrastiveDataModule(pl.LightningDataModule):
                 )
 
         if self.hparams.obs_dim is not None:
-            print("Adding observation layer")
-            obs_mixing = nn.Linear(
-                self.hparams.latent_dim,
-                self.hparams.obs_dim,
-                bias=False,
-                device=self.hparams.device,
-            )
+            obs_mixing = [
+                nn.Linear(
+                    self.hparams.latent_dim,
+                    self.hparams.obs_dim,
+                    bias=False,
+                    device=self.hparams.device,
+                ),
+                nn.LeakyReLU(negative_slope=0.25).to(self.hparams.device),
+            ]
+            nn.init.orthogonal_(obs_mixing[0].weight.data).to(self.hparams.device)
 
-            nn.init.orthogonal_(obs_mixing.weight.data).to(self.hparams.device)
+            for _ in range(self.hparams.obs_mixing_layers - 1):
+                obs_mixing.append(
+                    nn.Linear(self.hparams.obs_dim, self.hparams.obs_dim, bias=False)
+                )
+                nn.init.orthogonal_(obs_mixing[-1].weight.data).to(self.hparams.device)
+
+                obs_mixing.append(nn.LeakyReLU(negative_slope=0.25))
 
             self.mixing = nn.Sequential(
                 self.mixing.to(self.hparams.device),
-                nn.LeakyReLU(negative_slope=0.25).to(self.hparams.device),
-                obs_mixing,
+                *obs_mixing,
             )
 
         # make it non-trainable
