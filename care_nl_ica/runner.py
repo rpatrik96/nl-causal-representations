@@ -44,6 +44,7 @@ class ContrastiveICAModule(pl.LightningModule):
         obs_layers=1,
         width_factor=10,
         permute=False,
+        log_freq=1000
     ):
         """
 
@@ -284,6 +285,9 @@ class ContrastiveICAModule(pl.LightningModule):
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
             for key, val in self.trainer.datamodule.data_to_log.items():
                 self.logger.experiment.summary[key] = val
+
+            if self.hparams.log_freq is not None:
+                self.logger.watch(self.model, log="all", log_freq=self.hparams.log_freq)
 
     def on_fit_end(self) -> None:
         if isinstance(self.logger, pl.loggers.wandb.WandbLogger) is True:
