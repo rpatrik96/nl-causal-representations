@@ -60,6 +60,7 @@ class ContrastiveLearningModel(nn.Module):
                 opt_type="greedy",
                 adjacency=adjacency,
                 activation="prelu",
+                init_type="ian_uniform",
             )
 
             if self.hparams.permute is True:
