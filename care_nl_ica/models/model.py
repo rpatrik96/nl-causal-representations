@@ -30,7 +30,10 @@ class ContrastiveLearningModel(nn.Module):
 
         out_dim = hparams.latent_dim
         in_dim = hparams.latent_dim
-        hidden_sizes = [hparams.latent_dim * 10 for _ in range(hparams.strnn_layers)]
+        hidden_sizes = [
+            hparams.latent_dim * hparams.width_factor
+            for _ in range(hparams.strnn_layers)
+        ]
 
         if hparams.strnn is False:
             (

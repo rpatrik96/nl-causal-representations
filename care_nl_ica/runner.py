@@ -42,10 +42,12 @@ class ContrastiveICAModule(pl.LightningModule):
         obs_dim=None,
         strnn_layers=2,
         obs_layers=1,
+        width_factor=10,
         permute=False,
     ):
         """
 
+        :param width_factor:
         :param permute:
         :param strnn_layers:
         :param obs_layers:
