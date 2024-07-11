@@ -18,9 +18,9 @@ parameters:
   model.strnn:
     values: [true, false]
   model.strnn_layers:
-    value: 5
+    values: [2, 4, 6] 
   model.width_factor:
-    value: 10
+    values: [10, 20, 50]
   data.variant:
     value: 0
   data.latent_dim:
@@ -30,11 +30,11 @@ parameters:
   data.nonlin_sem:
     values: [false, true]
   data.permute:
-    value: true
+    value: false
   data.offset:
     value: 0
   data.obs_dim:
-    value: -1
+    value: 5
 
 
 

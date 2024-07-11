@@ -59,7 +59,7 @@ class ContrastiveLearningModel(nn.Module):
                 nout=out_dim,
                 opt_type="greedy",
                 adjacency=adjacency,
-                activation="prelu",
+                activation="leaky_relu",
                 init_type="ian_uniform",
             )
 
