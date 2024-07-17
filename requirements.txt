@@ -18,4 +18,4 @@ omegaconf
 pynvml
 functorch
 tueplots
-strnn
+strnn@git+https://github.com/rgklab/StructuredNNs@asic-dev
