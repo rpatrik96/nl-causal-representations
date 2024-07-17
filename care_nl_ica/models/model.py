@@ -61,6 +61,7 @@ class ContrastiveLearningModel(nn.Module):
                 adjacency=adjacency,
                 activation="leaky_relu",
                 init_type="ian_uniform",
+                norm_type="layer"
             )
 
             if self.hparams.permute is True:
