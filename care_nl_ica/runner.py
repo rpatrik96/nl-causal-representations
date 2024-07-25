@@ -16,6 +16,8 @@ from care_nl_ica.metrics.ica_dis import (
 )
 from care_nl_ica.models.model import ContrastiveLearningModel
 
+from care_nl_ica.path_sgd import PathSGD
+
 
 class ContrastiveICAModule(pl.LightningModule):
     def __init__(
@@ -44,10 +46,12 @@ class ContrastiveICAModule(pl.LightningModule):
         obs_layers=1,
         width_factor=10,
         permute=False,
-        log_freq=1000
+        log_freq=1000,
+        path_optimizer=False,
     ):
         """
 
+        :param path_optimizer:
         :param width_factor:
         :param permute:
         :param strnn_layers:
@@ -78,6 +82,16 @@ class ContrastiveICAModule(pl.LightningModule):
         self.model: ContrastiveLearningModel = ContrastiveLearningModel(
             self.hparams
         ).to(self.hparams.device)
+
+        if self.hparams.path_optimizer is True:
+            self.path_optimizer = PathSGD(
+                self.model,
+                self.hparams.latent_dim
+                if self.hparams.obs_dim is None
+                else self.hparams.obs_dim,
+            )
+        else:
+            self.path_optimizer = None
 
         self.dep_mat = None
         self.munkres_permutation_idx = None
@@ -324,3 +338,7 @@ class ContrastiveICAModule(pl.LightningModule):
             wandb.finish()
             # 3. call the sync command for the run directory
             subprocess.check_call(["wandb", "sync", sync_dir])
+
+    def on_before_optimizer_step(self, optimizer):
+        if self.path_optimizer is not None:
+            self.path_optimizer.update_grad()

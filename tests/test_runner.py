@@ -19,3 +19,19 @@ def test_runner(obs_dim, strnn):
     )
     dm = ContrastiveDataModule(batch_size=batch_size, obs_dim=obs_dim)
     trainer.fit(runner, datamodule=dm)
+
+
+@pytest.mark.parametrize("path_optimizer,strnn", [(True, False), (True, True)])
+def test_path_sgd(path_optimizer, strnn):
+    seed_everything(42)
+    trainer = Trainer(fast_dev_run=True)
+    batch_size = 16
+    runner = ContrastiveICAModule(
+        strnn=strnn,
+        obs_dim=None,
+        strnn_layers=2,
+        obs_layers=2,
+        path_optimizer=path_optimizer,
+    )
+    dm = ContrastiveDataModule(batch_size=batch_size, obs_dim=None)
+    trainer.fit(runner, datamodule=dm)
