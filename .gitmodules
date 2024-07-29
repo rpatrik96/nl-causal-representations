@@ -1,0 +1,3 @@
+[submodule "ivae"]
+	path = ivae
+	url = https://github.com/ilkhem/iVAE
