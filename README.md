@@ -105,11 +105,17 @@ Since th publication in TMLR, we have been experimenting with encoding the induc
 in Structured Neural Networks (StrNNs).
 
 There are two scenarios...:
-- Causal Discovery: the latent variables and observations have the same dimenions, we assume observing the causal variables
-- Causal Representation Learning: the latent variables lie on a low-dimensional manifold, the observations are a high-dimensional mixture of the causal variables
+- Causal Discovery (CD):
+    -  the latent variables and observations have the same dimenions, we assume observing the causal variables
+    -  if we assume that we know the causal order (i.e., there is no permutation indeterminacy), then StrNNs improve identifiability scores/convergence (tested in CL-ICA)
+    -  if the causal order is not known, then we can try to learn a permutation matrix (via Sinkhorn networks, see CL-ICA for detail), but learning the permutation doesn't work
+- Causal Representation Learning (CRL):
+    -  the latent variables lie on a low-dimensional manifold, the observations are a high-dimensional mixture of the causal variables
+    -  in this case, the encoder is either a single MLP or an MLP (to map to causal variables) and an StrNN
+    -  StrNNs do not help
 
 ...and three algorithms:
-- Contrastive ICA
+- Contrastive ICA (CL-ICA)
 - iVAE
 - ICE-BeeM
 - (CauCA is not used currently)
