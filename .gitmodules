@@ -1,6 +1,9 @@
 [submodule "ivae"]
 	path = ivae
-url=https://github.com/rpatrik96/iVAE
+    url=https://github.com/rpatrik96/iVAE
 [submodule "cauca"]
 	path = cauca
 	url = https://github.com/rpatrik96/causal-component-analysis
+[submodule "icebeem"]
+	path = icebeem
+	url = https://github.com/rpatrik96/icebeem
