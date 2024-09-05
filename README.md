@@ -100,3 +100,48 @@ If you find our work useful, please consider citing our [TMLR paper](https://ope
 ```
 
 
+# Using Structured Neural Networks (StrNNs) as s structural inductive bias
+Since th publication in TMLR, we have been experimenting with encoding the inductive bias of SEMs (the triangular structure) 
+in Structured Neural Networks (StrNNs).
+
+There are two scenarios...:
+- Causal Discovery: the latent variables and observations have the same dimenions, we assume observing the causal variables
+- Causal Representation Learning: the latent variables lie on a low-dimensional manifold, the observations are a high-dimensional mixture of the causal variables
+
+...and three algorithms:
+- Contrastive ICA
+- iVAE
+- ICE-BeeM
+- (CauCA is not used currently)
+
+## Contrastive ICA
+- The StrNN unmixing is defined in the `_setup_unmixing` function in `care_nl_ica/models/model.py`
+  - To use an StrNN, set `model.strnn: true` (in either `configs/config.yaml` or any of the sweep config files)
+  - `model.obs_layers` selects between CD (set to 0) and CRL (>0)
+  - `model.strnn_layers` defines the number of layers
+  - the width depends on `model.width_factor` and is calculated by `model.latent_dim * model.width_factor`
+  - if `model.permute is True` then a learnable permutation, in form of a Sinkhorn Network (`models/sinkhorn.py`) is added to `nn.Sequential`
+- To run `wandb` sweeps, check any sweep configuration file matching the pattern `configs/sem/*_strnn.yaml`.
+- `model.path_optimizer` turns a Path optimizer On/Off
+
+## iVAE
+- The StrNN unmixing is defined in the `_setup_encoder` function in `ivae/nets.py`, the observational unmixing (in case of CRL) is in the same file in the `_setup_obs_unmixing` function
+   - To use an StrNN, set `use_strnn: true` (in either `ivae/configs/ivae.yaml` or any of the sweep config files)
+  - `cond_strnn` switches between vanilla and conditional StrNN (conditional in a sense that the blocks can depend on another variable  think attention
+  - `strnn_adjacency_override` enables to set the StrNN adjacency to the ground-truth adjacency (the one used to generate the data)
+  - `separate_aux` adds a separate MLP before passing the input to the StrNN
+  - `residual_aux` converts the StrNN into a residual network where an auxiliary MLP is used in the residual branch
+  - `ignore_u` (also applies to the vanilla iVAE without StrNNs) decides whether the auxiliary information `u` is used in calculating the mean encodings
+- the SEM can also be set to an StrNN by configuring `nl>=2` (number of layers in the data generating process)
+- iVAE sweep configs match the pattern `ivae/configs/ivae_sweep_*.yaml`
+  - use `--sweep` when running `ivae/main.py` to run a wandb sweep
+  - specify the config with `--config`
+  - if you have a sweep ID, use `--sweep` and pass the ID into `--sweep-id`
+
+
+## ICE-BeeM
+- The StrNN unmixing is defined in the `_ICEBEEM_wrapper` function in `icebeem/icebeem_wrapper.py`
+   - To use an StrNN, set `use_strnn: true` (in either `icebeem/configs/imca.yaml` or any of the sweep config files)
+- the main file is `icebeem/simulations.py`
+- the config is `icebeem/configs/imca.yaml`
+- sweeps match the pattern `icebeem/configs/imca_sweep_*.yaml`
